@@ -15,6 +15,8 @@ import {
 import { isAguardando } from '../../domain/resolve';
 import { progressoTexto } from '../../domain/stateMachine';
 import { Selos } from './Selos';
+import { QuickActions } from './QuickActions';
+import { TudoEmDia } from './TudoEmDia';
 import type { CalendarItem, ObligationEstado } from '../../domain/types';
 
 export function DayView({
@@ -86,11 +88,7 @@ export function DayView({
 
       {/* Checklist do dia */}
       <div className="space-y-2">
-        {total === 0 && (
-          <div className="card p-[var(--spacing-24)] text-center">
-            <div className="label">Nenhuma obrigação com prazo neste dia.</div>
-          </div>
-        )}
+        {total === 0 && <TudoEmDia texto="Nenhuma obrigação com prazo neste dia." />}
         {doDia.map((ro) => {
           const { item, estado } = ro;
           const done = estado === 'concluida';
@@ -98,8 +96,9 @@ export function DayView({
           return (
             <div
               key={item.id}
-              className={`card flex items-center gap-3 p-[var(--spacing-16)] ${itemAccentClass({ atrasada: ro.atrasada, concluido: done, critico: ro.critico })}`}
+              className={`card p-[var(--spacing-16)] ${itemAccentClass({ atrasada: ro.atrasada, concluido: done, critico: ro.critico })}`}
             >
+             <div className="flex items-center gap-3">
               <input
                 type="checkbox"
                 className="h-5 w-5 shrink-0 accent-[var(--color-serges-blue)]"
@@ -135,6 +134,12 @@ export function DayView({
                 <span className={estadoChipClass(estado)}>{ESTADO_LABEL[estado]}</span>
                 <Selos ro={ro} />
               </div>
+             </div>
+             {(estado === 'aguardandoInput' || estado === 'concluida') && (
+               <div className="mt-2">
+                 <QuickActions ro={ro} />
+               </div>
+             )}
             </div>
           );
         })}
