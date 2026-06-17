@@ -28,7 +28,6 @@ export function WeekView({
     return Array.from({ length: 7 }, (_, i) => toISODate(addCalendarDays(start, i)));
   }, [anchorISO]);
 
-  // Coleta itens dos meses cobertos pela semana (pode cruzar a virada de mês).
   const all = useMemo(() => {
     const months = new Set(days.map((d) => d.slice(0, 7)));
     const map = new Map<string, ResolvedObligation>();
@@ -62,42 +61,55 @@ export function WeekView({
 
   return (
     <div>
-      <div className="grid grid-cols-1 gap-[var(--spacing-12)] md:grid-cols-7">
+      {/* Uma linha por dia; obrigações fluem na horizontal, fáceis de ler. */}
+      <div className="space-y-2">
         {days.map((dISO) => {
           const d = fromISODate(dISO);
           const isToday = dISO === today;
+          const isWeekend = d.getUTCDay() === 0 || d.getUTCDay() === 6;
           const items = byDay.get(dISO) ?? [];
           return (
             <div
               key={dISO}
               onDragOver={(e) => e.preventDefault()}
               onDrop={() => onDrop(dISO)}
-              className={`card min-h-[160px] p-[var(--spacing-12)] ${
+              className={`card flex flex-col gap-3 p-[var(--spacing-12)] sm:flex-row sm:items-stretch ${
                 isToday ? 'ring-2 ring-[var(--color-serges-blue)]' : ''
-              }`}
+              } ${isWeekend ? 'bg-[var(--color-surface-muted)]' : ''}`}
             >
-              <div className="mb-2 flex items-baseline justify-between">
-                <span className="label uppercase">{DOW_LONGO[d.getUTCDay()]}</span>
+              {/* Coluna fixa do dia */}
+              <div className="flex shrink-0 items-center gap-3 sm:w-[120px] sm:flex-col sm:items-start sm:justify-start sm:border-r sm:border-[var(--color-line)] sm:pr-3">
                 <span
-                  className={`text-[length:var(--text-subheading)] font-semibold ${
-                    isToday ? 'text-[var(--color-serges-blue)]' : 'text-[var(--color-ink)]'
+                  className={`flex h-9 w-9 items-center justify-center rounded-full text-[length:var(--text-subheading)] font-semibold ${
+                    isToday ? 'bg-[var(--color-serges-blue)] text-white' : 'text-[var(--color-ink)]'
                   }`}
                 >
                   {d.getUTCDate()}
-                  <span className="label ml-1 font-normal">{MESES[d.getUTCMonth()].slice(0, 3)}</span>
                 </span>
+                <div className="leading-tight">
+                  <div className="text-[length:var(--text-label)] font-medium capitalize text-[var(--color-ink)]">
+                    {DOW_LONGO[d.getUTCDay()]}
+                  </div>
+                  <div className="label">{MESES[d.getUTCMonth()]}</div>
+                </div>
               </div>
-              <div className="space-y-2">
-                {items.length === 0 && <div className="label opacity-60">—</div>}
-                {items.map((ro) => (
-                  <ObligationCard
-                    key={ro.item.id}
-                    ro={ro}
-                    onSelect={onSelect}
-                    draggable={!!ro.prazo}
-                    onDragStart={() => setDragItem(ro.item)}
-                  />
-                ))}
+
+              {/* Área de obrigações: flui na horizontal e quebra para a próxima linha */}
+              <div className="flex flex-1 flex-wrap content-start gap-2">
+                {items.length === 0 ? (
+                  <span className="label self-center opacity-60">Sem obrigações</span>
+                ) : (
+                  items.map((ro) => (
+                    <div key={ro.item.id} className="w-full sm:w-[260px]">
+                      <ObligationCard
+                        ro={ro}
+                        onSelect={onSelect}
+                        draggable={!!ro.prazo}
+                        onDragStart={() => setDragItem(ro.item)}
+                      />
+                    </div>
+                  ))
+                )}
               </div>
             </div>
           );

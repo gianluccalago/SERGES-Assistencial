@@ -1,4 +1,5 @@
 import { useMemo, useState } from 'react';
+import { DayView } from './ui/components/DayView';
 import { WeekView } from './ui/components/WeekView';
 import { MonthView } from './ui/components/MonthView';
 import { ListView } from './ui/components/ListView';
@@ -13,9 +14,10 @@ import type { Filtros } from './ui/filters';
 import { MESES, todayISO, formatDateShort } from './ui/format';
 import { addCalendarDays, fromISODate, toISODate } from './domain/dateUtils';
 
-type Screen = 'semana' | 'mes' | 'lista' | 'projetos' | 'feriados';
+type Screen = 'dia' | 'semana' | 'mes' | 'lista' | 'projetos' | 'feriados';
 
 const VIEW_TABS: Array<{ id: Screen; label: string }> = [
+  { id: 'dia', label: 'Dia' },
   { id: 'semana', label: 'Semana' },
   { id: 'mes', label: 'Mês' },
   { id: 'lista', label: 'Lista' },
@@ -23,7 +25,7 @@ const VIEW_TABS: Array<{ id: Screen; label: string }> = [
 
 export function App() {
   const store = useStore();
-  const [screen, setScreen] = useState<Screen>('semana');
+  const [screen, setScreen] = useState<Screen>('dia');
   const [cursorISO, setCursorISO] = useState<string>(todayISO());
   const [filtros, setFiltros] = useState<Filtros>({ projeto: 'todos', escalista: 'todos' });
   const [selected, setSelected] = useState<ResolvedObligation | null>(null);
@@ -40,10 +42,12 @@ export function App() {
     return [...set].sort();
   }, [store.state.projects]);
 
-  const isCalendar = screen === 'semana' || screen === 'mes' || screen === 'lista';
+  const isCalendar = screen === 'dia' || screen === 'semana' || screen === 'mes' || screen === 'lista';
 
   function shift(delta: number) {
-    if (screen === 'semana') {
+    if (screen === 'dia') {
+      setCursorISO(toISODate(addCalendarDays(cursor, delta)));
+    } else if (screen === 'semana') {
       setCursorISO(toISODate(addCalendarDays(cursor, 7 * delta)));
     } else {
       const idx = year * 12 + (month - 1) + delta;
@@ -54,6 +58,9 @@ export function App() {
   }
 
   const periodoLabel = useMemo(() => {
+    if (screen === 'dia') {
+      return `${formatDateShort(cursorISO)}/${year}`;
+    }
     if (screen === 'semana') {
       const start = addCalendarDays(cursor, -cursor.getUTCDay());
       const end = addCalendarDays(start, 6);
@@ -149,6 +156,7 @@ export function App() {
           </div>
         )}
 
+        {screen === 'dia' && <DayView anchorISO={cursorISO} filtros={filtros} onSelect={setSelected} />}
         {screen === 'semana' && <WeekView anchorISO={cursorISO} filtros={filtros} onSelect={setSelected} />}
         {screen === 'mes' && <MonthView year={year} month={month} filtros={filtros} onSelect={setSelected} />}
         {screen === 'lista' && <ListView year={year} month={month} filtros={filtros} onSelect={setSelected} />}
