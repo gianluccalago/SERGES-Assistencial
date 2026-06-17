@@ -1,6 +1,6 @@
 import { useStore } from '../../state/store';
 import type { ResolvedObligation } from '../useObligations';
-import { ESTADO_LABEL, TIPO_LABEL, estadoChipClass, itemAccentClass, formatDateShort } from '../format';
+import { TIPO_LABEL, itemAccentClass, formatDateShort } from '../format';
 import { progressoTexto } from '../../domain/stateMachine';
 import { Selos } from './Selos';
 import { QuickActions } from './QuickActions';
@@ -50,7 +50,6 @@ export function ObligationCard({ ro, onSelect, draggable, onDragStart }: Props) 
           </div>
         </button>
         <div className="flex flex-col items-end gap-1">
-          <span className={estadoChipClass(estado)}>{ESTADO_LABEL[estado]}</span>
           <Selos ro={ro} />
         </div>
       </div>
