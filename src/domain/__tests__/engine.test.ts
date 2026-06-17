@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { deriveObligations, paymentDate, cardPagamentoPrazo } from '../engine';
+import { deriveObligations, paymentDate, lotePagamentoPrazo } from '../engine';
 import { assembleMonth } from '../resolve';
 import { buildHolidaySet, easterSunday, brazilianHolidays, isBusinessDay } from '../holidays';
 import { toISODate, utcDate, fromISODate, dayOfWeek } from '../dateUtils';
@@ -53,14 +53,14 @@ describe('julho de 2026 (dia 1 é quarta-feira)', () => {
     expect(dayOfWeek(utcDate(2026, 7, 1))).toBe(3);
   });
   it('projetos de pagamento dia 15: card fica em 10 de julho (sexta)', () => {
-    expect(obById(obls, 'cardPagamento:dezEmergencias:2026-07').prazoCalculado).toBe('2026-07-10');
+    expect(obById(obls, 'lotePagamento:dezEmergencias:2026-07').prazoCalculado).toBe('2026-07-10');
   });
   it('ASF: pagamento dia 10 é sexta-feira útil, fica em 10 de julho', () => {
     const asf = seedProjects.find((p) => p.id === 'asf')!;
     expect(toISODate(paymentDate(asf, 2026, 7, holidays2026))).toBe('2026-07-10');
   });
   it('Mandirituba: card fica em 20 de julho (segunda)', () => {
-    expect(obById(obls, 'cardPagamento:mandirituba:2026-07').prazoCalculado).toBe('2026-07-20');
+    expect(obById(obls, 'lotePagamento:mandirituba:2026-07').prazoCalculado).toBe('2026-07-20');
   });
   it('FOPAM de fechamento: último dia útil, 31 de julho', () => {
     expect(obById(obls, 'fechamento:fopam:2026-07').prazoCalculado).toBe('2026-07-31');
@@ -72,7 +72,7 @@ describe('julho de 2026 (dia 1 é quarta-feira)', () => {
     expect(obById(obls, 'apresentacao:parcial:2026-07').prazoCalculado).toBe('2026-07-16');
   });
   it('card do Fred (Academia): sempre dia 1', () => {
-    expect(obById(obls, 'cardPagamento:academia:2026-07').prazoCalculado).toBe('2026-07-01');
+    expect(obById(obls, 'lotePagamento:academia:2026-07').prazoCalculado).toBe('2026-07-01');
   });
 });
 
@@ -82,13 +82,13 @@ describe('maio de 2026 (dia 10 cai num domingo)', () => {
   });
   it('card de pagamento dia 15 antecipa de domingo (10) para sexta (8 de maio)', () => {
     const obls = deriveObligations(2026, 5, seedProjects, holidays2026);
-    expect(obById(obls, 'cardPagamento:dezEmergencias:2026-05').prazoCalculado).toBe('2026-05-08');
+    expect(obById(obls, 'lotePagamento:dezEmergencias:2026-05').prazoCalculado).toBe('2026-05-08');
   });
   it('direção oposta: pagamento ADIA, card ANTECIPA', () => {
     const asf = seedProjects.find((p) => p.id === 'asf')!;
     const dezEmer = seedProjects.find((p) => p.id === 'dezEmergencias')!;
     expect(toISODate(paymentDate(asf, 2026, 5, holidays2026))).toBe('2026-05-11');
-    expect(toISODate(cardPagamentoPrazo(dezEmer, 2026, 5, holidays2026))).toBe('2026-05-08');
+    expect(toISODate(lotePagamentoPrazo(dezEmer, 2026, 5, holidays2026))).toBe('2026-05-08');
   });
 });
 
@@ -118,21 +118,21 @@ describe('dependência de terceiro (faturamentoCard)', () => {
 
 describe('marcador de atraso (selo, não status)', () => {
   it('obrigação com prazo recebe o selo atrasada após o prazo', () => {
-    const card = itemById(month(2026, 7), 'cardPagamento:dezEmergencias:2026-07');
+    const card = itemById(month(2026, 7), 'lotePagamento:dezEmergencias:2026-07');
     expect(marcadores(card, '2026-07-09').atrasada).toBe(false);
     expect(marcadores(card, '2026-07-11').atrasada).toBe(true);
     expect(resolveEstado(card)).toBe('pendente'); // status segue sendo pendente
   });
   it('concluída não recebe selo de atraso', () => {
     const ov: Override = { estado: 'concluida' };
-    const card = itemById(month(2026, 7, { 'cardPagamento:dezEmergencias:2026-07': ov }), 'cardPagamento:dezEmergencias:2026-07');
+    const card = itemById(month(2026, 7, { 'lotePagamento:dezEmergencias:2026-07': ov }), 'lotePagamento:dezEmergencias:2026-07');
     expect(resolveEstado(card)).toBe('concluida');
     expect(marcadores(card, '2026-07-30').atrasada).toBe(false);
   });
 });
 
 describe('overrides', () => {
-  const id = 'cardPagamento:dezEmergencias:2026-07';
+  const id = 'lotePagamento:dezEmergencias:2026-07';
 
   it('mover uma obrigação gera override; aparece na nova data, não na derivada', () => {
     const items = month(2026, 7, { [id]: { dataNova: '2026-07-22' } });

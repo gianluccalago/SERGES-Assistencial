@@ -32,6 +32,9 @@ export function applyOverride(obligation: Obligation, override?: Override): Cale
     ocRecebida: override?.ocRecebida,
     escalado: override?.escaladoEm != null,
     cobrancasCount: override?.cobrancas?.length ?? 0,
+    medicos: override?.medicos,
+    resolucaoMes: override?.resolucaoMes,
+    recuperacao: override?.recuperacao,
     isManual: false,
     movida: override?.dataNova != null,
   };

@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { useStore } from '../../state/store';
 import type { ResolvedObligation } from '../useObligations';
 import { ESTADO_LABEL, TIPO_LABEL, DEP_LABEL, estadoChipClass, formatDateLong, todayISO } from '../format';
-import { registrarRetorno } from '../../domain/stateMachine';
+import { registrarRetorno, bloqueioConclusao } from '../../domain/stateMachine';
 import { WorkflowPanels } from './WorkflowPanels';
 import { Selos } from './Selos';
 import { EditForm } from './EditForm';
@@ -15,6 +15,11 @@ export function ObligationDetail({ ro, onClose }: { ro: ResolvedObligation; onCl
   const [novaData, setNovaData] = useState(prazo ?? todayISO());
   const [notas, setNotas] = useState(item.notas ?? '');
   const [editando, setEditando] = useState(false);
+  const [valorFaltante, setValorFaltante] = useState('');
+
+  const bloqueio = bloqueioConclusao(item);
+  const podeResolverMes = item.tipo === 'lotePagamento' || item.id.startsWith('faturamentoIniciar:');
+  const ehFaturamento = item.id.startsWith('faturamentoIniciar:');
 
   const projeto = item.projetoId ? store.state.projects.find((p) => p.id === item.projetoId) : undefined;
   const contatos = store.contatosDoProjeto(item.projetoId).filter((c) => c.categoria === 'contratante');
@@ -70,6 +75,60 @@ export function ObligationDetail({ ro, onClose }: { ro: ResolvedObligation; onCl
           {item.responsavel && <Row k="Responsável">{item.responsavel}</Row>}
           <Row k="Regra de origem">{item.regraOrigem}</Row>
         </dl>
+
+        {/* Recuperação carregada do mês anterior (faturamento parcial, §4.5) */}
+        {item.recuperacao && (
+          <div className="card mt-[var(--spacing-16)] border-l-[3px] border-l-[var(--color-serges-blue)] p-[var(--spacing-16)]">
+            <div className="label mb-1 uppercase">Recuperação do mês anterior</div>
+            <p className="text-[length:var(--text-label)]">
+              {item.recuperacao.texto} · R$ {item.recuperacao.valor.toLocaleString('pt-BR')}
+            </p>
+          </div>
+        )}
+
+        {/* Resolução de mês (§4.5) */}
+        {podeResolverMes && (
+          <div className="card mt-[var(--spacing-16)] p-[var(--spacing-16)]">
+            <div className="label mb-2 uppercase">Resolução do mês</div>
+            {item.resolucaoMes === 'semAtuacao' ? (
+              <div className="flex items-center justify-between gap-2">
+                <span className="chip">Sem atuação neste mês</span>
+                <button className="btn-secondary" onClick={() => store.setResolucaoMes(item, undefined)}>
+                  Desfazer
+                </button>
+              </div>
+            ) : item.resolucaoMes === 'faturadoParcialmente' ? (
+              <span className="chip">Faturado parcialmente</span>
+            ) : (
+              <div className="space-y-2">
+                <button className="btn-secondary w-full" onClick={() => store.setResolucaoMes(item, 'semAtuacao')}>
+                  Não atuamos neste projeto neste mês
+                </button>
+                {ehFaturamento && (
+                  <div className="flex gap-2">
+                    <input
+                      className="input"
+                      inputMode="decimal"
+                      placeholder="Valor faltante"
+                      value={valorFaltante}
+                      onChange={(e) => setValorFaltante(e.target.value)}
+                    />
+                    <button
+                      className="btn-secondary"
+                      disabled={!valorFaltante}
+                      onClick={() => {
+                        store.faturadoParcialmente(item, Number(valorFaltante.replace(',', '.')));
+                        onClose();
+                      }}
+                    >
+                      Faturado incompletamente
+                    </button>
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+        )}
 
         {/* Contatos do contratante + escalonamento (§11.8, fonte: aba Contatos) */}
         {contatos.length > 0 && (
@@ -164,13 +223,6 @@ export function ObligationDetail({ ro, onClose }: { ro: ResolvedObligation; onCl
             <button
               className="btn-primary"
               disabled={!podeConcluir}
-              title={
-                !podeConcluir
-                  ? aguardando
-                    ? 'Aguarda o contratante: registre o retorno em vez de concluir'
-                    : 'Complete os guardrails (anexo, ASPA e PIX) antes de concluir'
-                  : undefined
-              }
               onClick={() => store.setEstado(item, 'concluida')}
             >
               Concluir
@@ -181,6 +233,13 @@ export function ObligationDetail({ ro, onClose }: { ro: ResolvedObligation; onCl
             </button>
           )}
         </div>
+
+        {/* Sempre explicar o bloqueio da conclusão (§4.5) */}
+        {estado !== 'concluida' && bloqueio && (
+          <p className="mt-2 text-[length:var(--text-caption)] text-[var(--color-overdue)]">
+            Conclusão bloqueada: {bloqueio}
+          </p>
+        )}
 
         {/* Editar / Excluir */}
         <div className="mt-[var(--spacing-24)] flex items-center justify-between border-t border-[var(--color-line)] pt-[var(--spacing-16)]">

@@ -1,4 +1,4 @@
-import type { CalendarItem, ObligationEstado, Override } from './types';
+import type { CalendarItem, MedicoCard, ObligationEstado, Override } from './types';
 import { fromISODate } from './dateUtils';
 
 /**
@@ -25,9 +25,10 @@ export function marcadores(
     : false;
   const concluido = item.baseEstado === 'concluida';
   const aguardando = item.baseEstado === 'aguardandoInput';
+  const semAtuacao = item.resolucaoMes === 'semAtuacao';
   return {
-    atrasada: past && !concluido && !aguardando,
-    contratanteAtrasado: past && aguardando,
+    atrasada: past && !concluido && !aguardando && !semAtuacao,
+    contratanteAtrasado: past && aguardando && !semAtuacao,
     critico: !!item.critico,
   };
 }
@@ -69,30 +70,37 @@ export function aprovacaoEstourou(enviadaAprovacaoEm: string | undefined, agoraI
   return agora - enviada > 24 * 60 * 60 * 1000;
 }
 
-/**
- * Regras para marcar como pronto/concluído.
- * - Itens aguardando retorno de terceiro NÃO podem ser concluídos direto; a
- *   ação é registrar o retorno (§11.11).
- * - Cards de pagamento exigem o mini-checklist de guardrails (§11.2):
- *   anexo da planilha + confirmação ASPA + conferência de PIX.
- */
-export function podeConcluir(item: CalendarItem): boolean {
-  if (item.baseEstado === 'aguardandoInput') return false;
-  if (item.tipo === 'cardPagamento') {
-    return item.anexoPresente === true && item.aspaConfirmado === true && item.pixConferido === true;
-  }
-  return true;
+/** Um card de médico está "pronto" quando os guardrails fundamentais batem (§11.2). */
+export function medicoPronto(m: MedicoCard): boolean {
+  return m.anexoPresente === true && m.pixConferido === true;
 }
 
-/** Itens que faltam no guardrail do card de pagamento, para exibir o checklist. */
-export function guardrailsCardPagamento(item: CalendarItem): {
-  anexo: boolean;
-  aspa: boolean;
-  pix: boolean;
-  completo: boolean;
-} {
-  const anexo = item.anexoPresente === true;
-  const aspa = item.aspaConfirmado === true;
-  const pix = item.pixConferido === true;
-  return { anexo, aspa, pix, completo: anexo && aspa && pix };
+/** Progresso do lote de pagamento: cards prontos e aprovados sobre o total. */
+export function loteProgresso(item: CalendarItem): { ok: number; total: number } {
+  const medicos = item.medicos ?? [];
+  return {
+    ok: medicos.filter((m) => medicoPronto(m) && m.aprovado === true).length,
+    total: medicos.length,
+  };
+}
+
+/**
+ * Motivo pelo qual a conclusão está bloqueada, ou null se pode concluir (§4.5).
+ * Sempre explicar o bloqueio na interface; nunca um botão apagado sem motivo.
+ */
+export function bloqueioConclusao(item: CalendarItem): string | null {
+  if (item.baseEstado === 'concluida') return null;
+  if (item.baseEstado === 'aguardandoInput') {
+    return 'Aguarda o contratante: registre o retorno em vez de concluir.';
+  }
+  if (item.tipo === 'lotePagamento') {
+    const { ok, total } = loteProgresso(item);
+    if (total === 0) return 'Adicione os cards de médico do lote antes de concluir.';
+    if (ok < total) return `Faltam cards de médico prontos e aprovados (${ok} de ${total}).`;
+  }
+  return null;
+}
+
+export function podeConcluir(item: CalendarItem): boolean {
+  return bloqueioConclusao(item) === null;
 }

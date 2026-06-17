@@ -19,7 +19,7 @@ export const ESTADO_LABEL: Record<ObligationEstado, string> = {
 };
 
 export const TIPO_LABEL: Record<ObligationTipo, string> = {
-  cardPagamento: 'Card de pagamento',
+  lotePagamento: 'Lote de pagamento',
   faturamentoIniciar: 'Iniciar faturamento',
   faturamentoCard: 'Card de faturamento',
   fixa: 'Tarefa fixa',

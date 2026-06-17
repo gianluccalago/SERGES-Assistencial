@@ -38,9 +38,9 @@ export function ListView({
       });
   }, [items, estadoFiltro]);
 
-  // §11 — agrupar cardPagamento por data de pagamento (lotes dos dias 10, 15, 25).
+  // §11 — agrupar lotes de pagamento por data (lotes dos dias 10, 15, 25).
   const lotes = useMemo(() => {
-    const cards = filtrados.filter((ro) => ro.item.tipo === 'cardPagamento' && ro.prazo);
+    const cards = filtrados.filter((ro) => ro.item.tipo === 'lotePagamento' && ro.prazo);
     const map = new Map<string, ResolvedObligation[]>();
     for (const ro of cards) {
       const k = ro.prazo!;
@@ -48,7 +48,7 @@ export function ListView({
       arr.push(ro);
       map.set(k, arr);
     }
-    const outros = filtrados.filter((ro) => !(ro.item.tipo === 'cardPagamento' && ro.prazo));
+    const outros = filtrados.filter((ro) => !(ro.item.tipo === 'lotePagamento' && ro.prazo));
     return { grupos: [...map.entries()].sort((a, b) => a[0].localeCompare(b[0])), outros };
   }, [filtrados]);
 
