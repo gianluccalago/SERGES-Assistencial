@@ -5,6 +5,8 @@ import { applyFiltros, type Filtros } from '../filters';
 import { addCalendarDays, fromISODate, toISODate } from '../../domain/dateUtils';
 import { ESTADO_LABEL, TIPO_LABEL, estadoChipClass, formatDateShort, MESES } from '../format';
 import { progressoTexto } from '../../domain/stateMachine';
+import { QuickActions } from './QuickActions';
+import { TudoEmDia } from './TudoEmDia';
 
 function weekStart(iso: string): string {
   const d = fromISODate(iso);
@@ -24,13 +26,15 @@ export function ChecklistView({
 }) {
   const store = useStore();
   const items = applyFiltros(useMonthObligations(year, month), filtros);
-  const [soPendentes, setSoPendentes] = useState(false);
   const [sel, setSel] = useState<Record<string, ResolvedObligation>>({});
   const [responsavel, setResponsavel] = useState('');
+  const [verConcluidas, setVerConcluidas] = useState(false);
 
   const resolvido = (ro: ResolvedObligation) =>
     ro.estado === 'concluida' || ro.item.resolucaoMes === 'semAtuacao';
-  const visiveis = soPendentes ? items.filter((ro) => !resolvido(ro)) : items;
+  // Por padrão mostra só pendentes; as concluídas ficam recolhidas e expansíveis.
+  const visiveis = items.filter((ro) => !resolvido(ro));
+  const resolvidas = items.filter(resolvido);
 
   // Progresso
   const concluidas = items.filter((ro) => ro.estado === 'concluida').length;
@@ -101,10 +105,6 @@ export function ChecklistView({
               <span className="label ml-2 font-normal">concluídas</span>
             </div>
           </div>
-          <label className="flex items-center gap-2 text-[length:var(--text-label)]">
-            <input type="checkbox" checked={soPendentes} onChange={(e) => setSoPendentes(e.target.checked)} />
-            Só pendentes
-          </label>
         </div>
         <div className="mt-3 grid grid-cols-2 gap-x-6 gap-y-1 sm:grid-cols-3">
           {porProjeto.map((p) => (
@@ -131,11 +131,29 @@ export function ChecklistView({
       })}
 
       {grupos.semPrazo.length > 0 && (
-        <Grupo titulo="Aguardando retorno de terceiro (sem prazo)">
+        <Grupo titulo="Aguardando input do contratante (sem prazo)">
           {grupos.semPrazo.map((ro) => (
-            <Row key={ro.item.id} ro={ro} selecionado={!!sel[ro.item.id]} onToggle={() => toggleSel(ro)} onOpen={() => onSelect(ro)} projetoNome={nomeProjeto(ro, store)} aguardandoContato={contatoCobranca(ro, store)} />
+            <Row key={ro.item.id} ro={ro} selecionado={!!sel[ro.item.id]} onToggle={() => toggleSel(ro)} onOpen={() => onSelect(ro)} projetoNome={nomeProjeto(ro, store)} />
           ))}
         </Grupo>
+      )}
+
+      {visiveis.length === 0 && <TudoEmDia />}
+
+      {/* Concluídas / resolvidas — recolhidas e expansíveis */}
+      {resolvidas.length > 0 && (
+        <div className="mt-[var(--spacing-16)]">
+          <button className="btn-ghost" onClick={() => setVerConcluidas((v) => !v)}>
+            Concluídas e resolvidas ({resolvidas.length}) {verConcluidas ? '▴' : '▾'}
+          </button>
+          {verConcluidas && (
+            <div className="mt-2 space-y-1.5">
+              {resolvidas.map((ro) => (
+                <Row key={ro.item.id} ro={ro} selecionado={!!sel[ro.item.id]} onToggle={() => toggleSel(ro)} onOpen={() => onSelect(ro)} projetoNome={nomeProjeto(ro, store)} />
+              ))}
+            </div>
+          )}
+        </div>
       )}
 
       {/* Barra de marcação em lote (repasse) */}
@@ -165,11 +183,6 @@ export function ChecklistView({
 function nomeProjeto(ro: ResolvedObligation, store: ReturnType<typeof useStore>): string | undefined {
   return ro.item.projetoId ? store.state.projects.find((p) => p.id === ro.item.projetoId)?.nome : undefined;
 }
-function contatoCobranca(ro: ResolvedObligation, store: ReturnType<typeof useStore>): string | undefined {
-  const p = ro.item.projetoId ? store.state.projects.find((x) => x.id === ro.item.projetoId) : undefined;
-  return p?.contatoPrimario;
-}
-
 function Grupo({ titulo, children }: { titulo: string; children: React.ReactNode }) {
   return (
     <div className="mb-[var(--spacing-20)]">
@@ -185,40 +198,42 @@ function Row({
   onToggle,
   onOpen,
   projetoNome,
-  aguardandoContato,
 }: {
   ro: ResolvedObligation;
   selecionado: boolean;
   onToggle: () => void;
   onOpen: () => void;
   projetoNome?: string;
-  aguardandoContato?: string;
 }) {
   const aguardando = ro.estado === 'aguardandoInput';
   const done = ro.estado === 'concluida';
   return (
-    <div className={`card flex items-center gap-3 p-[var(--spacing-12)] ${ro.atrasada ? 'border-l-[3px] border-l-[var(--color-overdue)]' : ''}`}>
-      <input
-        type="checkbox"
-        className="h-5 w-5 shrink-0 accent-[var(--color-serges-blue)]"
-        checked={selecionado}
-        disabled={aguardando || done || !ro.podeConcluir}
-        title={aguardando ? 'Aguarda o contratante: registre o retorno no detalhe' : !ro.podeConcluir ? 'Conclusão bloqueada — veja o detalhe' : undefined}
-        onChange={onToggle}
-      />
-      <button className="min-w-0 flex-1 text-left" onClick={onOpen}>
-        <div className={`text-[length:var(--text-label)] ${done ? 'text-[var(--color-ink-soft)] line-through' : 'font-medium'}`}>
-          {ro.item.titulo}
-        </div>
-        <div className="label mt-0.5 flex flex-wrap gap-x-2">
-          <span>{TIPO_LABEL[ro.item.tipo]}</span>
-          {ro.prazo && <span>· {formatDateShort(ro.prazo)}</span>}
-          {projetoNome && <span>· {projetoNome}</span>}
-          {progressoTexto(ro.item) && <span className="text-[var(--color-ink)]">· {progressoTexto(ro.item)}</span>}
-          {aguardando && aguardandoContato && <span className="text-[var(--color-ink-soft)]">· cobrar {aguardandoContato}</span>}
-        </div>
-      </button>
-      <span className={estadoChipClass(ro.estado)}>{ESTADO_LABEL[ro.estado]}</span>
+    <div className={`card p-[var(--spacing-12)] ${ro.atrasada ? 'border-l-[3px] border-l-[var(--color-overdue)]' : ''}`}>
+      <div className="flex items-center gap-3">
+        <input
+          type="checkbox"
+          className="h-5 w-5 shrink-0 accent-[var(--color-serges-blue)]"
+          checked={selecionado}
+          disabled={aguardando || done || !ro.podeConcluir}
+          title="Selecionar para marcação em lote (repasse)"
+          onChange={onToggle}
+        />
+        <button className="min-w-0 flex-1 text-left" onClick={onOpen}>
+          <div className={`text-[length:var(--text-label)] ${done ? 'text-[var(--color-ink-soft)] line-through' : 'font-medium'}`}>
+            {ro.item.titulo}
+          </div>
+          <div className="label mt-0.5 flex flex-wrap gap-x-2">
+            <span>{TIPO_LABEL[ro.item.tipo]}</span>
+            {ro.prazo && <span>· {formatDateShort(ro.prazo)}</span>}
+            {projetoNome && <span>· {projetoNome}</span>}
+            {progressoTexto(ro.item) && <span className="text-[var(--color-ink)]">· {progressoTexto(ro.item)}</span>}
+          </div>
+        </button>
+        <span className={estadoChipClass(ro.estado)}>{ESTADO_LABEL[ro.estado]}</span>
+      </div>
+      <div className="mt-2">
+        <QuickActions ro={ro} />
+      </div>
     </div>
   );
 }

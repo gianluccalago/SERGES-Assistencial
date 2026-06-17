@@ -7,9 +7,11 @@ import { WorkflowPanels } from './WorkflowPanels';
 import { Selos } from './Selos';
 import { EditForm } from './EditForm';
 import { whatsappLink, mailtoLink } from '../contatoLinks';
+import { useToast } from './Toast';
 
 export function ObligationDetail({ ro, onClose }: { ro: ResolvedObligation; onClose: () => void }) {
   const store = useStore();
+  const toast = useToast();
   const { item, estado, prazo, podeConcluir } = ro;
   const [prazoRetorno, setPrazoRetorno] = useState(todayISO());
   const [novaData, setNovaData] = useState(prazo ?? todayISO());
@@ -223,7 +225,12 @@ export function ObligationDetail({ ro, onClose }: { ro: ResolvedObligation; onCl
             <button
               className="btn-primary"
               disabled={!podeConcluir}
-              onClick={() => store.setEstado(item, 'concluida')}
+              onClick={() => {
+                const anterior = item.baseEstado;
+                store.setEstado(item, 'concluida');
+                toast.show('Concluída.', () => store.setEstado(item, anterior));
+                onClose();
+              }}
             >
               Concluir
             </button>
@@ -249,7 +256,14 @@ export function ObligationDetail({ ro, onClose }: { ro: ResolvedObligation; onCl
           <button
             className="btn-ghost text-[var(--color-overdue)]"
             onClick={() => {
-              store.deleteItem(item);
+              if (item.isManual) {
+                const original = store.state.manualObligations.find((m) => m.id === item.id);
+                store.deleteItem(item);
+                toast.show('Excluída.', original ? () => store.addManual(original) : undefined);
+              } else {
+                store.deleteItem(item);
+                toast.show('Ocultada.', () => store.undismiss(item.id));
+              }
               onClose();
             }}
           >

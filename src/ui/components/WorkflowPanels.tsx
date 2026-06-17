@@ -235,7 +235,19 @@ function ContratoSocial({
           ))}
         </div>
         <div className="mt-2 flex gap-2">
-          <input className="input" placeholder="Nome do entrante" value={nomeEnt} onChange={(e) => setNomeEnt(e.target.value)} />
+          <input
+            className="input"
+            placeholder="Nome do entrante"
+            value={nomeEnt}
+            onChange={(e) => setNomeEnt(e.target.value)}
+            onKeyDown={(e) => {
+              // Enter adiciona e mantém o foco no campo para o próximo.
+              if (e.key === 'Enter' && nomeEnt.trim()) {
+                setCS({ entrantes: [...entrantes, { id: `ent-${crypto.randomUUID().slice(0, 6)}`, nome: nomeEnt.trim() }] });
+                setNomeEnt('');
+              }
+            }}
+          />
           <button
             className="btn-secondary"
             disabled={!nomeEnt.trim()}
