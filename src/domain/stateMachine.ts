@@ -1,4 +1,4 @@
-import type { CalendarItem, MedicoCard, ObligationEstado, Override } from './types';
+import type { CalendarItem, ObligationEstado, Override } from './types';
 import { fromISODate } from './dateUtils';
 
 /**
@@ -70,20 +70,6 @@ export function aprovacaoEstourou(enviadaAprovacaoEm: string | undefined, agoraI
   return agora - enviada > 24 * 60 * 60 * 1000;
 }
 
-/** Um card de médico está "pronto" quando os guardrails fundamentais batem (§11.2). */
-export function medicoPronto(m: MedicoCard): boolean {
-  return m.anexoPresente === true && m.pixConferido === true;
-}
-
-/** Progresso do lote de pagamento: cards prontos e aprovados sobre o total. */
-export function loteProgresso(item: CalendarItem): { ok: number; total: number } {
-  const medicos = item.medicos ?? [];
-  return {
-    ok: medicos.filter((m) => medicoPronto(m) && m.aprovado === true).length,
-    total: medicos.length,
-  };
-}
-
 /**
  * Motivo pelo qual a conclusão está bloqueada, ou null se pode concluir (§4.5).
  * Sempre explicar o bloqueio na interface; nunca um botão apagado sem motivo.
@@ -92,11 +78,6 @@ export function bloqueioConclusao(item: CalendarItem): string | null {
   if (item.baseEstado === 'concluida') return null;
   if (item.baseEstado === 'aguardandoInput') {
     return 'Aguarda o contratante: registre o retorno em vez de concluir.';
-  }
-  if (item.tipo === 'lotePagamento') {
-    const { ok, total } = loteProgresso(item);
-    if (total === 0) return 'Adicione os cards de médico do lote antes de concluir.';
-    if (ok < total) return `Faltam cards de médico prontos e aprovados (${ok} de ${total}).`;
   }
   if (item.id.startsWith('fixa:contratoSocialContabilidade:')) {
     const cs = item.contratoSocial;
@@ -115,12 +96,8 @@ export function contratoSocialProgresso(item: CalendarItem): { ok: number; total
   return { ok: ent.filter((e) => e.procuracao && e.boleto).length, total: ent.length };
 }
 
-/** Texto curto de progresso para a linha da obrigação (lote, contrato social). */
+/** Texto curto de progresso para a linha da obrigação (contrato social). */
 export function progressoTexto(item: CalendarItem): string | null {
-  if (item.tipo === 'lotePagamento') {
-    const { ok, total } = loteProgresso(item);
-    return total > 0 ? `${ok} de ${total} prontos` : null;
-  }
   if (item.id.startsWith('fixa:contratoSocialContabilidade:')) {
     const { ok, total } = contratoSocialProgresso(item);
     return total > 0 ? `procurações e boletos ${ok} de ${total}` : null;

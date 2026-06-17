@@ -49,12 +49,6 @@ export type ObligationTipo =
   | 'fechamento'
   | 'evento';
 
-/** Vínculo do médico (§4.3). */
-export type MedicoVinculo = 'socio' | 'PJ';
-
-/** SERGES Connect (ex-ASPA): validação não obrigatória, 3 opções (§11.2). */
-export type SergesConnect = 'realizada' | 'parcialmente' | 'nada';
-
 /** Resolução explícita de mês para pagamento/faturamento (§4.5). */
 export type ResolucaoMes = 'semAtuacao' | 'faturadoParcialmente';
 
@@ -71,21 +65,6 @@ export interface ContratoSocialData {
   confirmacaoEscalistas?: boolean;
   entrantes?: EntranteCS[];
   saintes?: { id: string; nome: string }[];
-}
-
-/**
- * Card de um médico dentro de um lote de pagamento (§4.3). Guardrails
- * fundamentais (planilha + PIX) bloqueiam o "pronto"; SERGES Connect não bloqueia.
- */
-export interface MedicoCard {
-  id: string;
-  nome: string;
-  valor?: number;
-  vinculo: MedicoVinculo;
-  anexoPresente?: boolean;
-  pixConferido?: boolean;
-  sergesConnect?: SergesConnect;
-  aprovado?: boolean;
 }
 
 /**
@@ -130,8 +109,6 @@ export interface Override {
   /** Esconde a obrigação gerada ("Ocultar"); pode ser desfeito. */
   dismissed?: boolean;
   estado?: ObligationEstado;
-  /** Cards de médico do lote de pagamento (§4.3), adicionados manualmente. */
-  medicos?: MedicoCard[];
   /** Resolução de mês (§4.5): sem atuação ou faturado parcialmente. */
   resolucaoMes?: ResolucaoMes;
   /** Valor faltante quando faturado parcialmente. */
@@ -268,7 +245,6 @@ export interface CalendarItem {
   escalado?: boolean;
   cobrancasCount?: number;
   // Lote de pagamento (§4.3) e resoluções de mês (§4.5).
-  medicos?: MedicoCard[];
   resolucaoMes?: ResolucaoMes;
   recuperacao?: { texto: string; valor: number };
   contratoSocial?: ContratoSocialData;

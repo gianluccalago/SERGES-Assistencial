@@ -13,7 +13,6 @@ import {
   cardDevolucaoContratoSocial,
 } from '../../domain/workflows';
 import { todayISO } from '../format';
-import { LotePagamentoPanel } from './LotePagamentoPanel';
 
 // Painéis contextuais das extensões de workflow (§11). Só para obrigações
 // geradas (não manuais), com base no id/tipo. Gravam no override.
@@ -35,7 +34,7 @@ export function WorkflowPanels({ ro }: { ro: ResolvedObligation }) {
 
   return (
     <>
-      {isLote && <LotePagamentoPanel item={item} contratoSocial={!!projeto?.contratoSocialObrigatorio} />}
+      {isLote && projeto?.contratoSocialObrigatorio && <ContratoSocialAviso />}
       {isLote && projeto?.tetoNota && <NotasFracionadas tetoNota={projeto.tetoNota} />}
       {isAsfFat && <AsfWorkflow ov={ov} set={set} />}
       {is0600 && <Checklist0600 ov={ov} set={set} />}
@@ -61,6 +60,15 @@ function Check({ label, checked, onChange }: { label: string; checked: boolean; 
       <input type="checkbox" className="mt-0.5 h-4 w-4 accent-[var(--color-serges-blue)]" checked={checked} onChange={(e) => onChange(e.target.checked)} />
       <span>{label}</span>
     </label>
+  );
+}
+
+// Aviso (não bloqueia) de contrato social no lote de pagamento.
+function ContratoSocialAviso() {
+  return (
+    <div className="card mt-[var(--spacing-16)] border-[var(--color-overdue)] p-[var(--spacing-16)] text-[length:var(--text-label)] text-[var(--color-overdue)]">
+      Projeto exige contrato social · nota fiscal não permitida · risco de quarteirização.
+    </div>
   );
 }
 
