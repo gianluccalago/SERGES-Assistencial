@@ -1,17 +1,25 @@
 import { useMemo } from 'react';
 import { useStore } from '../state/store';
 import { resolveEstado, aprovacaoEstourou, podeConcluir } from '../domain/stateMachine';
-import type { Obligation, ObligationEstado, ObligationUserState } from '../domain/types';
+import type { CalendarItem, ObligationEstado } from '../domain/types';
 import { todayISO } from './format';
 
 export interface ResolvedObligation {
-  obligation: Obligation;
-  userState: ObligationUserState | undefined;
+  item: CalendarItem;
   estado: ObligationEstado;
-  /** Prazo efetivo (calculado ou manual). */
   prazo?: string;
   aprovacaoEstourada: boolean;
   podeConcluir: boolean;
+}
+
+export function resolveItem(item: CalendarItem, today: string, nowISO: string): ResolvedObligation {
+  return {
+    item,
+    estado: resolveEstado(item, today),
+    prazo: item.prazo,
+    aprovacaoEstourada: aprovacaoEstourou(item.enviadaAprovacaoEm, nowISO),
+    podeConcluir: podeConcluir(item),
+  };
 }
 
 export function useMonthObligations(year: number, month: number): ResolvedObligation[] {
@@ -20,18 +28,7 @@ export function useMonthObligations(year: number, month: number): ResolvedObliga
   const nowISO = new Date().toISOString();
 
   return useMemo(() => {
-    const raw = store.obligationsFor(year, month);
-    return raw.map((obligation) => {
-      const userState = store.state.obligationStates[obligation.id];
-      return {
-        obligation,
-        userState,
-        estado: resolveEstado(obligation, userState, today),
-        prazo: obligation.prazoCalculado ?? userState?.prazoManual,
-        aprovacaoEstourada: aprovacaoEstourou(userState, nowISO),
-        podeConcluir: podeConcluir(obligation, userState),
-      };
-    });
+    return store.itemsFor(year, month).map((item) => resolveItem(item, today, nowISO));
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [store.state, year, month, today]);
 }

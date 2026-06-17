@@ -1,4 +1,4 @@
-import type { Obligation, ObligationEstado, ObligationUserState } from './types';
+import type { CalendarItem, ObligationEstado, Override } from './types';
 import { fromISODate } from './dateUtils';
 
 /** Transições manuais permitidas ao usuário. */
@@ -16,79 +16,61 @@ export function podeTransicionar(de: ObligationEstado, para: ObligationEstado): 
 }
 
 /**
- * Resolve o estado efetivo de uma obrigação combinando o estado-base derivado,
- * a sobreposição do usuário e a regra de atraso relativa a "hoje".
+ * Resolve o estado efetivo de um item combinando o estado-base e a regra de
+ * atraso relativa a "hoje".
  *
  * Regras:
- * - Estado marcado pelo usuário tem precedência sobre o estado-base.
- * - Uma obrigação com prazo vira 'atrasada' quando hoje > prazo e ela não está
- *   concluida/escalada/emCobranca por escolha do usuário.
- * - Obrigações em 'aguardandoRetorno' nunca viram 'atrasada' sozinhas.
+ * - Estados terminais escolhidos pelo usuário (concluída/escalada) têm precedência.
+ * - Um item com prazo vira 'atrasada' quando hoje > prazo e não está concluído.
+ * - Itens em 'aguardandoRetorno' nunca viram 'atrasada' sozinhos.
  */
-export function resolveEstado(
-  obligation: Obligation,
-  user: ObligationUserState | undefined,
-  hojeISO: string,
-): ObligationEstado {
-  const userEstado = user?.estado;
-
-  // Estados terminais/explícitos do usuário têm precedência.
-  if (userEstado === 'concluida') return 'concluida';
-  if (userEstado === 'escalada') return 'escalada';
-
-  const base = userEstado ?? obligation.estado;
-
-  // Aguardando retorno de terceiro não vira atrasada pela passagem do tempo.
+export function resolveEstado(item: CalendarItem, hojeISO: string): ObligationEstado {
+  const base = item.baseEstado;
+  if (base === 'concluida') return 'concluida';
+  if (base === 'escalada') return 'escalada';
   if (base === 'aguardandoRetorno') return 'aguardandoRetorno';
 
-  const prazo = obligation.prazoCalculado ?? user?.prazoManual;
-  if (prazo) {
-    const venceu = fromISODate(hojeISO).getTime() > fromISODate(prazo).getTime();
+  if (item.prazo) {
+    const venceu = fromISODate(hojeISO).getTime() > fromISODate(item.prazo).getTime();
     if (venceu) return 'atrasada';
   }
-
   return base;
 }
 
 /**
- * Registra o recebimento de um retorno de terceiro: move o faturamentoCard de
- * 'aguardandoRetorno' para 'pendente'. O prazo passa a ser o informado pelo
- * usuário (prazoManual) ou imediato (a própria data de recebimento).
+ * Registra o recebimento de um retorno de terceiro: produz um Override que move
+ * o faturamentoCard de 'aguardandoRetorno' para 'pendente'. O prazo passa a ser
+ * o informado (dataNova) ou imediato (a própria data de recebimento).
  */
 export function registrarRetorno(
-  user: ObligationUserState | undefined,
+  override: Override | undefined,
   recebidoEmISO: string,
-  prazoManual?: string,
-): ObligationUserState {
+  prazo?: string,
+): Override {
   return {
-    ...user,
+    ...override,
     estado: 'pendente',
     retornoRecebidoEm: recebidoEmISO,
-    prazoManual: prazoManual ?? recebidoEmISO,
+    dataNova: prazo ?? recebidoEmISO,
   };
 }
 
 /**
- * Indica se uma obrigação enviada para aprovação já passou da expectativa de
- * 24 horas de retorno do coordenador/gestor.
+ * Indica se um item enviado para aprovação já passou da expectativa de 24h de
+ * retorno do coordenador/gestor.
  */
-export function aprovacaoEstourou(
-  user: ObligationUserState | undefined,
-  agoraISO: string,
-): boolean {
-  if (!user?.enviadaAprovacaoEm) return false;
-  const enviada = new Date(user.enviadaAprovacaoEm).getTime();
+export function aprovacaoEstourou(enviadaAprovacaoEm: string | undefined, agoraISO: string): boolean {
+  if (!enviadaAprovacaoEm) return false;
+  const enviada = new Date(enviadaAprovacaoEm).getTime();
   const agora = new Date(agoraISO).getTime();
   return agora - enviada > 24 * 60 * 60 * 1000;
 }
 
 /**
  * Pré-requisito de cards de pagamento: sem o anexo da planilha de origem do
- * valor, a obrigação não pode ser marcada como pronta/concluída.
+ * valor, o item não pode ser marcado como pronto/concluído.
  */
-export function podeConcluir(obligation: Obligation, user: ObligationUserState | undefined): boolean {
-  if (obligation.tipo === 'cardPagamento') {
-    return user?.anexoPlanilha === true;
-  }
+export function podeConcluir(item: CalendarItem): boolean {
+  if (item.tipo === 'cardPagamento') return item.anexoPresente === true;
   return true;
 }

@@ -4,13 +4,8 @@ import type { DependenciaFaturamento, Project } from '../../domain/types';
 import { DEP_LABEL } from '../format';
 
 const DEPENDENCIAS: DependenciaFaturamento[] = [
-  'nenhuma',
-  'fixo',
-  'empenho',
-  'ordemDeCompra',
-  'validacaoContratante',
-  'relatorioContratante',
-  'escalista',
+  'nenhuma', 'fixo', 'empenho', 'ordemDeCompra',
+  'validacaoContratante', 'relatorioContratante', 'escalista',
 ];
 
 function emptyProject(): Project {
@@ -31,18 +26,18 @@ export function ProjectsAdmin() {
   const [editing, setEditing] = useState<Project | null>(null);
 
   return (
-    <div className="grid gap-[var(--spacing-24)] lg:grid-cols-[1fr_380px]">
-      <div className="space-y-px">
-        <div className="mb-3 flex items-center justify-between">
-          <h2 className="text-[length:var(--text-subheading)]">Projetos</h2>
+    <div className="grid gap-[var(--spacing-24)] lg:grid-cols-[1fr_400px]">
+      <div className="space-y-2">
+        <div className="mb-1 flex items-center justify-between">
+          <h2 className="text-[length:var(--text-heading)]">Projetos</h2>
           <button className="btn-primary" onClick={() => setEditing(emptyProject())}>
             Novo projeto
           </button>
         </div>
         {store.state.projects.map((p) => (
-          <div key={p.id} className="surface hairline flex items-center gap-4 p-[var(--spacing-16)]">
+          <div key={p.id} className="card flex items-center gap-4 p-[var(--spacing-16)]">
             <div className="min-w-0 flex-1">
-              <div className={p.ativo ? 'text-[var(--color-bone)]' : 'text-[var(--color-ash)] opacity-50'}>
+              <div className={p.ativo ? 'font-medium text-[var(--color-ink)]' : 'text-[var(--color-ink-soft)]'}>
                 {p.nome} {!p.ativo && '· inativo'}
               </div>
               <div className="label mt-1">
@@ -51,10 +46,10 @@ export function ProjectsAdmin() {
                 {p.contratoSocialObrigatorio ? ' · contrato social' : ''}
               </div>
             </div>
-            <button className="btn-secondary" data-active onClick={() => setEditing({ ...p })}>
+            <button className="btn-secondary" onClick={() => setEditing({ ...p })}>
               Editar
             </button>
-            <button className="btn-secondary" onClick={() => store.setProjectAtivo(p.id, !p.ativo)}>
+            <button className="btn-ghost" onClick={() => store.setProjectAtivo(p.id, !p.ativo)}>
               {p.ativo ? 'Inativar' : 'Ativar'}
             </button>
           </div>
@@ -102,15 +97,11 @@ function ProjectForm({
   }
 
   const slug = (s: string) =>
-    s
-      .toLowerCase()
-      .normalize('NFD')
-      .replace(/[̀-ͯ]/g, '')
-      .replace(/[^a-z0-9]+/g, '');
+    s.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/[^a-z0-9]+/g, '');
 
   return (
-    <div className="surface hairline h-fit space-y-3 p-[var(--spacing-20)]">
-      <h3>{isNew ? 'Novo projeto' : `Editar ${project.nome}`}</h3>
+    <div className="card h-fit space-y-3 p-[var(--spacing-20)]">
+      <h3 className="text-[length:var(--text-subheading)]">{isNew ? 'Novo projeto' : `Editar ${project.nome}`}</h3>
 
       <Field label="Nome">
         <input
@@ -123,35 +114,26 @@ function ProjectForm({
           }}
         />
       </Field>
-      <Field label="Dia de pagamento">
-        <input
-          className="input"
-          type="number"
-          min={1}
-          max={31}
-          value={draft.diaPagamento}
-          onChange={(e) => set('diaPagamento', Number(e.target.value))}
-        />
-      </Field>
-      <Field label="Dia-limite de lançamento (opcional)">
-        <input
-          className="input"
-          type="number"
-          min={1}
-          max={31}
-          value={draft.diaLancamento ?? ''}
-          onChange={(e) => set('diaLancamento', e.target.value ? Number(e.target.value) : undefined)}
-        />
-      </Field>
+      <div className="grid grid-cols-2 gap-3">
+        <Field label="Dia de pagamento">
+          <input className="input" type="number" min={1} max={31} value={draft.diaPagamento} onChange={(e) => set('diaPagamento', Number(e.target.value))} />
+        </Field>
+        <Field label="Dia-limite lançamento">
+          <input
+            className="input"
+            type="number"
+            min={1}
+            max={31}
+            value={draft.diaLancamento ?? ''}
+            onChange={(e) => set('diaLancamento', e.target.value ? Number(e.target.value) : undefined)}
+          />
+        </Field>
+      </div>
       <Field label="Aferição">
         <input className="input" value={draft.afericao} onChange={(e) => set('afericao', e.target.value)} />
       </Field>
       <Field label="Dependência de faturamento">
-        <select
-          className="input"
-          value={draft.dependenciaFaturamento}
-          onChange={(e) => set('dependenciaFaturamento', e.target.value as DependenciaFaturamento)}
-        >
+        <select className="select" value={draft.dependenciaFaturamento} onChange={(e) => set('dependenciaFaturamento', e.target.value as DependenciaFaturamento)}>
           {DEPENDENCIAS.map((d) => (
             <option key={d} value={d}>
               {DEP_LABEL[d]}
@@ -162,32 +144,24 @@ function ProjectForm({
       <Field label="Escalista">
         <input className="input" value={draft.escalista ?? ''} onChange={(e) => set('escalista', e.target.value)} />
       </Field>
-      <label className="flex items-center gap-3 text-[length:var(--text-caption)]">
-        <input
-          type="checkbox"
-          checked={draft.contratoSocialObrigatorio}
-          onChange={(e) => set('contratoSocialObrigatorio', e.target.checked)}
-        />
+      <label className="flex items-center gap-3 text-[length:var(--text-label)]">
+        <input type="checkbox" checked={draft.contratoSocialObrigatorio} onChange={(e) => set('contratoSocialObrigatorio', e.target.checked)} />
         Contrato social obrigatório
       </label>
-      <label className="flex items-center gap-3 text-[length:var(--text-caption)]">
+      <label className="flex items-center gap-3 text-[length:var(--text-label)]">
         <input type="checkbox" checked={draft.ativo} onChange={(e) => set('ativo', e.target.checked)} />
         Ativo
       </label>
 
       <div className="flex gap-2 pt-2">
-        <button
-          className="btn-primary"
-          disabled={!draft.nome || !draft.id}
-          onClick={() => onSave(draft)}
-        >
+        <button className="btn-primary" disabled={!draft.nome || !draft.id} onClick={() => onSave(draft)}>
           Salvar
         </button>
-        <button className="btn-secondary" data-active onClick={onCancel}>
+        <button className="btn-secondary" onClick={onCancel}>
           Cancelar
         </button>
         {onDelete && (
-          <button className="btn-secondary" onClick={onDelete}>
+          <button className="btn-ghost text-[var(--color-overdue)]" onClick={onDelete}>
             Excluir
           </button>
         )}
