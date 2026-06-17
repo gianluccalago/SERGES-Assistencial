@@ -18,7 +18,7 @@ import type {
 } from '../domain/types';
 import { registrarCobranca } from '../domain/stateMachine';
 import { proximaCompetencia, textoRecuperacao } from '../domain/workflows';
-import type { MedicoCard, ResolucaoMes } from '../domain/types';
+import type { ResolucaoMes } from '../domain/types';
 import {
   loadState,
   saveState,
@@ -70,8 +70,6 @@ interface AppStore {
   upsertContato: (c: Contato) => void;
   removeContato: (id: string) => void;
   contatosDoProjeto: (projetoId?: string) => Contato[];
-  // Lote de pagamento — cards de médico (§4.3)
-  setMedicos: (loteId: string, medicos: MedicoCard[]) => void;
   // Resoluções de mês (§4.5)
   setResolucaoMes: (item: CalendarItem, resolucao: ResolucaoMes | undefined) => void;
   faturadoParcialmente: (item: CalendarItem, valorFaltante: number) => void;
@@ -284,9 +282,6 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       contatosDoProjeto(projetoId) {
         if (!projetoId) return [];
         return state.contatos.filter((c) => c.projetos.includes(projetoId));
-      },
-      setMedicos(loteId, medicos) {
-        patchOverride(loteId, { medicos });
       },
       setResolucaoMes(item, resolucao) {
         // Resoluções de mês aplicam-se a obrigações geradas (lote/faturamento).
