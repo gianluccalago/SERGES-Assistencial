@@ -12,13 +12,24 @@ import type {
   Holiday,
   ManualObligation,
   CalendarItem,
+  AppConfig,
+  ObligationEstado,
 } from '../domain/types';
-import { loadState, saveState, defaultState, type PersistedState } from './persistence';
+import {
+  loadState,
+  saveState,
+  defaultState,
+  loadConfig,
+  saveConfig,
+  type PersistedState,
+} from './persistence';
 import { assembleMonth } from '../domain/resolve';
 import { buildHolidaySet } from '../domain/holidays';
 
 interface AppStore {
   state: PersistedState;
+  config: AppConfig;
+  setConfig: (patch: Partial<AppConfig>) => void;
   // Projetos
   upsertProject: (project: Project) => void;
   removeProject: (id: string) => void;
@@ -39,6 +50,9 @@ interface AppStore {
   moveItem: (item: CalendarItem, novaData: string) => void;
   // Excluir (gerada -> dismissed; manual -> remove)
   deleteItem: (item: CalendarItem) => void;
+  // Estado (gerada -> override.estado; manual -> registro), com trilha de repasse
+  setEstado: (item: CalendarItem, estado: ObligationEstado, marca?: { por?: string }) => void;
+  batchMark: (items: CalendarItem[], estado: ObligationEstado, por?: string) => void;
   // Derivação
   itemsFor: (year: number, month: number) => CalendarItem[];
   dismissedFor: (year: number, month: number) => string[];
@@ -50,10 +64,14 @@ const StoreContext = createContext<AppStore | null>(null);
 
 export function StoreProvider({ children }: { children: ReactNode }) {
   const [state, setState] = useState<PersistedState>(() => loadState());
+  const [config, setConfigState] = useState<AppConfig>(() => loadConfig());
 
   useEffect(() => {
     saveState(state);
   }, [state]);
+  useEffect(() => {
+    saveConfig(config);
+  }, [config]);
 
   const store = useMemo<AppStore>(() => {
     const patchOverride = (id: string, patch: Partial<Override>) =>
@@ -64,6 +82,10 @@ export function StoreProvider({ children }: { children: ReactNode }) {
 
     return {
       state,
+      config,
+      setConfig(patch) {
+        setConfigState((c) => ({ ...c, ...patch }));
+      },
       upsertProject(project) {
         setState((s) => {
           const idx = s.projects.findIndex((p) => p.id === project.id);
@@ -138,6 +160,39 @@ export function StoreProvider({ children }: { children: ReactNode }) {
           patchOverride(item.id, { dismissed: true });
         }
       },
+      setEstado(item, estado, marca) {
+        const marcaPatch =
+          estado === 'concluida'
+            ? { markedAt: new Date().toISOString(), markedBy: marca?.por }
+            : {};
+        if (item.isManual) {
+          setState((s) => ({
+            ...s,
+            manualObligations: s.manualObligations.map((x) =>
+              x.id === item.id ? { ...x, estado, ...marcaPatch } : x,
+            ),
+          }));
+        } else {
+          patchOverride(item.id, { estado, ...marcaPatch });
+        }
+      },
+      batchMark(items, estado, por) {
+        const markedAt = new Date().toISOString();
+        setState((s) => {
+          const overrides = { ...s.overrides };
+          let manuais = s.manualObligations;
+          for (const item of items) {
+            if (item.isManual) {
+              manuais = manuais.map((x) =>
+                x.id === item.id ? { ...x, estado, markedAt, markedBy: por } : x,
+              );
+            } else {
+              overrides[item.id] = { ...overrides[item.id], estado, markedAt, markedBy: por };
+            }
+          }
+          return { ...s, overrides, manualObligations: manuais };
+        });
+      },
       holidaySetFor(years) {
         return buildHolidaySet(years, state.extraHolidays);
       },
@@ -155,7 +210,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
         setState(defaultState());
       },
     };
-  }, [state]);
+  }, [state, config]);
 
   return <StoreContext.Provider value={store}>{children}</StoreContext.Provider>;
 }

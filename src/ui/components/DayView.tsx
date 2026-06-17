@@ -45,12 +45,7 @@ export function DayView({
   }, [store.state, anchorISO, filtros, today]);
 
   function setEstado(item: CalendarItem, estado: ObligationEstado) {
-    if (item.isManual) {
-      const m = store.state.manualObligations.find((x) => x.id === item.id);
-      if (m) store.updateManual({ ...m, estado });
-    } else {
-      store.patchOverride(item.id, { estado });
-    }
+    store.setEstado(item, estado);
   }
 
   const concluidas = doDia.filter((ro) => ro.estado === 'concluida').length;

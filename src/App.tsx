@@ -3,6 +3,8 @@ import { DayView } from './ui/components/DayView';
 import { WeekView } from './ui/components/WeekView';
 import { MonthView } from './ui/components/MonthView';
 import { ListView } from './ui/components/ListView';
+import { ChecklistView } from './ui/components/ChecklistView';
+import { OraculoPage } from './ui/components/OraculoPage';
 import { ProjectsAdmin } from './ui/components/ProjectsAdmin';
 import { HolidaysAdmin } from './ui/components/HolidaysAdmin';
 import { ObligationDetail } from './ui/components/ObligationDetail';
@@ -14,13 +16,14 @@ import type { Filtros } from './ui/filters';
 import { MESES, todayISO, formatDateShort } from './ui/format';
 import { addCalendarDays, fromISODate, toISODate } from './domain/dateUtils';
 
-type Screen = 'dia' | 'semana' | 'mes' | 'lista' | 'projetos' | 'feriados';
+type Screen = 'dia' | 'semana' | 'mes' | 'lista' | 'checklist' | 'oraculo' | 'projetos' | 'feriados';
 
 const VIEW_TABS: Array<{ id: Screen; label: string }> = [
   { id: 'dia', label: 'Dia' },
   { id: 'semana', label: 'Semana' },
   { id: 'mes', label: 'Mês' },
   { id: 'lista', label: 'Lista' },
+  { id: 'checklist', label: 'Checklist' },
 ];
 
 export function App() {
@@ -42,7 +45,8 @@ export function App() {
     return [...set].sort();
   }, [store.state.projects]);
 
-  const isCalendar = screen === 'dia' || screen === 'semana' || screen === 'mes' || screen === 'lista';
+  const isCalendar =
+    screen === 'dia' || screen === 'semana' || screen === 'mes' || screen === 'lista' || screen === 'checklist';
 
   function shift(delta: number) {
     if (screen === 'dia') {
@@ -96,6 +100,9 @@ export function App() {
           </nav>
 
           <div className="flex items-center gap-1">
+            <button className="btn-ghost" data-active={screen === 'oraculo'} onClick={() => setScreen('oraculo')}>
+              Oráculo
+            </button>
             <button className="btn-ghost" data-active={screen === 'projetos'} onClick={() => setScreen('projetos')}>
               Projetos
             </button>
@@ -104,6 +111,9 @@ export function App() {
             </button>
           </div>
 
+          <a className="btn-secondary hidden lg:inline-flex" href={store.config.oraculoUrl} target="_blank" rel="noreferrer">
+            NotebookLM ↗
+          </a>
           <button className="btn-primary" onClick={openNew}>
             + Nova obrigação
           </button>
@@ -160,6 +170,8 @@ export function App() {
         {screen === 'semana' && <WeekView anchorISO={cursorISO} filtros={filtros} onSelect={setSelected} />}
         {screen === 'mes' && <MonthView year={year} month={month} filtros={filtros} onSelect={setSelected} />}
         {screen === 'lista' && <ListView year={year} month={month} filtros={filtros} onSelect={setSelected} />}
+        {screen === 'checklist' && <ChecklistView year={year} month={month} filtros={filtros} onSelect={setSelected} />}
+        {screen === 'oraculo' && <OraculoPage />}
         {screen === 'projetos' && <ProjectsAdmin />}
         {screen === 'feriados' && <HolidaysAdmin year={year} />}
       </main>

@@ -1,6 +1,33 @@
-import type { Project, Override, Holiday, ManualObligation } from '../domain/types';
+import type { Project, Override, Holiday, ManualObligation, AppConfig } from '../domain/types';
 import { seedProjects } from '../data/projects';
 import { seedExtraHolidays } from '../data/holidays';
+
+const CONFIG_KEY = 'serges.config';
+
+export const DEFAULT_ORACULO_URL =
+  'https://notebooklm.google.com/notebook/ee50a784-7239-4b3a-a7d3-a4fb591616c1';
+
+export function defaultConfig(): AppConfig {
+  return { oraculoUrl: DEFAULT_ORACULO_URL };
+}
+
+export function loadConfig(): AppConfig {
+  try {
+    const raw = localStorage.getItem(CONFIG_KEY);
+    if (!raw) return defaultConfig();
+    return { ...defaultConfig(), ...JSON.parse(raw) };
+  } catch {
+    return defaultConfig();
+  }
+}
+
+export function saveConfig(config: AppConfig): void {
+  try {
+    localStorage.setItem(CONFIG_KEY, JSON.stringify(config));
+  } catch {
+    // ignore
+  }
+}
 
 // Persistência local versionada. Guarda três coisas: a configuração dos
 // projetos, os overrides sobre obrigações geradas e as obrigações manuais.
