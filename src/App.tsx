@@ -72,8 +72,13 @@ export function App() {
       {/* Cabeçalho */}
       <header className="sticky top-0 z-30 border-b border-[var(--color-line)] bg-[var(--color-surface)]/95 backdrop-blur">
         <div className="mx-auto flex max-w-[1280px] flex-wrap items-center gap-3 px-[var(--spacing-16)] py-[var(--spacing-12)] md:px-[var(--spacing-24)]">
-          <SergesLogo />
-          <span className="label hidden sm:inline">· Calendário de Obrigações</span>
+          <span className="hidden sm:block">
+            <SergesLogo />
+          </span>
+          <span className="sm:hidden">
+            <SergesLogo compact />
+          </span>
+          <span className="label hidden md:inline">· Calendário de Obrigações</span>
 
           <nav className="ml-auto flex items-center gap-1 rounded-full bg-[var(--color-surface-muted)] p-1">
             {VIEW_TABS.map((t) => (

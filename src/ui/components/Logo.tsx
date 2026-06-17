@@ -1,39 +1,14 @@
-// Lockup SERGES: símbolo (cruz segmentada) + wordmark em fonte arredondada.
-// Os SVGs de marca vivem em src/assets; aqui o lockup é composto para escalar
-// e usar a fonte da página de forma confiável.
+// Lockup SERGES oficial (na cor de marca #2042E1).
+// - azul_1.svg: lockup horizontal (símbolo + "serges") para o cabeçalho.
+// - serges-square.svg: símbolo isolado, para telas pequenas e favicon.
+import lockup from '../../assets/azul_1.svg';
+import square from '../../assets/serges-square.svg';
 
 export function SergesMark({ size = 28 }: { size?: number }) {
-  return (
-    <svg width={size} height={size} viewBox="0 0 100 100" fill="none" aria-hidden>
-      <g fill="var(--color-serges-blue)">
-        <rect x="37" y="6" width="26" height="26" rx="8" />
-        <rect x="6" y="37" width="26" height="26" rx="8" />
-        <rect x="37" y="37" width="26" height="26" rx="8" />
-        <rect x="68" y="37" width="26" height="26" rx="8" />
-        <rect x="37" y="68" width="26" height="26" rx="8" />
-      </g>
-    </svg>
-  );
+  return <img src={square} alt="SERGES" width={size} height={size} style={{ display: 'block' }} />;
 }
 
 export function SergesLogo({ compact = false }: { compact?: boolean }) {
-  return (
-    <span className="inline-flex items-center gap-2" aria-label="SERGES">
-      <SergesMark size={compact ? 26 : 30} />
-      {!compact && (
-        <span
-          className="text-[var(--color-serges-blue)]"
-          style={{
-            fontFamily: 'var(--font-brand)',
-            fontWeight: 600,
-            fontSize: '26px',
-            letterSpacing: '-0.5px',
-            lineHeight: 1,
-          }}
-        >
-          serges
-        </span>
-      )}
-    </span>
-  );
+  if (compact) return <SergesMark size={28} />;
+  return <img src={lockup} alt="SERGES" style={{ height: 30, width: 'auto', display: 'block' }} />;
 }
