@@ -16,7 +16,6 @@ import type {
   ObligationEstado,
   Contato,
 } from '../domain/types';
-import { registrarCobranca } from '../domain/stateMachine';
 import { proximaCompetencia, textoRecuperacao } from '../domain/workflows';
 import type { ResolucaoMes } from '../domain/types';
 import {
@@ -58,9 +57,6 @@ interface AppStore {
   // Estado (gerada -> override.estado; manual -> registro), com trilha de repasse
   setEstado: (item: CalendarItem, estado: ObligationEstado, marca?: { por?: string }) => void;
   batchMark: (items: CalendarItem[], estado: ObligationEstado, por?: string) => void;
-  // Ações (§4.5): cobrar (log) e escalar (protocolo), sem mudar status.
-  cobrar: (item: CalendarItem) => void;
-  escalar: (item: CalendarItem) => void;
   // Editar campos de uma obrigação (gerada -> override; manual -> registro).
   editItem: (
     item: CalendarItem,
@@ -182,10 +178,11 @@ export function StoreProvider({ children }: { children: ReactNode }) {
         }
       },
       setEstado(item, estado, marca) {
-        const marcaPatch =
-          estado === 'concluida'
-            ? { markedAt: new Date().toISOString(), markedBy: marca?.por }
-            : {};
+        const marcaPatch = {
+          ...(estado === 'concluida' ? { markedAt: new Date().toISOString(), markedBy: marca?.por } : {}),
+          // Ao entrar "Em aprovação do Gestor", inicia o timer de 24h.
+          ...(estado === 'emAprovacao' ? { enviadaAprovacaoEm: new Date().toISOString() } : {}),
+        };
         if (item.isManual) {
           setState((s) => ({
             ...s,
@@ -213,32 +210,6 @@ export function StoreProvider({ children }: { children: ReactNode }) {
           }
           return { ...s, overrides, manualObligations: manuais };
         });
-      },
-      cobrar(item) {
-        const agora = new Date().toISOString();
-        if (item.isManual) {
-          setState((s) => ({
-            ...s,
-            manualObligations: s.manualObligations.map((x) =>
-              x.id === item.id ? { ...x, cobrancas: registrarCobranca(x.cobrancas, agora) } : x,
-            ),
-          }));
-        } else {
-          patchOverride(item.id, { cobrancas: registrarCobranca(state.overrides[item.id]?.cobrancas, agora) });
-        }
-      },
-      escalar(item) {
-        const agora = new Date().toISOString();
-        if (item.isManual) {
-          setState((s) => ({
-            ...s,
-            manualObligations: s.manualObligations.map((x) =>
-              x.id === item.id ? { ...x, escaladoEm: agora } : x,
-            ),
-          }));
-        } else {
-          patchOverride(item.id, { escaladoEm: agora });
-        }
       },
       editItem(item, patch) {
         if (item.isManual) {

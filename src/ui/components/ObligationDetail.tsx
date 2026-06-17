@@ -1,10 +1,10 @@
 import { useState } from 'react';
 import { useStore } from '../../state/store';
 import type { ResolvedObligation } from '../useObligations';
-import { ESTADO_LABEL, TIPO_LABEL, DEP_LABEL, estadoChipClass, formatDateLong, todayISO } from '../format';
-import { registrarRetorno, bloqueioConclusao } from '../../domain/stateMachine';
+import { TIPO_LABEL, DEP_LABEL, formatDateLong, todayISO } from '../format';
 import { WorkflowPanels } from './WorkflowPanels';
 import { Selos } from './Selos';
+import { StatusSelector } from './StatusSelector';
 import { EditForm } from './EditForm';
 import { whatsappLink, mailtoLink } from '../contatoLinks';
 import { useToast } from './Toast';
@@ -12,14 +12,12 @@ import { useToast } from './Toast';
 export function ObligationDetail({ ro, onClose }: { ro: ResolvedObligation; onClose: () => void }) {
   const store = useStore();
   const toast = useToast();
-  const { item, estado, prazo, podeConcluir } = ro;
-  const [prazoRetorno, setPrazoRetorno] = useState(todayISO());
+  const { item, prazo } = ro;
   const [novaData, setNovaData] = useState(prazo ?? todayISO());
   const [notas, setNotas] = useState(item.notas ?? '');
   const [editando, setEditando] = useState(false);
   const [valorFaltante, setValorFaltante] = useState('');
 
-  const bloqueio = bloqueioConclusao(item);
   const podeResolverMes = item.tipo === 'lotePagamento' || item.id.startsWith('faturamentoIniciar:');
   const ehFaturamento = item.id.startsWith('faturamentoIniciar:');
 
@@ -35,17 +33,6 @@ export function ObligationDetail({ ro, onClose }: { ro: ResolvedObligation; onCl
     }
   }
 
-  function enviarParaAprovacao() {
-    if (item.isManual) {
-      const m = store.state.manualObligations.find((x) => x.id === item.id);
-      if (m) store.updateManual({ ...m, estado: 'emAprovacao', enviadaAprovacaoEm: new Date().toISOString() });
-    } else {
-      store.patchOverride(item.id, { estado: 'emAprovacao', enviadaAprovacaoEm: new Date().toISOString() });
-    }
-  }
-
-  const aguardando = estado === 'aguardandoInput';
-
   return (
     <div className="fixed inset-0 z-50 flex justify-end bg-black/40" onClick={onClose}>
       <div
@@ -60,9 +47,10 @@ export function ObligationDetail({ ro, onClose }: { ro: ResolvedObligation; onCl
           <button className="btn-ghost" onClick={onClose}>✕</button>
         </div>
 
-        <div className="mt-[var(--spacing-16)] flex flex-wrap gap-2">
-          <span className={estadoChipClass(estado)}>{ESTADO_LABEL[estado]}</span>
-          <Selos ro={ro} mostrarCobrancas />
+        {/* Status: troca livre entre os quatro estados, ida e volta. */}
+        <div className="mt-[var(--spacing-16)] flex flex-wrap items-center gap-2">
+          <StatusSelector ro={ro} />
+          <Selos ro={ro} />
           {item.movida && (
             <span className="chip border-[var(--color-serges-blue)] text-[var(--color-serges-blue)]">Movida</span>
           )}
@@ -169,26 +157,6 @@ export function ObligationDetail({ ro, onClose }: { ro: ResolvedObligation; onCl
         {/* Painéis de workflow (§11) */}
         <WorkflowPanels ro={ro} />
 
-        {/* Registrar retorno do contratante (§4.5) */}
-        {item.tipo === 'faturamentoCard' && aguardando && !item.isManual && (
-          <div className="card mt-[var(--spacing-16)] p-[var(--spacing-16)]">
-            <div className="label mb-2">Registrar retorno do contratante</div>
-            <input className="input" type="date" value={prazoRetorno} onChange={(e) => setPrazoRetorno(e.target.value)} />
-            <button
-              className="btn-primary mt-3 w-full"
-              onClick={() => {
-                store.patchOverride(item.id, {
-                  ...registrarRetorno(store.getOverride(item.id), todayISO(), prazoRetorno),
-                  ocRecebida: item.dependenciaAguardada === 'ordemDeCompra' ? true : undefined,
-                });
-                onClose();
-              }}
-            >
-              Registrar retorno e gerar tarefa
-            </button>
-          </div>
-        )}
-
         {/* Mover de data */}
         <div className="card mt-[var(--spacing-20)] p-[var(--spacing-16)]">
           <div className="label mb-2">Mover para outra data</div>
@@ -205,48 +173,6 @@ export function ObligationDetail({ ro, onClose }: { ro: ResolvedObligation; onCl
           <div className="label mb-1">Notas</div>
           <textarea className="input" rows={2} value={notas} onChange={(e) => setNotas(e.target.value)} onBlur={patchNotas} />
         </div>
-
-        {/* Ações (§4.5) */}
-        <div className="mt-[var(--spacing-24)] flex flex-wrap gap-2">
-          {aguardando && (
-            <button className="btn-secondary" onClick={() => store.cobrar(item)}>
-              Cobrar
-            </button>
-          )}
-          <button className="btn-secondary" onClick={() => store.escalar(item)}>
-            Escalar
-          </button>
-          {estado !== 'emAprovacao' && estado !== 'concluida' && (
-            <button className="btn-secondary" onClick={enviarParaAprovacao}>
-              Enviar para aprovação
-            </button>
-          )}
-          {estado !== 'concluida' ? (
-            <button
-              className="btn-primary"
-              disabled={!podeConcluir}
-              onClick={() => {
-                const anterior = item.baseEstado;
-                store.setEstado(item, 'concluida');
-                toast.show('Concluída.', () => store.setEstado(item, anterior));
-                onClose();
-              }}
-            >
-              Concluir
-            </button>
-          ) : (
-            <button className="btn-secondary" onClick={() => store.setEstado(item, 'pendente')}>
-              Reabrir
-            </button>
-          )}
-        </div>
-
-        {/* Sempre explicar o bloqueio da conclusão (§4.5) */}
-        {estado !== 'concluida' && bloqueio && (
-          <p className="mt-2 text-[length:var(--text-caption)] text-[var(--color-overdue)]">
-            Conclusão bloqueada: {bloqueio}
-          </p>
-        )}
 
         {/* Editar / Excluir */}
         <div className="mt-[var(--spacing-24)] flex items-center justify-between border-t border-[var(--color-line)] pt-[var(--spacing-16)]">

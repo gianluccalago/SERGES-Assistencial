@@ -3,9 +3,10 @@ import { useStore } from '../../state/store';
 import { useMonthObligations, type ResolvedObligation } from '../useObligations';
 import { applyFiltros, type Filtros } from '../filters';
 import { addCalendarDays, fromISODate, toISODate } from '../../domain/dateUtils';
-import { ESTADO_LABEL, TIPO_LABEL, estadoChipClass, formatDateShort, MESES } from '../format';
+import { TIPO_LABEL, formatDateShort, MESES } from '../format';
 import { progressoTexto } from '../../domain/stateMachine';
 import { QuickActions } from './QuickActions';
+import { Selos } from './Selos';
 import { TudoEmDia } from './TudoEmDia';
 
 function weekStart(iso: string): string {
@@ -88,7 +89,7 @@ export function ChecklistView({
   }
 
   function confirmarLote() {
-    const lista = Object.values(sel).filter((ro) => ro.estado !== 'concluida' && ro.podeConcluir);
+    const lista = Object.values(sel).filter((ro) => ro.estado !== 'concluida');
     if (lista.length) store.batchMark(lista.map((ro) => ro.item), 'concluida', responsavel || undefined);
     setSel({});
   }
@@ -205,7 +206,6 @@ function Row({
   onOpen: () => void;
   projetoNome?: string;
 }) {
-  const aguardando = ro.estado === 'aguardandoInput';
   const done = ro.estado === 'concluida';
   return (
     <div className={`card p-[var(--spacing-12)] ${ro.atrasada ? 'border-l-[3px] border-l-[var(--color-overdue)]' : ''}`}>
@@ -214,7 +214,7 @@ function Row({
           type="checkbox"
           className="h-5 w-5 shrink-0 accent-[var(--color-serges-blue)]"
           checked={selecionado}
-          disabled={aguardando || done || !ro.podeConcluir}
+          disabled={done}
           title="Selecionar para marcação em lote (repasse)"
           onChange={onToggle}
         />
@@ -229,7 +229,7 @@ function Row({
             {progressoTexto(ro.item) && <span className="text-[var(--color-ink)]">· {progressoTexto(ro.item)}</span>}
           </div>
         </button>
-        <span className={estadoChipClass(ro.estado)}>{ESTADO_LABEL[ro.estado]}</span>
+        <Selos ro={ro} />
       </div>
       <div className="mt-2">
         <QuickActions ro={ro} />

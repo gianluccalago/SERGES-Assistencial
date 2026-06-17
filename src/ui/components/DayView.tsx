@@ -7,7 +7,6 @@ import {
   DOW_LONGO,
   MESES,
   todayISO,
-  ESTADO_LABEL,
   TIPO_LABEL,
   estadoChipClass,
   itemAccentClass,
@@ -17,7 +16,6 @@ import { progressoTexto } from '../../domain/stateMachine';
 import { Selos } from './Selos';
 import { QuickActions } from './QuickActions';
 import { TudoEmDia } from './TudoEmDia';
-import type { CalendarItem, ObligationEstado } from '../../domain/types';
 
 export function DayView({
   anchorISO,
@@ -47,10 +45,6 @@ export function DayView({
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [store.state, anchorISO, filtros, today]);
-
-  function setEstado(item: CalendarItem, estado: ObligationEstado) {
-    store.setEstado(item, estado);
-  }
 
   const concluidas = doDia.filter((ro) => ro.estado === 'concluida').length;
   const total = doDia.length;
@@ -92,27 +86,12 @@ export function DayView({
         {doDia.map((ro) => {
           const { item, estado } = ro;
           const done = estado === 'concluida';
-          const checkDisabled = !done && !ro.podeConcluir;
           return (
             <div
               key={item.id}
               className={`card p-[var(--spacing-16)] ${itemAccentClass({ atrasada: ro.atrasada, concluido: done, critico: ro.critico })}`}
             >
-             <div className="flex items-center gap-3">
-              <input
-                type="checkbox"
-                className="h-5 w-5 shrink-0 accent-[var(--color-serges-blue)]"
-                checked={done}
-                disabled={checkDisabled}
-                title={
-                  checkDisabled
-                    ? estado === 'aguardandoInput'
-                      ? 'Aguarda o contratante: registre o retorno em vez de concluir'
-                      : 'Complete os guardrails antes de concluir'
-                    : undefined
-                }
-                onChange={() => setEstado(item, done ? 'pendente' : 'concluida')}
-              />
+             <div className="flex items-start gap-3">
               <button className="min-w-0 flex-1 text-left" onClick={() => onSelect(ro)}>
                 <div
                   className={`text-[length:var(--text-body)] ${
@@ -130,16 +109,11 @@ export function DayView({
                   {progressoTexto(item) && <span className="text-[var(--color-ink)]">· {progressoTexto(item)}</span>}
                 </div>
               </button>
-              <div className="flex flex-col items-end gap-1">
-                <span className={estadoChipClass(estado)}>{ESTADO_LABEL[estado]}</span>
-                <Selos ro={ro} />
-              </div>
+              <Selos ro={ro} />
              </div>
-             {(estado === 'aguardandoInput' || estado === 'concluida') && (
-               <div className="mt-2">
-                 <QuickActions ro={ro} />
-               </div>
-             )}
+             <div className="mt-2">
+               <QuickActions ro={ro} />
+             </div>
             </div>
           );
         })}
