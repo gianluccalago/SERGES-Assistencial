@@ -41,13 +41,37 @@ export type AsfSubEstado =
   | 'aprovado';
 
 export type ObligationTipo =
-  | 'cardPagamento'
+  | 'lotePagamento'
   | 'faturamentoIniciar'
   | 'faturamentoCard'
   | 'fixa'
   | 'apresentacao'
   | 'fechamento'
   | 'evento';
+
+/** Vínculo do médico (§4.3). */
+export type MedicoVinculo = 'socio' | 'PJ';
+
+/** SERGES Connect (ex-ASPA): validação não obrigatória, 3 opções (§11.2). */
+export type SergesConnect = 'realizada' | 'parcialmente' | 'nada';
+
+/** Resolução explícita de mês para pagamento/faturamento (§4.5). */
+export type ResolucaoMes = 'semAtuacao' | 'faturadoParcialmente';
+
+/**
+ * Card de um médico dentro de um lote de pagamento (§4.3). Guardrails
+ * fundamentais (planilha + PIX) bloqueiam o "pronto"; SERGES Connect não bloqueia.
+ */
+export interface MedicoCard {
+  id: string;
+  nome: string;
+  valor?: number;
+  vinculo: MedicoVinculo;
+  anexoPresente?: boolean;
+  pixConferido?: boolean;
+  sergesConnect?: SergesConnect;
+  aprovado?: boolean;
+}
 
 /**
  * Status de uma obrigação — exatamente quatro (§4.5). "Atrasada", "Crítico" e
@@ -88,9 +112,17 @@ export interface Obligation {
 export interface Override {
   /** Nova data (ISO) que vence a derivada. */
   dataNova?: string;
-  /** Esconde a obrigação gerada; pode ser desfeito. */
+  /** Esconde a obrigação gerada ("Ocultar"); pode ser desfeito. */
   dismissed?: boolean;
   estado?: ObligationEstado;
+  /** Cards de médico do lote de pagamento (§4.3), adicionados manualmente. */
+  medicos?: MedicoCard[];
+  /** Resolução de mês (§4.5): sem atuação ou faturado parcialmente. */
+  resolucaoMes?: ResolucaoMes;
+  /** Valor faltante quando faturado parcialmente. */
+  valorFaltante?: number;
+  /** Recuperação carregada do mês anterior (faturamento parcial). */
+  recuperacao?: { texto: string; valor: number };
   /** Campos editados pelo usuário sobre a obrigação gerada (§4.5). */
   titulo?: string;
   responsavel?: string;
@@ -218,4 +250,8 @@ export interface CalendarItem {
   // Marcadores de ação (§4.5).
   escalado?: boolean;
   cobrancasCount?: number;
+  // Lote de pagamento (§4.3) e resoluções de mês (§4.5).
+  medicos?: MedicoCard[];
+  resolucaoMes?: ResolucaoMes;
+  recuperacao?: { texto: string; valor: number };
 }

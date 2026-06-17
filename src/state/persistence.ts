@@ -156,6 +156,15 @@ function migrate(state: any): PersistedState {
     }
   }
 
+  // Renomeia ids antigos cardPagamento: -> lotePagamento: (§4.3).
+  for (const id of Object.keys(overrides)) {
+    if (id.startsWith('cardPagamento:')) {
+      const novo = id.replace(/^cardPagamento:/, 'lotePagamento:');
+      overrides[novo] = { ...overrides[novo], ...overrides[id] };
+      delete overrides[id];
+    }
+  }
+
   // Normaliza status antigos para o modelo de 4 status (§4.5).
   for (const ov of Object.values(overrides)) {
     if (ov.estado) ov.estado = migrarEstado(ov.estado);

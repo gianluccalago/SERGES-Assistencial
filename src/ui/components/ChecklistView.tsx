@@ -27,7 +27,9 @@ export function ChecklistView({
   const [sel, setSel] = useState<Record<string, ResolvedObligation>>({});
   const [responsavel, setResponsavel] = useState('');
 
-  const visiveis = soPendentes ? items.filter((ro) => ro.estado !== 'concluida') : items;
+  const resolvido = (ro: ResolvedObligation) =>
+    ro.estado === 'concluida' || ro.item.resolucaoMes === 'semAtuacao';
+  const visiveis = soPendentes ? items.filter((ro) => !resolvido(ro)) : items;
 
   // Progresso
   const concluidas = items.filter((ro) => ro.estado === 'concluida').length;
@@ -200,7 +202,7 @@ function Row({
         className="h-5 w-5 shrink-0 accent-[var(--color-serges-blue)]"
         checked={selecionado}
         disabled={aguardando || done || !ro.podeConcluir}
-        title={aguardando ? 'Aguarda o contratante: registre o retorno no detalhe' : !ro.podeConcluir ? 'Faltam guardrails (anexo/ASPA/PIX)' : undefined}
+        title={aguardando ? 'Aguarda o contratante: registre o retorno no detalhe' : !ro.podeConcluir ? 'Conclusão bloqueada — veja o detalhe' : undefined}
         onChange={onToggle}
       />
       <button className="min-w-0 flex-1 text-left" onClick={onOpen}>

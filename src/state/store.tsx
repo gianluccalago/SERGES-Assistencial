@@ -17,6 +17,8 @@ import type {
   Contato,
 } from '../domain/types';
 import { registrarCobranca } from '../domain/stateMachine';
+import { proximaCompetencia, textoRecuperacao } from '../domain/workflows';
+import type { MedicoCard, ResolucaoMes } from '../domain/types';
 import {
   loadState,
   saveState,
@@ -68,6 +70,11 @@ interface AppStore {
   upsertContato: (c: Contato) => void;
   removeContato: (id: string) => void;
   contatosDoProjeto: (projetoId?: string) => Contato[];
+  // Lote de pagamento — cards de médico (§4.3)
+  setMedicos: (loteId: string, medicos: MedicoCard[]) => void;
+  // Resoluções de mês (§4.5)
+  setResolucaoMes: (item: CalendarItem, resolucao: ResolucaoMes | undefined) => void;
+  faturadoParcialmente: (item: CalendarItem, valorFaltante: number) => void;
   // Derivação
   itemsFor: (year: number, month: number) => CalendarItem[];
   dismissedFor: (year: number, month: number) => string[];
@@ -277,6 +284,30 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       contatosDoProjeto(projetoId) {
         if (!projetoId) return [];
         return state.contatos.filter((c) => c.projetos.includes(projetoId));
+      },
+      setMedicos(loteId, medicos) {
+        patchOverride(loteId, { medicos });
+      },
+      setResolucaoMes(item, resolucao) {
+        // Resoluções de mês aplicam-se a obrigações geradas (lote/faturamento).
+        patchOverride(item.id, { resolucaoMes: resolucao });
+      },
+      faturadoParcialmente(item, valorFaltante) {
+        // Conclui o faturamento do mês com a marca de faturado parcialmente.
+        patchOverride(item.id, {
+          estado: 'concluida',
+          resolucaoMes: 'faturadoParcialmente',
+          valorFaltante,
+          markedAt: new Date().toISOString(),
+        });
+        // Carrega a recuperação para o faturamento do mesmo projeto no mês seguinte.
+        if (item.projetoId) {
+          const proxComp = proximaCompetencia(item.competencia);
+          const proxId = `faturamentoIniciar:${item.projetoId}:${proxComp}`;
+          patchOverride(proxId, {
+            recuperacao: { texto: textoRecuperacao(item.competencia), valor: valorFaltante },
+          });
+        }
       },
       holidaySetFor(years) {
         return buildHolidaySet(years, state.extraHolidays);

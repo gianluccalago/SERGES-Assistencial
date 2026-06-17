@@ -45,16 +45,19 @@ aguardam o contratante e a cadeia de escalonamento.
   o dia 15).
 - **FOPAM de fechamento** — último dia útil do mês.
 
-## Guardrails do card de pagamento (§11.2)
+## Lote de pagamento e guardrails (§4.3, §11.2)
 
-Antes de marcar como pronto, exigir:
+O pagamento de um projeto no mês é um **lote** com um card por médico. Cada card
+de médico tem guardrails próprios:
 
-1. **Anexo da planilha** de origem do valor.
-2. **Confirmação ASPA** — o médico validou e concordou com o valor das horas.
-3. **Conferência de PIX** — a chave corresponde ao vínculo (sócio ou PJ).
+- **Fundamentais (bloqueiam o card pronto)**: planilha de origem anexada e PIX
+  conferido (a chave corresponde ao vínculo, sócio ou PJ).
+- **SERGES Connect** (ex-ASPA): não bloqueia. Três opções — Realizada,
+  Parcialmente ou Nada — confirmando que o médico validou o valor das horas.
 
-Se o projeto exige **contrato social**: aviso destacado — nota fiscal não
-permitida, risco de quarteirização.
+O lote só conclui quando **todos** os cards de médico estão prontos e aprovados
+(mostra progresso, ex.: 12 de 15). Se o projeto exige **contrato social**: aviso
+destacado — nota fiscal não permitida, risco de quarteirização.
 
 ## Sub-workflow da ASF (§11.3)
 

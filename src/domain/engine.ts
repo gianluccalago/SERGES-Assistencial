@@ -50,7 +50,7 @@ export function paymentDate(
  * nominal de pagamento (ou do dia-limite de lançamento, quando houver), e
  * antecipado para o dia útil anterior se cair em dia não útil. Prazo crítico.
  */
-export function cardPagamentoPrazo(
+export function lotePagamentoPrazo(
   project: Project,
   year: number,
   month: number,
@@ -138,15 +138,15 @@ export function deriveObligations(
   const ativos = projects.filter((p) => p.ativo);
 
   for (const p of ativos) {
-    // --- Card de pagamento ---
+    // --- Lote de pagamento (um por projeto/mês, contém os cards de médico) ---
     if (p.id === 'academia') {
       // Exceção: o card do Fred é lançado sempre no dia 1, regra própria.
       const dia1 = ajustarDiaUtil(utcDate(year, month, 1), holidays, 'antecipa');
       out.push({
-        id: `cardPagamento:${p.id}:${comp}`,
-        titulo: `Card de pagamento — ${p.nome} (Fred, dia 1)`,
+        id: `lotePagamento:${p.id}:${comp}`,
+        titulo: `Pagamentos do projeto ${p.nome} (Fred, dia 1)`,
         projetoId: p.id,
-        tipo: 'cardPagamento',
+        tipo: 'lotePagamento',
         regraOrigem: 'Exceção Academia: card do Fred lançado no dia 1.',
         competencia: comp,
         prazoCalculado: toISODate(dia1),
@@ -155,13 +155,13 @@ export function deriveObligations(
         critico: true,
       });
     } else {
-      const prazo = cardPagamentoPrazo(p, year, month, holidays);
+      const prazo = lotePagamentoPrazo(p, year, month, holidays);
       const base = p.diaLancamento !== undefined ? 'dia-limite de lançamento' : 'pagamento − 5 dias corridos';
       out.push({
-        id: `cardPagamento:${p.id}:${comp}`,
-        titulo: `Card de pagamento — ${p.nome}`,
+        id: `lotePagamento:${p.id}:${comp}`,
+        titulo: `Pagamentos do projeto ${p.nome}`,
         projetoId: p.id,
-        tipo: 'cardPagamento',
+        tipo: 'lotePagamento',
         regraOrigem: `Prazo crítico: ${base}, antecipa em dia não útil.`,
         competencia: comp,
         prazoCalculado: toISODate(prazo),

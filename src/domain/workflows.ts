@@ -1,6 +1,26 @@
 import type { AsfSubEstado, ManualObligation } from './types';
 import { fromISODate, toISODate, utcDate } from './dateUtils';
 
+const MESES_EXTENSO = [
+  'janeiro', 'fevereiro', 'março', 'abril', 'maio', 'junho',
+  'julho', 'agosto', 'setembro', 'outubro', 'novembro', 'dezembro',
+];
+
+/**
+ * Competência do mês seguinte a uma competência YYYY-MM (§4.5, faturamento parcial).
+ */
+export function proximaCompetencia(comp: string): string {
+  const [y, m] = comp.split('-').map(Number);
+  const idx = y * 12 + (m - 1) + 1;
+  return `${Math.floor(idx / 12)}-${String((idx % 12) + 1).padStart(2, '0')}`;
+}
+
+/** Texto da recuperação a carregar: "referente ao mês de <mês anterior por extenso>". */
+export function textoRecuperacao(compAnterior: string): string {
+  const [, m] = compAnterior.split('-').map(Number);
+  return `Recuperar valor referente ao mês de ${MESES_EXTENSO[m - 1]}`;
+}
+
 // Lógica pura das extensões de workflow (§11). Sem dependência de UI.
 
 /** Ordem linear do sub-workflow da ASF (§11.3). */
@@ -60,7 +80,7 @@ export function cardDevolucaoContratoSocial(refISO: string, projetoId?: string):
     id: `manual:devolucao:${Date.now()}`,
     titulo: 'Devolução do contrato social (R$ 50)',
     data: toISODate(proximo),
-    tipo: 'cardPagamento',
+    tipo: 'evento',
     projetoId,
     estado: 'pendente',
     notas: 'Saída do contrato social: card de R$ 50 sem prazo crítico, pode ir para o mês seguinte (§11.7).',

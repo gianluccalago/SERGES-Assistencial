@@ -5,7 +5,7 @@ import { TIPO_LABEL, todayISO } from '../format';
 
 const TIPOS: ObligationTipo[] = [
   'evento',
-  'cardPagamento',
+  'lotePagamento',
   'faturamentoIniciar',
   'faturamentoCard',
   'fixa',

@@ -13,6 +13,7 @@ import {
   cardDevolucaoContratoSocial,
 } from '../../domain/workflows';
 import { todayISO } from '../format';
+import { LotePagamentoPanel } from './LotePagamentoPanel';
 
 // Painéis contextuais das extensões de workflow (§11). Só para obrigações
 // geradas (não manuais), com base no id/tipo. Gravam no override.
@@ -25,7 +26,7 @@ export function WorkflowPanels({ ro }: { ro: ResolvedObligation }) {
   const set = (patch: Partial<Override>) => store.patchOverride(item.id, patch);
   const projeto = item.projetoId ? store.state.projects.find((p) => p.id === item.projetoId) : undefined;
 
-  const isCardPag = item.tipo === 'cardPagamento';
+  const isLote = item.tipo === 'lotePagamento';
   const isAsfFat = item.id.startsWith('faturamentoIniciar:asf:');
   const is0600 = item.id.startsWith('fixa:finalizar0600:');
   const isDoc = item.id.startsWith('fixa:documentacao:');
@@ -34,7 +35,8 @@ export function WorkflowPanels({ ro }: { ro: ResolvedObligation }) {
 
   return (
     <>
-      {isCardPag && <Guardrails ro={ro} ov={ov} set={set} tetoNota={projeto?.tetoNota} contratoSocial={!!projeto?.contratoSocialObrigatorio} />}
+      {isLote && <LotePagamentoPanel item={item} contratoSocial={!!projeto?.contratoSocialObrigatorio} />}
+      {isLote && projeto?.tetoNota && <NotasFracionadas tetoNota={projeto.tetoNota} />}
       {isAsfFat && <AsfWorkflow ov={ov} set={set} />}
       {is0600 && <Checklist0600 ov={ov} set={set} />}
       {isDoc && <ZapSign ov={ov} set={set} />}
@@ -62,51 +64,18 @@ function Check({ label, checked, onChange }: { label: string; checked: boolean; 
   );
 }
 
-// §11.2 — guardrails do card de pagamento
-function Guardrails({
-  ro,
-  ov,
-  set,
-  tetoNota,
-  contratoSocial,
-}: {
-  ro: ResolvedObligation;
-  ov?: Override;
-  set: (p: Partial<Override>) => void;
-  tetoNota?: number;
-  contratoSocial: boolean;
-}) {
+// §11.5 — apoio a notas fracionadas (Ipiranga, Herval)
+function NotasFracionadas({ tetoNota }: { tetoNota: number }) {
   const [total, setTotal] = useState('');
-  const frac = tetoNota && Number(total) > 0 ? notasFracionadas(Number(total), tetoNota) : null;
+  const frac = Number(total) > 0 ? notasFracionadas(Number(total), tetoNota) : null;
   return (
-    <Panel titulo="Guardrails do card de pagamento">
-      {contratoSocial && (
-        <div className="mb-2 rounded-[var(--radius-sm)] border border-[var(--color-overdue)] bg-[color-mix(in_srgb,var(--color-overdue)_8%,transparent)] p-2 text-[length:var(--text-caption)] text-[var(--color-overdue)]">
-          Projeto exige contrato social · nota fiscal não permitida · risco de quarteirização.
-        </div>
-      )}
-      <Check label="Planilha de origem do valor anexada" checked={ov?.anexoPresente ?? ro.item.anexoPresente ?? false} onChange={(v) => set({ anexoPresente: v })} />
-      <Check label="ASPA: o médico validou e concordou com o valor das horas" checked={ov?.aspaConfirmado ?? false} onChange={(v) => set({ aspaConfirmado: v })} />
-      <Check label="PIX conferido: a chave corresponde ao vínculo (sócio ou PJ)" checked={ov?.pixConferido ?? false} onChange={(v) => set({ pixConferido: v })} />
-      <div className="mt-1 flex gap-3">
-        <button className="btn-ghost" onClick={() => set({ anexoPresente: true, aspaConfirmado: true, pixConferido: true })}>
-          Marcar todos
-        </button>
-        <button className="btn-ghost" onClick={() => set({ anexoPresente: false, aspaConfirmado: false, pixConferido: false })}>
-          Desmarcar todos
-        </button>
-      </div>
-
-      {tetoNota && (
-        <div className="mt-3 border-t border-[var(--color-line)] pt-3">
-          <div className="label mb-1">Notas fracionadas — teto R$ {tetoNota.toLocaleString('pt-BR')}/nota</div>
-          <input className="input" inputMode="decimal" placeholder="Valor total a faturar" value={total} onChange={(e) => setTotal(e.target.value)} />
-          {frac && frac.quantidade > 0 && (
-            <p className="label mt-1">
-              Dividir em <strong className="text-[var(--color-ink)]">{frac.quantidade}</strong> nota(s) de ~R$ {frac.valorPorNota.toLocaleString('pt-BR')}.
-            </p>
-          )}
-        </div>
+    <Panel titulo="Notas fracionadas">
+      <div className="label mb-1">Teto R$ {tetoNota.toLocaleString('pt-BR')}/nota</div>
+      <input className="input" inputMode="decimal" placeholder="Valor total a faturar" value={total} onChange={(e) => setTotal(e.target.value)} />
+      {frac && frac.quantidade > 0 && (
+        <p className="label mt-1">
+          Dividir em <strong className="text-[var(--color-ink)]">{frac.quantidade}</strong> nota(s) de ~R$ {frac.valorPorNota.toLocaleString('pt-BR')}.
+        </p>
       )}
     </Panel>
   );

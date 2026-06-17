@@ -11,6 +11,8 @@ export function Selos({ ro, mostrarCobrancas = false }: { ro: ResolvedObligation
       {ro.contratanteAtrasado && (
         <span className="chip border-[var(--color-overdue)] text-[var(--color-overdue)]">Contratante atrasado</span>
       )}
+      {ro.item.resolucaoMes === 'semAtuacao' && <span className="chip">Sem atuação</span>}
+      {ro.item.resolucaoMes === 'faturadoParcialmente' && <span className="chip">Faturado parcial</span>}
       {ro.critico && <span className="chip">Crítico</span>}
       {ro.escalado && (
         <span className="chip bg-[var(--color-serges-blue)] border-[var(--color-serges-blue)] uppercase tracking-wide text-white">
