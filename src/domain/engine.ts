@@ -116,8 +116,9 @@ const FIXED_TASKS: FixedTask[] = [
   {
     chave: 'contratoSocialContabilidade',
     dia: 20,
-    titulo: 'Enviar contrato social à contabilidade (confirmar entradas/saídas com escalistas)',
-    modo: 'adia',
+    titulo: 'Alteração do contrato social — envio à contabilidade',
+    modo: 'antecipa', // teto dia 20: antecipa em dia não útil, não adia.
+    critico: true,
   },
 ];
 

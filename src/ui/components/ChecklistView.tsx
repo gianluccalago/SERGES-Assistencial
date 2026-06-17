@@ -4,6 +4,7 @@ import { useMonthObligations, type ResolvedObligation } from '../useObligations'
 import { applyFiltros, type Filtros } from '../filters';
 import { addCalendarDays, fromISODate, toISODate } from '../../domain/dateUtils';
 import { ESTADO_LABEL, TIPO_LABEL, estadoChipClass, formatDateShort, MESES } from '../format';
+import { progressoTexto } from '../../domain/stateMachine';
 
 function weekStart(iso: string): string {
   const d = fromISODate(iso);
@@ -213,6 +214,7 @@ function Row({
           <span>{TIPO_LABEL[ro.item.tipo]}</span>
           {ro.prazo && <span>· {formatDateShort(ro.prazo)}</span>}
           {projetoNome && <span>· {projetoNome}</span>}
+          {progressoTexto(ro.item) && <span className="text-[var(--color-ink)]">· {progressoTexto(ro.item)}</span>}
           {aguardando && aguardandoContato && <span className="text-[var(--color-ink-soft)]">· cobrar {aguardandoContato}</span>}
         </div>
       </button>

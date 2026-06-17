@@ -13,6 +13,7 @@ import {
   itemAccentClass,
 } from '../format';
 import { isAguardando } from '../../domain/resolve';
+import { progressoTexto } from '../../domain/stateMachine';
 import { Selos } from './Selos';
 import type { CalendarItem, ObligationEstado } from '../../domain/types';
 
@@ -127,6 +128,7 @@ export function DayView({
                     <span>· {store.state.projects.find((p) => p.id === item.projetoId)?.nome}</span>
                   )}
                   {item.responsavel && <span>· {item.responsavel}</span>}
+                  {progressoTexto(item) && <span className="text-[var(--color-ink)]">· {progressoTexto(item)}</span>}
                 </div>
               </button>
               <div className="flex flex-col items-end gap-1">

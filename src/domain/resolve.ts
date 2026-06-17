@@ -35,6 +35,7 @@ export function applyOverride(obligation: Obligation, override?: Override): Cale
     medicos: override?.medicos,
     resolucaoMes: override?.resolucaoMes,
     recuperacao: override?.recuperacao,
+    contratoSocial: override?.contratoSocial,
     isManual: false,
     movida: override?.dataNova != null,
   };
