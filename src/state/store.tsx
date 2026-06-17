@@ -6,9 +6,15 @@ import {
   useState,
   type ReactNode,
 } from 'react';
-import type { Project, ObligationUserState, Holiday, Obligation } from '../domain/types';
-import { loadState, saveState, defaultState, type PersistedState, type PersistedEvento } from './persistence';
-import { deriveObligations } from '../domain/engine';
+import type {
+  Project,
+  Override,
+  Holiday,
+  ManualObligation,
+  CalendarItem,
+} from '../domain/types';
+import { loadState, saveState, defaultState, type PersistedState } from './persistence';
+import { assembleMonth } from '../domain/resolve';
 import { buildHolidaySet } from '../domain/holidays';
 
 interface AppStore {
@@ -20,14 +26,22 @@ interface AppStore {
   // Feriados
   addHoliday: (holiday: Holiday) => void;
   removeHoliday: (date: string) => void;
-  // Estado de obrigações
-  updateObligationState: (id: string, patch: Partial<ObligationUserState>) => void;
-  getObligationState: (id: string) => ObligationUserState | undefined;
-  // Eventos avulsos
-  addEvento: (evento: PersistedEvento) => void;
-  removeEvento: (id: string) => void;
+  // Overrides sobre obrigações geradas
+  patchOverride: (id: string, patch: Partial<Override>) => void;
+  getOverride: (id: string) => Override | undefined;
+  dismiss: (id: string) => void;
+  undismiss: (id: string) => void;
+  // Obrigações manuais
+  addManual: (m: ManualObligation) => void;
+  updateManual: (m: ManualObligation) => void;
+  removeManual: (id: string) => void;
+  // Mover (gerada -> override.dataNova; manual -> altera data)
+  moveItem: (item: CalendarItem, novaData: string) => void;
+  // Excluir (gerada -> dismissed; manual -> remove)
+  deleteItem: (item: CalendarItem) => void;
   // Derivação
-  obligationsFor: (year: number, month: number) => Obligation[];
+  itemsFor: (year: number, month: number) => CalendarItem[];
+  dismissedFor: (year: number, month: number) => string[];
   holidaySetFor: (years: number[]) => Set<string>;
   resetAll: () => void;
 }
@@ -42,6 +56,12 @@ export function StoreProvider({ children }: { children: ReactNode }) {
   }, [state]);
 
   const store = useMemo<AppStore>(() => {
+    const patchOverride = (id: string, patch: Partial<Override>) =>
+      setState((s) => ({
+        ...s,
+        overrides: { ...s.overrides, [id]: { ...s.overrides[id], ...patch } },
+      }));
+
     return {
       state,
       upsertProject(project) {
@@ -71,46 +91,65 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       removeHoliday(date) {
         setState((s) => ({ ...s, extraHolidays: s.extraHolidays.filter((h) => h.date !== date) }));
       },
-      updateObligationState(id, patch) {
+      patchOverride,
+      getOverride(id) {
+        return state.overrides[id];
+      },
+      dismiss(id) {
+        patchOverride(id, { dismissed: true });
+      },
+      undismiss(id) {
+        patchOverride(id, { dismissed: false });
+      },
+      addManual(m) {
+        setState((s) => ({ ...s, manualObligations: [...s.manualObligations, m] }));
+      },
+      updateManual(m) {
         setState((s) => ({
           ...s,
-          obligationStates: {
-            ...s.obligationStates,
-            [id]: { ...s.obligationStates[id], ...patch },
-          },
+          manualObligations: s.manualObligations.map((x) => (x.id === m.id ? m : x)),
         }));
       },
-      getObligationState(id) {
-        return state.obligationStates[id];
+      removeManual(id) {
+        setState((s) => ({
+          ...s,
+          manualObligations: s.manualObligations.filter((x) => x.id !== id),
+        }));
       },
-      addEvento(evento) {
-        setState((s) => ({ ...s, eventos: [...s.eventos.filter((e) => e.id !== evento.id), evento] }));
+      moveItem(item, novaData) {
+        if (item.isManual) {
+          setState((s) => ({
+            ...s,
+            manualObligations: s.manualObligations.map((x) =>
+              x.id === item.id ? { ...x, data: novaData } : x,
+            ),
+          }));
+        } else {
+          patchOverride(item.id, { dataNova: novaData });
+        }
       },
-      removeEvento(id) {
-        setState((s) => ({ ...s, eventos: s.eventos.filter((e) => e.id !== id) }));
+      deleteItem(item) {
+        if (item.isManual) {
+          setState((s) => ({
+            ...s,
+            manualObligations: s.manualObligations.filter((x) => x.id !== item.id),
+          }));
+        } else {
+          patchOverride(item.id, { dismissed: true });
+        }
       },
       holidaySetFor(years) {
         return buildHolidaySet(years, state.extraHolidays);
       },
-      obligationsFor(year, month) {
+      itemsFor(year, month) {
         const holidays = buildHolidaySet([year - 1, year, year + 1], state.extraHolidays);
-        const derived = deriveObligations(year, month, state.projects, holidays);
+        return assembleMonth(year, month, state.projects, holidays, state.overrides, state.manualObligations);
+      },
+      dismissedFor(year, month) {
         const comp = `${year}-${String(month).padStart(2, '0')}`;
-        const eventos: Obligation[] = state.eventos
-          .filter((e) => e.prazoCalculado.startsWith(comp))
-          .map((e) => ({
-            id: e.id,
-            titulo: e.titulo,
-            projetoId: e.projetoId,
-            tipo: 'evento',
-            regraOrigem: e.regraOrigem,
-            competencia: comp,
-            prazoCalculado: e.prazoCalculado,
-            estado: 'pendente',
-            responsavel: e.responsavel,
-            critico: e.critico,
-          }));
-        return [...derived, ...eventos];
+        return Object.entries(state.overrides)
+          .filter(([id, ov]) => ov.dismissed && id.endsWith(`:${comp}`))
+          .map(([id]) => id);
       },
       resetAll() {
         setState(defaultState());

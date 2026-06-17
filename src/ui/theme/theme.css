@@ -1,38 +1,47 @@
 @import 'tailwindcss';
 
 @theme {
-  --color-ember: #ff4700;
-  --color-ember-glow: #8b2e09;
-  --color-ember-smoke: #451e0e;
-  --color-obsidian: #0f0d0a;
-  --color-graphite: #161412;
-  --color-ash: #cccccc;
-  --color-bone: #ffffff;
+  --color-serges-blue: #2042e1;
+  --color-serges-blue-strong: #1a36bc;
+  --color-serges-blue-tint: #eaedfc;
+  --color-serges-blue-tint-soft: #f4f6fe;
+  --color-canvas: #ffffff;
+  --color-surface: #ffffff;
+  --color-surface-muted: #f5f6f8;
+  --color-ink: #15161c;
+  --color-ink-soft: #5b6170;
+  --color-line: #e5e7eb;
+  --color-overdue: #d92d20;
+  --color-done: #1f9d55;
 
-  --font-helvetica-neue: 'Helvetica Neue', ui-sans-serif, system-ui, -apple-system,
-    BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  --font-ui: 'Inter', ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+  --font-brand: 'Fredoka', 'Baloo 2', 'Nunito', ui-rounded, system-ui, sans-serif;
 
   --text-caption: 13px;
-  --leading-caption: 1.7;
-  --tracking-caption: 0.13px;
+  --text-label: 14px;
   --text-body: 15px;
-  --leading-body: 1.5;
-  --text-subheading: 22px;
-  --leading-subheading: 1;
+  --text-subheading: 18px;
+  --text-heading: 22px;
+  --text-title: 28px;
 
   --font-weight-regular: 400;
   --font-weight-medium: 500;
+  --font-weight-semibold: 600;
   --font-weight-bold: 700;
 
+  --spacing-8: 8px;
   --spacing-12: 12px;
   --spacing-16: 16px;
   --spacing-20: 20px;
   --spacing-24: 24px;
-  --spacing-40: 40px;
-  --spacing-80: 80px;
+  --spacing-32: 32px;
 
-  --radius-md: 4px;
+  --radius-sm: 8px;
+  --radius-md: 12px;
   --radius-full: 9999px;
+
+  --shadow-soft: 0 1px 2px rgba(21, 22, 28, 0.06), 0 4px 16px rgba(21, 22, 28, 0.06);
+  --shadow-pop: 0 8px 30px rgba(21, 22, 28, 0.14);
 }
 
 @layer base {
@@ -41,113 +50,133 @@
   #root {
     height: 100%;
   }
-
   body {
     margin: 0;
-    background-color: var(--color-obsidian);
-    color: var(--color-ash);
-    font-family: var(--font-helvetica-neue);
+    background-color: var(--color-canvas);
+    color: var(--color-ink);
+    font-family: var(--font-ui);
     font-size: var(--text-body);
-    line-height: var(--leading-body);
+    line-height: 1.5;
     -webkit-font-smoothing: antialiased;
   }
-
-  h1,
-  h2,
-  h3 {
-    color: var(--color-bone);
-    font-weight: var(--font-weight-medium);
+  h1, h2, h3 {
+    color: var(--color-ink);
+    font-weight: var(--font-weight-semibold);
     margin: 0;
+    line-height: 1.2;
   }
-
-  button {
-    font-family: inherit;
-    cursor: pointer;
+  * {
+    box-sizing: border-box;
   }
 }
 
 @layer components {
-  /* Botão primário: único preenchido do sistema, com o brilho duplo quente. */
   .btn-primary {
-    background-color: var(--color-ember);
-    color: var(--color-bone);
-    font-size: var(--text-body);
-    font-weight: var(--font-weight-medium);
+    background-color: var(--color-serges-blue);
+    color: #fff;
+    font-size: var(--text-label);
+    font-weight: var(--font-weight-semibold);
     border: none;
-    border-radius: var(--radius-md);
-    padding: 8px 16px;
-    box-shadow:
-      0 0 0 1px var(--color-ember-smoke),
-      0 0 24px 4px var(--color-ember-glow);
-    transition: filter 0.15s ease;
+    border-radius: var(--radius-sm);
+    padding: 9px 16px;
+    box-shadow: var(--shadow-soft);
+    transition: background-color 0.15s ease;
+    white-space: nowrap;
   }
   .btn-primary:hover {
-    filter: brightness(1.08);
+    background-color: var(--color-serges-blue-strong);
   }
   .btn-primary:disabled {
-    opacity: 0.4;
-    box-shadow: none;
+    opacity: 0.45;
     cursor: not-allowed;
+    box-shadow: none;
   }
 
-  /* Botão secundário / pills de navegação. */
   .btn-secondary {
-    background-color: transparent;
-    color: var(--color-ash);
-    border: 1px solid transparent;
-    border-radius: var(--radius-full);
-    padding: 6px 16px;
-    transition:
-      color 0.15s ease,
-      border-color 0.15s ease;
+    background-color: var(--color-surface);
+    color: var(--color-ink);
+    border: 1px solid var(--color-line);
+    border-radius: var(--radius-sm);
+    padding: 8px 14px;
+    font-size: var(--text-label);
+    font-weight: var(--font-weight-medium);
+    transition: border-color 0.15s ease, color 0.15s ease, background-color 0.15s ease;
+    white-space: nowrap;
   }
   .btn-secondary:hover {
-    color: var(--color-bone);
+    border-color: var(--color-serges-blue);
+    color: var(--color-serges-blue);
   }
-  .btn-secondary[data-active='true'] {
-    color: var(--color-bone);
-    border-color: var(--color-ash);
+  .btn-ghost {
+    background: transparent;
+    border: none;
+    color: var(--color-ink-soft);
+    padding: 6px 10px;
+    border-radius: var(--radius-sm);
+    font-size: var(--text-label);
+  }
+  .btn-ghost:hover {
+    color: var(--color-serges-blue);
+    background-color: var(--color-serges-blue-tint-soft);
   }
 
-  /* Chip informativo. */
+  /* Grupo de pills do seletor de visão. */
+  .pill {
+    border: none;
+    background: transparent;
+    color: var(--color-ink-soft);
+    border-radius: var(--radius-full);
+    padding: 7px 16px;
+    font-size: var(--text-label);
+    font-weight: var(--font-weight-medium);
+    transition: all 0.15s ease;
+  }
+  .pill[data-active='true'] {
+    background-color: var(--color-serges-blue);
+    color: #fff;
+  }
+
   .chip {
     display: inline-flex;
     align-items: center;
     gap: 6px;
-    background-color: var(--color-graphite);
-    border: 1px solid var(--color-ash);
+    background-color: var(--color-surface);
+    border: 1px solid var(--color-line);
     border-radius: var(--radius-full);
-    color: var(--color-ash);
+    color: var(--color-ink);
     font-size: var(--text-caption);
     line-height: 1;
-    letter-spacing: var(--tracking-caption);
     padding: 4px 10px;
+    white-space: nowrap;
   }
 
-  /* Cards e células: Graphite sobre Obsidian, canto reto (0px). */
-  .surface {
-    background-color: var(--color-graphite);
-    border-radius: 0;
-  }
-  .hairline {
-    border: 1px solid color-mix(in srgb, var(--color-ash) 22%, transparent);
-  }
-  .input {
-    background-color: var(--color-obsidian);
-    border: 1px solid color-mix(in srgb, var(--color-ash) 30%, transparent);
+  .card {
+    background-color: var(--color-surface);
+    border: 1px solid var(--color-line);
     border-radius: var(--radius-md);
-    color: var(--color-bone);
+    box-shadow: var(--shadow-soft);
+  }
+
+  .input,
+  .select {
+    background-color: var(--color-surface);
+    border: 1px solid var(--color-line);
+    border-radius: var(--radius-sm);
+    color: var(--color-ink);
     font-size: var(--text-body);
-    padding: 8px 10px;
+    font-family: inherit;
+    padding: 9px 11px;
     width: 100%;
   }
-  .input:focus {
+  .input:focus,
+  .select:focus {
     outline: none;
-    border-color: var(--color-ash);
+    border-color: var(--color-serges-blue);
+    box-shadow: 0 0 0 3px var(--color-serges-blue-tint);
   }
   .label {
-    color: var(--color-ash);
+    color: var(--color-ink-soft);
     font-size: var(--text-caption);
-    letter-spacing: var(--tracking-caption);
+    font-weight: var(--font-weight-medium);
   }
 }
