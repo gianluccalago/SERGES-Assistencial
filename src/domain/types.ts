@@ -58,6 +58,21 @@ export type SergesConnect = 'realizada' | 'parcialmente' | 'nada';
 /** Resolução explícita de mês para pagamento/faturamento (§4.5). */
 export type ResolucaoMes = 'semAtuacao' | 'faturadoParcialmente';
 
+/** Médico entrante na alteração do contrato social. */
+export interface EntranteCS {
+  id: string;
+  nome: string;
+  procuracao?: boolean;
+  boleto?: boolean;
+}
+
+/** Dados da obrigação de alteração do contrato social. */
+export interface ContratoSocialData {
+  confirmacaoEscalistas?: boolean;
+  entrantes?: EntranteCS[];
+  saintes?: { id: string; nome: string }[];
+}
+
 /**
  * Card de um médico dentro de um lote de pagamento (§4.3). Guardrails
  * fundamentais (planilha + PIX) bloqueiam o "pronto"; SERGES Connect não bloqueia.
@@ -157,6 +172,8 @@ export interface Override {
   fopamConfirmado?: boolean;
   /** Checklists ad-hoc (esteiras do contrato social etc., §11.7). */
   checklist?: Record<string, boolean>;
+  /** Alteração do contrato social: entrantes, saintes e confirmação. */
+  contratoSocial?: ContratoSocialData;
   /** Trilha de repasse de cargo (§11.11). */
   markedAt?: string;
   markedBy?: string;
@@ -254,4 +271,5 @@ export interface CalendarItem {
   medicos?: MedicoCard[];
   resolucaoMes?: ResolucaoMes;
   recuperacao?: { texto: string; valor: number };
+  contratoSocial?: ContratoSocialData;
 }

@@ -98,6 +98,33 @@ export function bloqueioConclusao(item: CalendarItem): string | null {
     if (total === 0) return 'Adicione os cards de médico do lote antes de concluir.';
     if (ok < total) return `Faltam cards de médico prontos e aprovados (${ok} de ${total}).`;
   }
+  if (item.id.startsWith('fixa:contratoSocialContabilidade:')) {
+    const cs = item.contratoSocial;
+    if (!cs?.confirmacaoEscalistas) {
+      return 'Confirme a lista de entradas e saídas com os escalistas (Rodrigo e Danneline).';
+    }
+    const { ok, total } = contratoSocialProgresso(item);
+    if (ok < total) return `Faltam procuração e boleto dos médicos entrantes (${ok} de ${total}).`;
+  }
+  return null;
+}
+
+/** Progresso dos entrantes do contrato social: procuração + boleto por médico. */
+export function contratoSocialProgresso(item: CalendarItem): { ok: number; total: number } {
+  const ent = item.contratoSocial?.entrantes ?? [];
+  return { ok: ent.filter((e) => e.procuracao && e.boleto).length, total: ent.length };
+}
+
+/** Texto curto de progresso para a linha da obrigação (lote, contrato social). */
+export function progressoTexto(item: CalendarItem): string | null {
+  if (item.tipo === 'lotePagamento') {
+    const { ok, total } = loteProgresso(item);
+    return total > 0 ? `${ok} de ${total} prontos` : null;
+  }
+  if (item.id.startsWith('fixa:contratoSocialContabilidade:')) {
+    const { ok, total } = contratoSocialProgresso(item);
+    return total > 0 ? `procurações e boletos ${ok} de ${total}` : null;
+  }
   return null;
 }
 

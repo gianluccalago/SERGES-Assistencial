@@ -1,6 +1,7 @@
 import { useStore } from '../../state/store';
 import type { ResolvedObligation } from '../useObligations';
 import { ESTADO_LABEL, TIPO_LABEL, estadoChipClass, itemAccentClass, formatDateShort } from '../format';
+import { progressoTexto } from '../../domain/stateMachine';
 import { Selos } from './Selos';
 
 interface Props {
@@ -43,6 +44,7 @@ export function ObligationCard({ ro, onSelect, variant = 'week', draggable, onDr
           {variant === 'list' && prazo && <span>· {formatDateShort(prazo)}</span>}
           {item.isManual && <span className="text-[var(--color-serges-blue)]">· manual</span>}
           {item.movida && <span className="text-[var(--color-serges-blue)]">· movida</span>}
+          {progressoTexto(item) && <span className="text-[var(--color-ink)]">· {progressoTexto(item)}</span>}
         </div>
       </div>
       <div className="flex flex-col items-end gap-1">

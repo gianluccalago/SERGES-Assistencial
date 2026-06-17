@@ -9,6 +9,7 @@ import {
   cardDevolucaoContratoSocial,
 } from '../workflows';
 import { podeConcluir, bloqueioConclusao, medicoPronto, loteProgresso } from '../stateMachine';
+// (bloqueioConclusao cobre lote, contrato social e aguardando)
 import type { CalendarItem, MedicoCard } from '../types';
 
 function lote(extra: Partial<CalendarItem> = {}): CalendarItem {
@@ -51,6 +52,46 @@ describe('lote de pagamento e cards de médico (§4.3, §11.2)', () => {
   it('aguardando o contratante nunca conclui direto (§11.11)', () => {
     const c = lote({ tipo: 'faturamentoCard', baseEstado: 'aguardandoInput', prazo: undefined });
     expect(podeConcluir(c)).toBe(false);
+  });
+});
+
+describe('alteração do contrato social', () => {
+  const base = (extra: Partial<CalendarItem> = {}): CalendarItem => ({
+    id: 'fixa:contratoSocialContabilidade:2026-07',
+    titulo: 'Alteração do contrato social',
+    tipo: 'fixa',
+    regraOrigem: '',
+    competencia: '2026-07',
+    prazo: '2026-07-20',
+    baseEstado: 'pendente',
+    isManual: false,
+    ...extra,
+  });
+  it('bloqueia sem confirmação dos escalistas', () => {
+    expect(bloqueioConclusao(base())).toMatch(/escalistas/);
+  });
+  it('bloqueia enquanto entrantes não têm procuração + boleto', () => {
+    const item = base({
+      contratoSocial: {
+        confirmacaoEscalistas: true,
+        entrantes: [
+          { id: 'a', nome: 'Dr A', procuracao: true, boleto: true },
+          { id: 'b', nome: 'Dr B', procuracao: true },
+        ],
+      },
+    });
+    expect(bloqueioConclusao(item)).toMatch(/1 de 2/);
+    expect(podeConcluir(item)).toBe(false);
+  });
+  it('conclui quando confirmado e todos os entrantes completos', () => {
+    const item = base({
+      contratoSocial: {
+        confirmacaoEscalistas: true,
+        entrantes: [{ id: 'a', nome: 'Dr A', procuracao: true, boleto: true }],
+        saintes: [{ id: 's', nome: 'Dr S' }],
+      },
+    });
+    expect(podeConcluir(item)).toBe(true);
   });
 });
 

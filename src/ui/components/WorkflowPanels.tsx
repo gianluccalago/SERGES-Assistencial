@@ -160,29 +160,130 @@ function ZapSign({ ov, set }: { ov?: Override; set: (p: Partial<Override>) => vo
   );
 }
 
-// §11.7 — esteiras do contrato social (anexadas à tarefa do dia 20)
-function ContratoSocial({ ov, set, projetoId }: { ov?: Override; set: (p: Partial<Override>) => void; projetoId?: string }) {
+// Alteração do contrato social — envio à contabilidade.
+// Entrantes e saintes são itens dentro desta única obrigação (não geram
+// obrigação por médico). Gates bloqueiam a conclusão; ver bloqueioConclusao.
+function ContratoSocial({
+  ov,
+  set,
+  projetoId,
+}: {
+  ov?: Override;
+  set: (p: Partial<Override>) => void;
+  projetoId?: string;
+}) {
   const store = useStore();
-  const cl = ov?.checklist ?? {};
-  const setCl = (k: string, v: boolean) => set({ checklist: { ...cl, [k]: v } });
+  const cs = ov?.contratoSocial ?? {};
+  const entrantes = cs.entrantes ?? [];
+  const saintes = cs.saintes ?? [];
+  const setCS = (patch: Partial<NonNullable<Override['contratoSocial']>>) =>
+    set({ contratoSocial: { ...cs, ...patch } });
+
+  const [nomeEnt, setNomeEnt] = useState('');
+  const [nomeSai, setNomeSai] = useState('');
   const [refData, setRefData] = useState(todayISO());
+
+  const okEnt = entrantes.filter((e) => e.procuracao && e.boleto).length;
+
+  // Destinatários: contatos de contabilidade (Estilocont), e-mails da aba Contatos.
+  const emails = [
+    ...new Set(
+      store.state.contatos
+        .filter((c) => c.categoria === 'contabilidade')
+        .flatMap((c) => `${c.email ?? ''} ${c.notas ?? ''}`.match(/[\w.+-]+@[\w.-]+\.\w+/g) ?? []),
+    ),
+  ];
+
   return (
-    <Panel titulo="Contrato social — esteiras (§11.7)">
-      <div className="label mb-1">Ingresso</div>
-      <Check label="Mover dados" checked={!!cl.ingMoverDados} onChange={(v) => setCl('ingMoverDados', v)} />
-      <Check label="Enviar procuração (boleto vence em 3 dias)" checked={!!cl.ingProcuracao} onChange={(v) => setCl('ingProcuracao', v)} />
-      <Check label="Validar assinatura da procuração e da cota" checked={!!cl.ingValidar} onChange={(v) => setCl('ingValidar', v)} />
+    <Panel titulo="Alteração do contrato social — envio à contabilidade">
+      <p className="label mb-2">Prazo teto: dia 20 (antecipa). Trabalhe os pré-requisitos a partir do dia 11.</p>
 
-      <div className="label mb-1 mt-3">Virada contratual (dias 11–17)</div>
-      <Check label="Entradas e saídas confirmadas com Rodrigo e Danneline" checked={!!cl.viradaConfirmada} onChange={(v) => setCl('viradaConfirmada', v)} />
-      <Check label="Documentos compactados (procuração + CNH/RG) para a Estilocont" checked={!!cl.viradaDocs} onChange={(v) => setCl('viradaDocs', v)} />
+      <Check
+        label="Lista de entradas e saídas confirmada e conferida pelos escalistas (Rodrigo e Danneline)"
+        checked={!!cs.confirmacaoEscalistas}
+        onChange={(v) => setCS({ confirmacaoEscalistas: v })}
+      />
 
+      {/* Médicos entrantes */}
       <div className="mt-3 border-t border-[var(--color-line)] pt-3">
-        <div className="label mb-1">Saída — gerar card de devolução (R$ 50, mês seguinte)</div>
-        <div className="flex gap-2">
+        <div className="mb-1 flex items-center justify-between">
+          <span className="label uppercase">Médicos entrantes</span>
+          <span className={`chip ${entrantes.length > 0 && okEnt === entrantes.length ? 'text-[var(--color-done)] border-[var(--color-done)]' : ''}`}>
+            procurações e boletos {okEnt} de {entrantes.length}
+          </span>
+        </div>
+        <div className="space-y-1.5">
+          {entrantes.map((e) => (
+            <div key={e.id} className="rounded-[var(--radius-sm)] border border-[var(--color-line)] p-2">
+              <div className="flex items-center justify-between">
+                <span className="font-medium text-[var(--color-ink)]">{e.nome}</span>
+                <button className="btn-ghost text-[var(--color-overdue)]" onClick={() => setCS({ entrantes: entrantes.filter((x) => x.id !== e.id) })}>
+                  remover
+                </button>
+              </div>
+              <Check label="Procuração assinada" checked={!!e.procuracao} onChange={(v) => setCS({ entrantes: entrantes.map((x) => (x.id === e.id ? { ...x, procuracao: v } : x)) })} />
+              <Check label="Boleto da cota (compra de cotas) pago" checked={!!e.boleto} onChange={(v) => setCS({ entrantes: entrantes.map((x) => (x.id === e.id ? { ...x, boleto: v } : x)) })} />
+            </div>
+          ))}
+        </div>
+        <div className="mt-2 flex gap-2">
+          <input className="input" placeholder="Nome do entrante" value={nomeEnt} onChange={(e) => setNomeEnt(e.target.value)} />
+          <button
+            className="btn-secondary"
+            disabled={!nomeEnt.trim()}
+            onClick={() => {
+              setCS({ entrantes: [...entrantes, { id: `ent-${crypto.randomUUID().slice(0, 6)}`, nome: nomeEnt.trim() }] });
+              setNomeEnt('');
+            }}
+          >
+            Adicionar
+          </button>
+        </div>
+      </div>
+
+      {/* Médicos que saem (apenas conferência) */}
+      <div className="mt-3 border-t border-[var(--color-line)] pt-3">
+        <div className="label mb-1 uppercase">Médicos que saem (conferência)</div>
+        <div className="space-y-1">
+          {saintes.map((s) => (
+            <div key={s.id} className="flex items-center justify-between text-[length:var(--text-label)]">
+              <span>{s.nome}</span>
+              <button className="btn-ghost text-[var(--color-overdue)]" onClick={() => setCS({ saintes: saintes.filter((x) => x.id !== s.id) })}>
+                remover
+              </button>
+            </div>
+          ))}
+        </div>
+        <div className="mt-2 flex gap-2">
+          <input className="input" placeholder="Nome de quem sai" value={nomeSai} onChange={(e) => setNomeSai(e.target.value)} />
+          <button
+            className="btn-secondary"
+            disabled={!nomeSai.trim()}
+            onClick={() => {
+              setCS({ saintes: [...saintes, { id: `sai-${crypto.randomUUID().slice(0, 6)}`, nome: nomeSai.trim() }] });
+              setNomeSai('');
+            }}
+          >
+            Adicionar
+          </button>
+        </div>
+        <p className="label mt-1">A devolução do boleto de quem sai é tratada à parte (R$ 50, sem prazo crítico) e não bloqueia este envio.</p>
+      </div>
+
+      {/* Destinatários e saída */}
+      <div className="mt-3 border-t border-[var(--color-line)] pt-3">
+        <div className="label mb-1">Destinatários (Estilocont)</div>
+        {emails.length > 0 ? (
+          <a className="btn-secondary" href={`mailto:${emails.join(',')}`}>
+            Enviar para {emails.join(', ')}
+          </a>
+        ) : (
+          <p className="label">Cadastre a contabilidade (Estilocont) na aba Contatos.</p>
+        )}
+        <div className="mt-3 flex gap-2">
           <input className="input" type="date" value={refData} onChange={(e) => setRefData(e.target.value)} />
           <button className="btn-secondary" onClick={() => store.addManual(cardDevolucaoContratoSocial(refData, projetoId))}>
-            Gerar
+            Gerar devolução de saída (R$ 50)
           </button>
         </div>
       </div>
