@@ -1,40 +1,40 @@
 import type { CalendarItem, ObligationEstado, Override } from './types';
 import { fromISODate } from './dateUtils';
 
-/** Transições manuais permitidas ao usuário. */
-const TRANSICOES_MANUAIS: Record<ObligationEstado, ObligationEstado[]> = {
-  pendente: ['emCobranca', 'escalada', 'concluida'],
-  emCobranca: ['escalada', 'concluida', 'pendente'],
-  aguardandoRetorno: ['emCobranca', 'escalada', 'concluida'],
-  atrasada: ['emCobranca', 'escalada', 'concluida'],
-  escalada: ['concluida', 'emCobranca'],
-  concluida: ['pendente'],
-};
-
-export function podeTransicionar(de: ObligationEstado, para: ObligationEstado): boolean {
-  return TRANSICOES_MANUAIS[de]?.includes(para) ?? false;
+/**
+ * O status efetivo é o próprio status-base (um dos quatro). "Atrasada" e
+ * "Crítico" são marcadores derivados (selos), não status — ver `marcadores`.
+ */
+export function resolveEstado(item: CalendarItem): ObligationEstado {
+  return item.baseEstado;
 }
 
 /**
- * Resolve o estado efetivo de um item combinando o estado-base e a regra de
- * atraso relativa a "hoje".
- *
- * Regras:
- * - Estados terminais escolhidos pelo usuário (concluída/escalada) têm precedência.
- * - Um item com prazo vira 'atrasada' quando hoje > prazo e não está concluído.
- * - Itens em 'aguardandoRetorno' nunca viram 'atrasada' sozinhos.
+ * Marcadores derivados que coexistem com o status (§4.5):
+ * - atrasada: tem prazo, hoje passou e não está concluído nem aguardando o
+ *   contratante (atraso "por culpa nossa").
+ * - contratanteAtrasado: aguardando input e o prazo de cobrança passou — não é
+ *   culpa nossa, mas sinaliza para reforçar a cobrança.
  */
-export function resolveEstado(item: CalendarItem, hojeISO: string): ObligationEstado {
-  const base = item.baseEstado;
-  if (base === 'concluida') return 'concluida';
-  if (base === 'escalada') return 'escalada';
-  if (base === 'aguardandoRetorno') return 'aguardandoRetorno';
+export function marcadores(
+  item: CalendarItem,
+  hojeISO: string,
+): { atrasada: boolean; contratanteAtrasado: boolean; critico: boolean } {
+  const past = item.prazo
+    ? fromISODate(hojeISO).getTime() > fromISODate(item.prazo).getTime()
+    : false;
+  const concluido = item.baseEstado === 'concluida';
+  const aguardando = item.baseEstado === 'aguardandoInput';
+  return {
+    atrasada: past && !concluido && !aguardando,
+    contratanteAtrasado: past && aguardando,
+    critico: !!item.critico,
+  };
+}
 
-  if (item.prazo) {
-    const venceu = fromISODate(hojeISO).getTime() > fromISODate(item.prazo).getTime();
-    if (venceu) return 'atrasada';
-  }
-  return base;
+/** Registra uma cobrança (ação "Cobrar", §4.5). Não muda o status. */
+export function registrarCobranca(cobrancas: string[] | undefined, agoraISO: string): string[] {
+  return [...(cobrancas ?? []), agoraISO];
 }
 
 /**
@@ -55,6 +55,9 @@ export function registrarRetorno(
   };
 }
 
+/** Reexporta o tipo para conveniência. */
+export type { ObligationEstado };
+
 /**
  * Indica se um item enviado para aprovação já passou da expectativa de 24h de
  * retorno do coordenador/gestor.
@@ -74,7 +77,7 @@ export function aprovacaoEstourou(enviadaAprovacaoEm: string | undefined, agoraI
  *   anexo da planilha + confirmação ASPA + conferência de PIX.
  */
 export function podeConcluir(item: CalendarItem): boolean {
-  if (item.baseEstado === 'aguardandoRetorno') return false;
+  if (item.baseEstado === 'aguardandoInput') return false;
   if (item.tipo === 'cardPagamento') {
     return item.anexoPresente === true && item.aspaConfirmado === true && item.pixConferido === true;
   }

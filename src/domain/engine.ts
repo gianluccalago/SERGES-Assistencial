@@ -198,7 +198,7 @@ export function deriveObligations(
         regraOrigem:
           'Sem data fixa: nasce aguardando retorno de terceiro; vira tarefa quando o retorno é registrado.',
         competencia: comp,
-        estado: 'aguardandoRetorno',
+        estado: 'aguardandoInput',
         dependenciaAguardada: p.dependenciaFaturamento,
         responsavel: p.escalista,
       });

@@ -14,7 +14,9 @@ import type {
   CalendarItem,
   AppConfig,
   ObligationEstado,
+  Contato,
 } from '../domain/types';
+import { registrarCobranca } from '../domain/stateMachine';
 import {
   loadState,
   saveState,
@@ -54,6 +56,18 @@ interface AppStore {
   // Estado (gerada -> override.estado; manual -> registro), com trilha de repasse
   setEstado: (item: CalendarItem, estado: ObligationEstado, marca?: { por?: string }) => void;
   batchMark: (items: CalendarItem[], estado: ObligationEstado, por?: string) => void;
+  // Ações (§4.5): cobrar (log) e escalar (protocolo), sem mudar status.
+  cobrar: (item: CalendarItem) => void;
+  escalar: (item: CalendarItem) => void;
+  // Editar campos de uma obrigação (gerada -> override; manual -> registro).
+  editItem: (
+    item: CalendarItem,
+    patch: { titulo?: string; responsavel?: string; projetoId?: string; prazo?: string; notas?: string },
+  ) => void;
+  // Contatos (§6.5)
+  upsertContato: (c: Contato) => void;
+  removeContato: (id: string) => void;
+  contatosDoProjeto: (projetoId?: string) => Contato[];
   // Derivação
   itemsFor: (year: number, month: number) => CalendarItem[];
   dismissedFor: (year: number, month: number) => string[];
@@ -194,6 +208,75 @@ export function StoreProvider({ children }: { children: ReactNode }) {
           }
           return { ...s, overrides, manualObligations: manuais };
         });
+      },
+      cobrar(item) {
+        const agora = new Date().toISOString();
+        if (item.isManual) {
+          setState((s) => ({
+            ...s,
+            manualObligations: s.manualObligations.map((x) =>
+              x.id === item.id ? { ...x, cobrancas: registrarCobranca(x.cobrancas, agora) } : x,
+            ),
+          }));
+        } else {
+          patchOverride(item.id, { cobrancas: registrarCobranca(state.overrides[item.id]?.cobrancas, agora) });
+        }
+      },
+      escalar(item) {
+        const agora = new Date().toISOString();
+        if (item.isManual) {
+          setState((s) => ({
+            ...s,
+            manualObligations: s.manualObligations.map((x) =>
+              x.id === item.id ? { ...x, escaladoEm: agora } : x,
+            ),
+          }));
+        } else {
+          patchOverride(item.id, { escaladoEm: agora });
+        }
+      },
+      editItem(item, patch) {
+        if (item.isManual) {
+          setState((s) => ({
+            ...s,
+            manualObligations: s.manualObligations.map((x) =>
+              x.id === item.id
+                ? {
+                    ...x,
+                    titulo: patch.titulo ?? x.titulo,
+                    responsavel: patch.responsavel,
+                    projetoId: patch.projetoId,
+                    data: patch.prazo ?? x.data,
+                    notas: patch.notas,
+                  }
+                : x,
+            ),
+          }));
+        } else {
+          patchOverride(item.id, {
+            titulo: patch.titulo,
+            responsavel: patch.responsavel,
+            projetoId: patch.projetoId,
+            dataNova: patch.prazo,
+            notas: patch.notas,
+          });
+        }
+      },
+      upsertContato(c) {
+        setState((s) => {
+          const idx = s.contatos.findIndex((x) => x.id === c.id);
+          const contatos = [...s.contatos];
+          if (idx >= 0) contatos[idx] = c;
+          else contatos.push(c);
+          return { ...s, contatos };
+        });
+      },
+      removeContato(id) {
+        setState((s) => ({ ...s, contatos: s.contatos.filter((x) => x.id !== id) }));
+      },
+      contatosDoProjeto(projetoId) {
+        if (!projetoId) return [];
+        return state.contatos.filter((c) => c.projetos.includes(projetoId));
       },
       holidaySetFor(years) {
         return buildHolidaySet(years, state.extraHolidays);

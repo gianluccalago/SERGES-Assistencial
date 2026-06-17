@@ -1,6 +1,7 @@
 import { useStore } from '../../state/store';
 import type { ResolvedObligation } from '../useObligations';
 import { ESTADO_LABEL, TIPO_LABEL, estadoChipClass, itemAccentClass, formatDateShort } from '../format';
+import { Selos } from './Selos';
 
 interface Props {
   ro: ResolvedObligation;
@@ -12,7 +13,7 @@ interface Props {
 
 export function ObligationCard({ ro, onSelect, variant = 'week', draggable, onDragStart }: Props) {
   const store = useStore();
-  const { item, estado, prazo, aprovacaoEstourada } = ro;
+  const { item, estado, prazo } = ro;
   const projeto = item.projetoId
     ? store.state.projects.find((p) => p.id === item.projetoId)?.nome
     : undefined;
@@ -24,8 +25,7 @@ export function ObligationCard({ ro, onSelect, variant = 'week', draggable, onDr
       onDragStart={onDragStart}
       onClick={() => onSelect(ro)}
       className={`card flex w-full items-start gap-3 p-[var(--spacing-12)] text-left transition hover:border-[var(--color-serges-blue)] ${itemAccentClass(
-        estado,
-        item.critico,
+        { atrasada: ro.atrasada, concluido: estado === 'concluida', critico: ro.critico },
       )} ${draggable ? 'cursor-grab active:cursor-grabbing' : ''}`}
     >
       <div className="min-w-0 flex-1">
@@ -47,9 +47,7 @@ export function ObligationCard({ ro, onSelect, variant = 'week', draggable, onDr
       </div>
       <div className="flex flex-col items-end gap-1">
         <span className={estadoChipClass(estado)}>{ESTADO_LABEL[estado]}</span>
-        {aprovacaoEstourada && (
-          <span className="chip border-[var(--color-overdue)] text-[var(--color-overdue)]">24h+</span>
-        )}
+        <Selos ro={ro} />
       </div>
     </button>
   );

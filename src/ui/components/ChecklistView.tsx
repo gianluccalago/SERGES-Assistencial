@@ -191,16 +191,16 @@ function Row({
   projetoNome?: string;
   aguardandoContato?: string;
 }) {
-  const aguardando = ro.estado === 'aguardandoRetorno';
+  const aguardando = ro.estado === 'aguardandoInput';
   const done = ro.estado === 'concluida';
   return (
-    <div className={`card flex items-center gap-3 p-[var(--spacing-12)] ${ro.estado === 'atrasada' ? 'border-l-[3px] border-l-[var(--color-overdue)]' : ''}`}>
+    <div className={`card flex items-center gap-3 p-[var(--spacing-12)] ${ro.atrasada ? 'border-l-[3px] border-l-[var(--color-overdue)]' : ''}`}>
       <input
         type="checkbox"
         className="h-5 w-5 shrink-0 accent-[var(--color-serges-blue)]"
         checked={selecionado}
         disabled={aguardando || done || !ro.podeConcluir}
-        title={aguardando ? 'Aguarda terceiro: registre o retorno no detalhe' : !ro.podeConcluir ? 'Faltam guardrails (anexo/ASPA/PIX)' : undefined}
+        title={aguardando ? 'Aguarda o contratante: registre o retorno no detalhe' : !ro.podeConcluir ? 'Faltam guardrails (anexo/ASPA/PIX)' : undefined}
         onChange={onToggle}
       />
       <button className="min-w-0 flex-1 text-left" onClick={onOpen}>

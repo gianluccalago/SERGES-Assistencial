@@ -6,14 +6,7 @@ import { ESTADO_LABEL, formatDateShort } from '../format';
 import { fromISODate } from '../../domain/dateUtils';
 import type { ObligationEstado } from '../../domain/types';
 
-const ORDEM_ESTADO: ObligationEstado[] = [
-  'atrasada',
-  'escalada',
-  'emCobranca',
-  'aguardandoRetorno',
-  'pendente',
-  'concluida',
-];
+const ORDEM_ESTADO: ObligationEstado[] = ['pendente', 'aguardandoInput', 'emAprovacao', 'concluida'];
 
 export function ListView({
   year,
@@ -34,6 +27,10 @@ export function ListView({
     return items
       .filter((ro) => (estadoFiltro === 'todos' ? true : ro.estado === estadoFiltro))
       .sort((a, b) => {
+        // Atrasadas e aguardando-contratante primeiro (destaque, §6.1).
+        const pa = a.atrasada ? 0 : a.estado === 'aguardandoInput' ? 1 : 2;
+        const pb = b.atrasada ? 0 : b.estado === 'aguardandoInput' ? 1 : 2;
+        if (pa !== pb) return pa - pb;
         const ea = ORDEM_ESTADO.indexOf(a.estado);
         const eb = ORDEM_ESTADO.indexOf(b.estado);
         if (ea !== eb) return ea - eb;

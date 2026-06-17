@@ -158,9 +158,9 @@ export const seedProjects: Project[] = [
     afericao: '1-31',
     dependenciaFaturamento: 'nenhuma',
     contratoSocialObrigatorio: false,
-    escalista: 'Milton',
+    escalista: 'Julyane',
     notaFiscalPermitida: true,
-    excecaoLancamento: 'Pagamento da médica dia 15; Fred dia 5 com card lançado no dia 1',
+    excecaoLancamento: 'Pagamento da médica dia 15; Fred dia 5 com card lançado no dia 1. Responsável: Julyane (faturista)',
   },
   // Inativos: cadastrados, sem gerar obrigações.
   {

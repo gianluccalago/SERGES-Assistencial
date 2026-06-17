@@ -94,11 +94,11 @@ export function MonthView({
                       onClick={() => onSelect(ro)}
                       title={`${ro.item.titulo} — ${ESTADO_LABEL[ro.estado]}`}
                       className={`block w-full truncate rounded-[6px] border-l-[3px] bg-[var(--color-surface-muted)] px-1.5 py-1 text-left text-[length:var(--text-label)] leading-snug ${
-                        ro.estado === 'atrasada'
+                        ro.atrasada
                           ? 'border-l-[var(--color-overdue)] text-[var(--color-overdue)]'
                           : ro.estado === 'concluida'
                             ? 'border-l-[var(--color-done)] text-[var(--color-ink-soft)] line-through'
-                            : ro.item.critico
+                            : ro.critico
                               ? 'border-l-[var(--color-serges-blue)] text-[var(--color-ink)]'
                               : 'border-l-transparent text-[var(--color-ink)]'
                       }`}
@@ -176,7 +176,7 @@ function DayBlock({
             key={ro.item.id}
             onClick={() => onSelect(ro)}
             className={`flex w-full items-center justify-between gap-2 rounded-[8px] border-l-[3px] bg-[var(--color-surface-muted)] px-2 py-2 text-left ${
-              ro.estado === 'atrasada' ? 'border-l-[var(--color-overdue)]' : ro.item.critico ? 'border-l-[var(--color-serges-blue)]' : 'border-l-transparent'
+              ro.atrasada ? 'border-l-[var(--color-overdue)]' : ro.critico ? 'border-l-[var(--color-serges-blue)]' : 'border-l-transparent'
             }`}
           >
             <span className="text-[length:var(--text-label)]">{ro.item.titulo}</span>

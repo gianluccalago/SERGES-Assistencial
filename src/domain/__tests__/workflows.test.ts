@@ -36,8 +36,8 @@ describe('guardrails do card de pagamento (§11.2)', () => {
     expect(podeConcluir(c)).toBe(true);
     expect(guardrailsCardPagamento(c).completo).toBe(true);
   });
-  it('aguardando retorno nunca conclui direto (§11.11)', () => {
-    const c = card({ tipo: 'faturamentoCard', baseEstado: 'aguardandoRetorno', prazo: undefined });
+  it('aguardando o contratante nunca conclui direto (§11.11)', () => {
+    const c = card({ tipo: 'faturamentoCard', baseEstado: 'aguardandoInput', prazo: undefined });
     expect(podeConcluir(c)).toBe(false);
   });
 });

@@ -5,6 +5,7 @@ import { MonthView } from './ui/components/MonthView';
 import { ListView } from './ui/components/ListView';
 import { ChecklistView } from './ui/components/ChecklistView';
 import { OraculoPage } from './ui/components/OraculoPage';
+import { ContatosPage } from './ui/components/ContatosPage';
 import { ProjectsAdmin } from './ui/components/ProjectsAdmin';
 import { HolidaysAdmin } from './ui/components/HolidaysAdmin';
 import { ObligationDetail } from './ui/components/ObligationDetail';
@@ -17,7 +18,7 @@ import type { Filtros } from './ui/filters';
 import { MESES, todayISO, formatDateShort } from './ui/format';
 import { addCalendarDays, fromISODate, toISODate } from './domain/dateUtils';
 
-type Screen = 'dia' | 'semana' | 'mes' | 'lista' | 'checklist' | 'oraculo' | 'projetos' | 'feriados';
+type Screen = 'dia' | 'semana' | 'mes' | 'lista' | 'checklist' | 'oraculo' | 'contatos' | 'projetos' | 'feriados';
 
 const VIEW_TABS: Array<{ id: Screen; label: string }> = [
   { id: 'dia', label: 'Dia' },
@@ -34,7 +35,6 @@ export function App() {
   const [filtros, setFiltros] = useState<Filtros>({ projeto: 'todos', escalista: 'todos' });
   const [selected, setSelected] = useState<ResolvedObligation | null>(null);
   const [formOpen, setFormOpen] = useState(false);
-  const [editManualId, setEditManualId] = useState<string | undefined>(undefined);
 
   const cursor = fromISODate(cursorISO);
   const year = cursor.getUTCFullYear();
@@ -75,7 +75,6 @@ export function App() {
   }, [screen, cursorISO, month, year]);
 
   function openNew() {
-    setEditManualId(undefined);
     setFormOpen(true);
   }
 
@@ -103,6 +102,9 @@ export function App() {
           <div className="flex items-center gap-1">
             <button className="btn-ghost" data-active={screen === 'oraculo'} onClick={() => setScreen('oraculo')}>
               Oráculo
+            </button>
+            <button className="btn-ghost" data-active={screen === 'contatos'} onClick={() => setScreen('contatos')}>
+              Contatos
             </button>
             <button className="btn-ghost" data-active={screen === 'projetos'} onClick={() => setScreen('projetos')}>
               Projetos
@@ -175,22 +177,13 @@ export function App() {
         {screen === 'lista' && <ListView year={year} month={month} filtros={filtros} onSelect={setSelected} />}
         {screen === 'checklist' && <ChecklistView year={year} month={month} filtros={filtros} onSelect={setSelected} />}
         {screen === 'oraculo' && <OraculoPage />}
+        {screen === 'contatos' && <ContatosPage />}
         {screen === 'projetos' && <ProjectsAdmin />}
         {screen === 'feriados' && <HolidaysAdmin year={year} />}
       </main>
 
-      {selected && (
-        <ObligationDetail
-          ro={selected}
-          onClose={() => setSelected(null)}
-          onEditManual={(id) => {
-            setSelected(null);
-            setEditManualId(id);
-            setFormOpen(true);
-          }}
-        />
-      )}
-      {formOpen && <ManualForm editId={editManualId} onClose={() => setFormOpen(false)} />}
+      {selected && <ObligationDetail ro={selected} onClose={() => setSelected(null)} />}
+      {formOpen && <ManualForm onClose={() => setFormOpen(false)} />}
     </div>
   );
 }

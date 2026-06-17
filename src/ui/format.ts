@@ -13,11 +13,9 @@ export const DOW_LONGO = [
 
 export const ESTADO_LABEL: Record<ObligationEstado, string> = {
   pendente: 'Pendente',
-  emCobranca: 'Em cobrança',
-  aguardandoRetorno: 'Aguardando retorno',
-  concluida: 'Concluída',
-  atrasada: 'Atrasada',
-  escalada: 'Escalada',
+  aguardandoInput: 'Aguardando input do contratante',
+  emAprovacao: 'Em aprovação do Gestor',
+  concluida: 'Concluído',
 };
 
 export const TIPO_LABEL: Record<ObligationTipo, string> = {
@@ -56,30 +54,26 @@ export function todayISO(): string {
 }
 
 /**
- * Classes do chip de estado. Disciplina: azul = ação/seleção, vermelho overdue
- * é o único alerta, verde done é discreto; o resto é neutro.
+ * Chip do status (um dos quatro). Disciplina: azul = ação/seleção, verde done
+ * discreto; aguardando é neutro tracejado. "Atrasada" é selo à parte (vermelho).
  */
 export function estadoChipClass(estado: ObligationEstado): string {
   switch (estado) {
-    case 'atrasada':
-      return 'chip border-[var(--color-overdue)] text-[var(--color-overdue)]';
     case 'concluida':
       return 'chip text-[var(--color-done)] border-[var(--color-done)]';
-    case 'emCobranca':
+    case 'emAprovacao':
       return 'chip bg-[var(--color-serges-blue-tint)] border-[var(--color-serges-blue)] text-[var(--color-serges-blue)]';
-    case 'escalada':
-      return 'chip bg-[var(--color-serges-blue)] border-[var(--color-serges-blue)] text-white uppercase tracking-wide';
-    case 'aguardandoRetorno':
+    case 'aguardandoInput':
       return 'chip border-dashed text-[var(--color-ink-soft)]';
     default:
       return 'chip';
   }
 }
 
-/** Classe da borda lateral / acento de um item conforme o estado. */
-export function itemAccentClass(estado: ObligationEstado, critico?: boolean): string {
-  if (estado === 'atrasada') return 'border-l-[3px] border-l-[var(--color-overdue)]';
-  if (estado === 'concluida') return 'border-l-[3px] border-l-[var(--color-done)] opacity-70';
-  if (critico) return 'border-l-[3px] border-l-[var(--color-serges-blue)]';
+/** Classe da borda lateral / acento conforme marcadores. */
+export function itemAccentClass(p: { atrasada?: boolean; concluido?: boolean; critico?: boolean }): string {
+  if (p.atrasada) return 'border-l-[3px] border-l-[var(--color-overdue)]';
+  if (p.concluido) return 'border-l-[3px] border-l-[var(--color-done)] opacity-70';
+  if (p.critico) return 'border-l-[3px] border-l-[var(--color-serges-blue)]';
   return 'border-l-[3px] border-l-transparent';
 }
