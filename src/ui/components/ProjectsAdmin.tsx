@@ -129,9 +129,22 @@ function ProjectForm({
           />
         </Field>
       </div>
-      <Field label="Aferição">
-        <input className="input" value={draft.afericao} onChange={(e) => set('afericao', e.target.value)} />
-      </Field>
+      <div className="grid grid-cols-2 gap-3">
+        <Field label="Aferição">
+          <input className="input" value={draft.afericao} onChange={(e) => set('afericao', e.target.value)} />
+        </Field>
+        <Field label="Dia iniciar faturamento">
+          <input
+            className="input"
+            type="number"
+            min={1}
+            max={31}
+            placeholder="1"
+            value={draft.diaFaturamentoIniciar ?? ''}
+            onChange={(e) => set('diaFaturamentoIniciar', e.target.value ? Number(e.target.value) : undefined)}
+          />
+        </Field>
+      </div>
       <Field label="Dependência de faturamento">
         <select className="select" value={draft.dependenciaFaturamento} onChange={(e) => set('dependenciaFaturamento', e.target.value as DependenciaFaturamento)}>
           {DEPENDENCIAS.map((d) => (

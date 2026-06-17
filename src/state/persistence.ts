@@ -62,7 +62,7 @@ export function saveConfig(config: AppConfig): void {
 // projetos, os overrides sobre obrigações geradas e as obrigações manuais.
 
 const STORAGE_KEY = 'serges.obrigacoes';
-const SCHEMA_VERSION = 3;
+const SCHEMA_VERSION = 4;
 
 export interface PersistedState {
   version: number;
@@ -173,9 +173,21 @@ function migrate(state: any): PersistedState {
     m.estado = migrarEstado(m.estado) ?? 'pendente';
   }
 
+  // v4: correção do UPA Palmas (aferição 20-19; iniciar faturamento dia 21).
+  const projects: Project[] = state.projects ?? base.projects;
+  if ((state.version ?? 0) < 4) {
+    for (const p of projects) {
+      if (p.id === 'upaPalmas') {
+        p.afericao = '20-19';
+        p.diaFaturamentoIniciar = 21;
+      }
+    }
+  }
+
   return {
     version: SCHEMA_VERSION,
-    projects: state.projects ?? base.projects,
+    projects,
+    // (correção do UPA Palmas aplicada acima quando vindo de versão < 4)
     extraHolidays: state.extraHolidays ?? base.extraHolidays,
     overrides,
     manualObligations,

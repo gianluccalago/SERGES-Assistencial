@@ -74,6 +74,9 @@ describe('julho de 2026 (dia 1 é quarta-feira)', () => {
   it('card do Fred (Academia): sempre dia 1', () => {
     expect(obById(obls, 'lotePagamento:academia:2026-07').prazoCalculado).toBe('2026-07-01');
   });
+  it('UPA Palmas inicia faturamento no dia 21 (aferição 20-19)', () => {
+    expect(obById(obls, 'faturamentoIniciar:upaPalmas:2026-07').prazoCalculado).toBe('2026-07-21');
+  });
 });
 
 describe('maio de 2026 (dia 10 cai num domingo)', () => {
