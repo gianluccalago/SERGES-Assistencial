@@ -25,7 +25,20 @@ export interface Project {
   excecaoLancamento?: string;
   /** Dia em que a obrigação deve estar lançada, quando difere do pagamento. */
   diaLancamento?: number;
+  /** Contato primário para cobrar o retorno (§11.8). */
+  contatoPrimario?: string;
+  /** Para quem escalar quando há silêncio do contato primário (§11.8). */
+  escalarPara?: string;
+  /** Teto por nota para notas fracionadas (§11.5), ex.: Ipiranga, Herval. */
+  tetoNota?: number;
 }
+
+/** Sub-estados do faturamento da ASF (§11.3). */
+export type AsfSubEstado =
+  | 'enviadoADaniela'
+  | 'correcoesSolicitadas'
+  | 'emCorrecaoPeloRodrigo'
+  | 'aprovado';
 
 export type ObligationTipo =
   | 'cardPagamento'
@@ -86,6 +99,28 @@ export interface Override {
   enviadaAprovacaoEm?: string;
   /** Registro de recebimento de retorno de terceiro (ISO date). */
   retornoRecebidoEm?: string;
+  // --- Extensões de workflow (§11) ---
+  /** Guardrail ASPA: médico validou e concordou com o valor das horas (§11.2). */
+  aspaConfirmado?: boolean;
+  /** Conferência de PIX: a chave corresponde ao vínculo (§11.2). */
+  pixConferido?: boolean;
+  /** Ordem de compra recebida; destrava o faturamentoCard (§11.5). */
+  ocRecebida?: boolean;
+  /** Sub-workflow da ASF (§11.3). */
+  asfSubEstado?: AsfSubEstado;
+  asfTransicoes?: { estado: AsfSubEstado; data: string }[];
+  /** ZapSign da documentação FUNEAS/HRL/HRNP/HZN (§11.6). */
+  zapsignLink?: string;
+  zapsignOk?: boolean;
+  /** Checklist do processo 0600 (§11.4). */
+  c0600?: { norte?: boolean; capela?: boolean; parelheiros?: boolean; nfsEmitidas?: boolean };
+  /** Confirmação do envio do e-mail da FOPAM ao Bismarck (§11.9). */
+  fopamConfirmado?: boolean;
+  /** Checklists ad-hoc (esteiras do contrato social etc., §11.7). */
+  checklist?: Record<string, boolean>;
+  /** Trilha de repasse de cargo (§11.11). */
+  markedAt?: string;
+  markedBy?: string;
 }
 
 /**
@@ -105,6 +140,14 @@ export interface ManualObligation {
   anexoPresente?: boolean;
   critico?: boolean;
   enviadaAprovacaoEm?: string;
+  markedAt?: string;
+  markedBy?: string;
+}
+
+/** Configuração editável do app (§10). Persistida à parte. */
+export interface AppConfig {
+  /** URL do notebook do Oráculo no NotebookLM. */
+  oraculoUrl: string;
 }
 
 export interface Holiday {
@@ -141,4 +184,8 @@ export interface CalendarItem {
   isManual: boolean;
   /** Indica se o prazo veio de um override (foi movida). */
   movida?: boolean;
+  // Guardrails / workflow expostos para a resolução de conclusão (§11).
+  aspaConfirmado?: boolean;
+  pixConferido?: boolean;
+  ocRecebida?: boolean;
 }

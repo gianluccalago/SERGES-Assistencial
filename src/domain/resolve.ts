@@ -27,6 +27,9 @@ export function applyOverride(obligation: Obligation, override?: Override): Cale
     notas: override?.notas,
     anexoPresente: override?.anexoPresente,
     enviadaAprovacaoEm: override?.enviadaAprovacaoEm,
+    aspaConfirmado: override?.aspaConfirmado,
+    pixConferido: override?.pixConferido,
+    ocRecebida: override?.ocRecebida,
     isManual: false,
     movida: override?.dataNova != null,
   };

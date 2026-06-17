@@ -11,6 +11,7 @@ import {
   todayISO,
 } from '../format';
 import { registrarRetorno } from '../../domain/stateMachine';
+import { WorkflowPanels } from './WorkflowPanels';
 
 export function ObligationDetail({
   ro,
@@ -76,27 +77,36 @@ export function ObligationDetail({
           <Row k="Regra de origem">{item.regraOrigem}</Row>
         </dl>
 
-        {/* Anexo da planilha (pré-requisito de cards de pagamento) */}
-        {item.tipo === 'cardPagamento' && (
-          <label className="mt-[var(--spacing-20)] flex items-center gap-3 text-[length:var(--text-label)]">
-            <input
-              type="checkbox"
-              checked={item.anexoPresente ?? false}
-              onChange={(e) => setField({ anexoPresente: e.target.checked })}
-            />
-            Planilha de origem do valor anexada (necessária para concluir)
-          </label>
+        {/* Escalonamento por silêncio (§11.8) */}
+        {(estado === 'emCobranca' || estado === 'escalada') && projeto?.escalarPara && (
+          <div className="card mt-[var(--spacing-16)] border-l-[3px] border-l-[var(--color-serges-blue)] p-[var(--spacing-16)]">
+            <div className="label mb-1 uppercase">Escalonamento</div>
+            <p className="text-[length:var(--text-label)]">
+              Contato primário: <strong>{projeto.contatoPrimario ?? '—'}</strong>. Sem resposta, acionar{' '}
+              <strong className="text-[var(--color-serges-blue)]">{projeto.escalarPara}</strong>.
+            </p>
+          </div>
         )}
+
+        {/* Painéis de workflow (§11): guardrails, ASF, 0600, ZapSign, contrato social, FOPAM */}
+        <WorkflowPanels ro={ro} />
 
         {/* Registrar retorno de terceiro (gerada, faturamentoCard) */}
         {item.tipo === 'faturamentoCard' && estado === 'aguardandoRetorno' && !item.isManual && (
-          <div className="card mt-[var(--spacing-20)] p-[var(--spacing-16)]">
+          <div className="card mt-[var(--spacing-16)] p-[var(--spacing-16)]">
+            <div className="label mb-1">
+              Aguardando: {item.dependenciaAguardada ? DEP_LABEL[item.dependenciaAguardada] : '—'}
+              {projeto?.contatoPrimario ? ` · cobrar ${projeto.contatoPrimario}` : ''}
+            </div>
             <div className="label mb-2">Registrar recebimento do retorno</div>
             <input className="input" type="date" value={prazoRetorno} onChange={(e) => setPrazoRetorno(e.target.value)} />
             <button
               className="btn-primary mt-3 w-full"
               onClick={() => {
-                store.patchOverride(item.id, registrarRetorno(store.getOverride(item.id), todayISO(), prazoRetorno));
+                store.patchOverride(item.id, {
+                  ...registrarRetorno(store.getOverride(item.id), todayISO(), prazoRetorno),
+                  ocRecebida: item.dependenciaAguardada === 'ordemDeCompra' ? true : undefined,
+                });
                 onClose();
               }}
             >
@@ -143,7 +153,13 @@ export function ObligationDetail({
             <button
               className="btn-primary"
               disabled={!podeConcluir}
-              title={!podeConcluir ? 'Anexe a planilha de origem antes de concluir' : undefined}
+              title={
+                !podeConcluir
+                  ? estado === 'aguardandoRetorno'
+                    ? 'Aguarda terceiro: registre o retorno em vez de concluir'
+                    : 'Complete os guardrails (anexo, ASPA e PIX) antes de concluir'
+                  : undefined
+              }
               onClick={() => setField({ estado: 'concluida' })}
             >
               Concluir

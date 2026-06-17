@@ -13,6 +13,8 @@ export const seedProjects: Project[] = [
     dependenciaFaturamento: 'validacaoContratante',
     contratoSocialObrigatorio: true,
     escalista: 'Rodrigo',
+    contatoPrimario: 'Daniela',
+    escalarPara: 'Cynthia (RH Regional)',
   },
   {
     id: 'dezEmergencias',
@@ -77,6 +79,7 @@ export const seedProjects: Project[] = [
     contratoSocialObrigatorio: false,
     escalista: 'Danneline',
     notaFiscalPermitida: true,
+    tetoNota: 17600,
   },
   {
     id: 'mandirituba',
@@ -89,6 +92,7 @@ export const seedProjects: Project[] = [
     contratoSocialObrigatorio: true,
     escalista: 'Danneline',
     excecaoLancamento: 'Pagamento dia 25, lançar até o dia 20',
+    contatoPrimario: 'Coordenadora',
   },
   {
     id: 'newLifeMaceio',
@@ -100,6 +104,7 @@ export const seedProjects: Project[] = [
     contratoSocialObrigatorio: false,
     escalista: 'Danneline',
     notaFiscalPermitida: true,
+    contatoPrimario: 'Elizandra (ordem de compra)',
   },
   {
     id: 'monteAlegre',
@@ -143,6 +148,7 @@ export const seedProjects: Project[] = [
     contratoSocialObrigatorio: false,
     escalista: 'Rodrigo',
     notaFiscalPermitida: true,
+    tetoNota: 17600,
   },
   {
     id: 'academia',

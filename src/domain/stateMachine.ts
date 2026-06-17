@@ -67,10 +67,29 @@ export function aprovacaoEstourou(enviadaAprovacaoEm: string | undefined, agoraI
 }
 
 /**
- * Pré-requisito de cards de pagamento: sem o anexo da planilha de origem do
- * valor, o item não pode ser marcado como pronto/concluído.
+ * Regras para marcar como pronto/concluído.
+ * - Itens aguardando retorno de terceiro NÃO podem ser concluídos direto; a
+ *   ação é registrar o retorno (§11.11).
+ * - Cards de pagamento exigem o mini-checklist de guardrails (§11.2):
+ *   anexo da planilha + confirmação ASPA + conferência de PIX.
  */
 export function podeConcluir(item: CalendarItem): boolean {
-  if (item.tipo === 'cardPagamento') return item.anexoPresente === true;
+  if (item.baseEstado === 'aguardandoRetorno') return false;
+  if (item.tipo === 'cardPagamento') {
+    return item.anexoPresente === true && item.aspaConfirmado === true && item.pixConferido === true;
+  }
   return true;
+}
+
+/** Itens que faltam no guardrail do card de pagamento, para exibir o checklist. */
+export function guardrailsCardPagamento(item: CalendarItem): {
+  anexo: boolean;
+  aspa: boolean;
+  pix: boolean;
+  completo: boolean;
+} {
+  const anexo = item.anexoPresente === true;
+  const aspa = item.aspaConfirmado === true;
+  const pix = item.pixConferido === true;
+  return { anexo, aspa, pix, completo: anexo && aspa && pix };
 }
