@@ -24,6 +24,7 @@ import {
   type PersistedState,
 } from './persistence';
 import { assembleMonth } from '../domain/resolve';
+import { deriveObligations } from '../domain/engine';
 import { buildHolidaySet } from '../domain/holidays';
 
 interface AppStore {
@@ -56,6 +57,7 @@ interface AppStore {
   // Derivação
   itemsFor: (year: number, month: number) => CalendarItem[];
   dismissedFor: (year: number, month: number) => string[];
+  dismissedItemsFor: (year: number, month: number) => { id: string; titulo: string }[];
   holidaySetFor: (years: number[]) => Set<string>;
   resetAll: () => void;
 }
@@ -205,6 +207,13 @@ export function StoreProvider({ children }: { children: ReactNode }) {
         return Object.entries(state.overrides)
           .filter(([id, ov]) => ov.dismissed && id.endsWith(`:${comp}`))
           .map(([id]) => id);
+      },
+      dismissedItemsFor(year, month) {
+        const holidays = buildHolidaySet([year - 1, year, year + 1], state.extraHolidays);
+        const comp = `${year}-${String(month).padStart(2, '0')}`;
+        return deriveObligations(year, month, state.projects, holidays)
+          .filter((o) => state.overrides[o.id]?.dismissed && o.competencia === comp)
+          .map((o) => ({ id: o.id, titulo: o.titulo }));
       },
       resetAll() {
         setState(defaultState());

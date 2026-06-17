@@ -9,6 +9,7 @@ import { ProjectsAdmin } from './ui/components/ProjectsAdmin';
 import { HolidaysAdmin } from './ui/components/HolidaysAdmin';
 import { ObligationDetail } from './ui/components/ObligationDetail';
 import { ManualForm } from './ui/components/ManualForm';
+import { OcultadasBar } from './ui/components/OcultadasBar';
 import { SergesLogo } from './ui/components/Logo';
 import { useStore } from './state/store';
 import type { ResolvedObligation } from './ui/useObligations';
@@ -165,6 +166,8 @@ export function App() {
             </div>
           </div>
         )}
+
+        {isCalendar && <OcultadasBar year={year} month={month} />}
 
         {screen === 'dia' && <DayView anchorISO={cursorISO} filtros={filtros} onSelect={setSelected} />}
         {screen === 'semana' && <WeekView anchorISO={cursorISO} filtros={filtros} onSelect={setSelected} />}
