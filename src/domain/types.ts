@@ -49,13 +49,12 @@ export type ObligationTipo =
   | 'fechamento'
   | 'evento';
 
-export type ObligationEstado =
-  | 'pendente'
-  | 'emCobranca'
-  | 'aguardandoRetorno'
-  | 'concluida'
-  | 'atrasada'
-  | 'escalada';
+/**
+ * Status de uma obrigação — exatamente quatro (§4.5). "Atrasada", "Crítico" e
+ * "Escalado" NÃO são status: são marcadores/selos derivados que coexistem.
+ * "Cobrar" e "Escalar" são ações, não status.
+ */
+export type ObligationEstado = 'pendente' | 'aguardandoInput' | 'emAprovacao' | 'concluida';
 
 /** Indica se o prazo é crítico (antecipa em dia não útil) ou genérico (adia). */
 export type AjusteDiaUtil = 'antecipa' | 'adia' | 'nenhum';
@@ -92,6 +91,10 @@ export interface Override {
   /** Esconde a obrigação gerada; pode ser desfeito. */
   dismissed?: boolean;
   estado?: ObligationEstado;
+  /** Campos editados pelo usuário sobre a obrigação gerada (§4.5). */
+  titulo?: string;
+  responsavel?: string;
+  projetoId?: string;
   /** Anexo da planilha de origem do valor (pré-requisito de cards de pagamento). */
   anexoPresente?: boolean;
   notas?: string;
@@ -99,6 +102,10 @@ export interface Override {
   enviadaAprovacaoEm?: string;
   /** Registro de recebimento de retorno de terceiro (ISO date). */
   retornoRecebidoEm?: string;
+  /** Ação "Escalar" (§4.5): dispara o protocolo, não muda o status. */
+  escaladoEm?: string;
+  /** Ação "Cobrar" (§4.5): registra cobranças (datas ISO). */
+  cobrancas?: string[];
   // --- Extensões de workflow (§11) ---
   /** Guardrail ASPA: médico validou e concordou com o valor das horas (§11.2). */
   aspaConfirmado?: boolean;
@@ -140,6 +147,8 @@ export interface ManualObligation {
   anexoPresente?: boolean;
   critico?: boolean;
   enviadaAprovacaoEm?: string;
+  escaladoEm?: string;
+  cobrancas?: string[];
   markedAt?: string;
   markedBy?: string;
 }
@@ -148,6 +157,24 @@ export interface ManualObligation {
 export interface AppConfig {
   /** URL do notebook do Oráculo no NotebookLM. */
   oraculoUrl: string;
+}
+
+/** Categoria de contato (§6.5). */
+export type ContatoCategoria = 'contratante' | 'interno' | 'contabilidade';
+
+/** Contato operacional (§6.5). Fonte única de contatos do app. */
+export interface Contato {
+  id: string;
+  nome: string;
+  papel?: string;
+  categoria: ContatoCategoria;
+  /** Ids de projetos associados. */
+  projetos: string[];
+  telefone?: string;
+  email?: string;
+  notas?: string;
+  /** Marca contato de escalonamento (acionado quando o primário não responde). */
+  escalonamento?: boolean;
 }
 
 export interface Holiday {
@@ -188,4 +215,7 @@ export interface CalendarItem {
   aspaConfirmado?: boolean;
   pixConferido?: boolean;
   ocRecebida?: boolean;
+  // Marcadores de ação (§4.5).
+  escalado?: boolean;
+  cobrancasCount?: number;
 }

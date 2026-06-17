@@ -5,6 +5,20 @@ Projetos. A fonte viva e completa é o notebook no NotebookLM (botão **Abrir no
 NotebookLM**). Valores de hora e de consulta **não** ficam neste app — consulte
 sempre o Oráculo / planilha de regras.
 
+## Status e selos
+
+Os status são exatamente quatro: **Pendente**, **Aguardando input do
+contratante**, **Em aprovação do Gestor** e **Concluído**. *Atrasada*,
+*Crítico* e *Escalado* não são status — são selos que coexistem com o status.
+*Cobrar* e *Escalar* são ações, não status. Itens aguardando o contratante não
+são concluídos direto: a ação é cobrar e, ao chegar, registrar o retorno.
+
+## Contatos
+
+A aba **Contatos** é a fonte única de contatos (contratantes, internos,
+contabilidade). É de lá que sai o contato de cobrança das obrigações que
+aguardam o contratante e a cadeia de escalonamento.
+
 ## Regras de dia útil
 
 - **Prazos críticos antecipam.** Prazo interno de fechamento (cards prontos,

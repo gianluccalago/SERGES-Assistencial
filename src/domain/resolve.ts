@@ -14,10 +14,10 @@ export function applyOverride(obligation: Obligation, override?: Override): Cale
   const prazo = override?.dataNova ?? obligation.prazoCalculado;
   return {
     id: obligation.id,
-    titulo: obligation.titulo,
+    titulo: override?.titulo ?? obligation.titulo,
     tipo: obligation.tipo,
-    projetoId: obligation.projetoId,
-    responsavel: obligation.responsavel,
+    projetoId: override?.projetoId ?? obligation.projetoId,
+    responsavel: override?.responsavel ?? obligation.responsavel,
     regraOrigem: obligation.regraOrigem,
     competencia: obligation.competencia,
     prazo,
@@ -30,6 +30,8 @@ export function applyOverride(obligation: Obligation, override?: Override): Cale
     aspaConfirmado: override?.aspaConfirmado,
     pixConferido: override?.pixConferido,
     ocRecebida: override?.ocRecebida,
+    escalado: override?.escaladoEm != null,
+    cobrancasCount: override?.cobrancas?.length ?? 0,
     isManual: false,
     movida: override?.dataNova != null,
   };
@@ -51,6 +53,8 @@ export function manualToItem(m: ManualObligation): CalendarItem {
     notas: m.notas,
     anexoPresente: m.anexoPresente,
     enviadaAprovacaoEm: m.enviadaAprovacaoEm,
+    escalado: m.escaladoEm != null,
+    cobrancasCount: m.cobrancas?.length ?? 0,
     isManual: true,
   };
 }
@@ -110,5 +114,5 @@ export function assembleMonth(
 
 /** Itens sem prazo (aguardando retorno) de uma competência, para a lista lateral. */
 export function isAguardando(item: CalendarItem): boolean {
-  return !item.prazo && item.baseEstado === 'aguardandoRetorno';
+  return !item.prazo && item.baseEstado === 'aguardandoInput';
 }

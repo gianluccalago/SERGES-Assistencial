@@ -88,6 +88,14 @@ function Guardrails({
       <Check label="Planilha de origem do valor anexada" checked={ov?.anexoPresente ?? ro.item.anexoPresente ?? false} onChange={(v) => set({ anexoPresente: v })} />
       <Check label="ASPA: o médico validou e concordou com o valor das horas" checked={ov?.aspaConfirmado ?? false} onChange={(v) => set({ aspaConfirmado: v })} />
       <Check label="PIX conferido: a chave corresponde ao vínculo (sócio ou PJ)" checked={ov?.pixConferido ?? false} onChange={(v) => set({ pixConferido: v })} />
+      <div className="mt-1 flex gap-3">
+        <button className="btn-ghost" onClick={() => set({ anexoPresente: true, aspaConfirmado: true, pixConferido: true })}>
+          Marcar todos
+        </button>
+        <button className="btn-ghost" onClick={() => set({ anexoPresente: false, aspaConfirmado: false, pixConferido: false })}>
+          Desmarcar todos
+        </button>
+      </div>
 
       {tetoNota && (
         <div className="mt-3 border-t border-[var(--color-line)] pt-3">

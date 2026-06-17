@@ -13,6 +13,7 @@ import {
   itemAccentClass,
 } from '../format';
 import { isAguardando } from '../../domain/resolve';
+import { Selos } from './Selos';
 import type { CalendarItem, ObligationEstado } from '../../domain/types';
 
 export function DayView({
@@ -96,14 +97,20 @@ export function DayView({
           return (
             <div
               key={item.id}
-              className={`card flex items-center gap-3 p-[var(--spacing-16)] ${itemAccentClass(estado, item.critico)}`}
+              className={`card flex items-center gap-3 p-[var(--spacing-16)] ${itemAccentClass({ atrasada: ro.atrasada, concluido: done, critico: ro.critico })}`}
             >
               <input
                 type="checkbox"
                 className="h-5 w-5 shrink-0 accent-[var(--color-serges-blue)]"
                 checked={done}
                 disabled={checkDisabled}
-                title={checkDisabled ? 'Anexe a planilha de origem antes de concluir' : undefined}
+                title={
+                  checkDisabled
+                    ? estado === 'aguardandoInput'
+                      ? 'Aguarda o contratante: registre o retorno em vez de concluir'
+                      : 'Complete os guardrails antes de concluir'
+                    : undefined
+                }
                 onChange={() => setEstado(item, done ? 'pendente' : 'concluida')}
               />
               <button className="min-w-0 flex-1 text-left" onClick={() => onSelect(ro)}>
@@ -120,13 +127,12 @@ export function DayView({
                     <span>· {store.state.projects.find((p) => p.id === item.projetoId)?.nome}</span>
                   )}
                   {item.responsavel && <span>· {item.responsavel}</span>}
-                  {checkDisabled && <span className="text-[var(--color-overdue)]">· falta anexo</span>}
                 </div>
               </button>
-              {ro.aprovacaoEstourada && (
-                <span className="chip border-[var(--color-overdue)] text-[var(--color-overdue)]">24h+</span>
-              )}
-              <span className={estadoChipClass(estado)}>{ESTADO_LABEL[estado]}</span>
+              <div className="flex flex-col items-end gap-1">
+                <span className={estadoChipClass(estado)}>{ESTADO_LABEL[estado]}</span>
+                <Selos ro={ro} />
+              </div>
             </div>
           );
         })}

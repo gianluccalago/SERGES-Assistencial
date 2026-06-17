@@ -1,6 +1,35 @@
-import type { Project, Override, Holiday, ManualObligation, AppConfig } from '../domain/types';
+import type {
+  Project,
+  Override,
+  Holiday,
+  ManualObligation,
+  AppConfig,
+  Contato,
+  ObligationEstado,
+} from '../domain/types';
 import { seedProjects } from '../data/projects';
 import { seedExtraHolidays } from '../data/holidays';
+import { seedContatos } from '../data/contatos';
+
+/** Mapeia status antigos (modelo de 6 estados) para os 4 atuais (§4.5). */
+function migrarEstado(e: unknown): ObligationEstado | undefined {
+  switch (e) {
+    case 'pendente':
+    case 'concluida':
+      return e;
+    case 'aguardandoRetorno':
+      return 'aguardandoInput';
+    case 'aguardandoInput':
+    case 'emAprovacao':
+      return e;
+    case 'emCobranca':
+    case 'escalada':
+    case 'atrasada':
+      return 'pendente';
+    default:
+      return undefined;
+  }
+}
 
 const CONFIG_KEY = 'serges.config';
 
@@ -33,7 +62,7 @@ export function saveConfig(config: AppConfig): void {
 // projetos, os overrides sobre obrigações geradas e as obrigações manuais.
 
 const STORAGE_KEY = 'serges.obrigacoes';
-const SCHEMA_VERSION = 2;
+const SCHEMA_VERSION = 3;
 
 export interface PersistedState {
   version: number;
@@ -43,6 +72,8 @@ export interface PersistedState {
   overrides: Record<string, Override>;
   /** Obrigações criadas do zero pelo usuário. */
   manualObligations: ManualObligation[];
+  /** Contatos operacionais (§6.5), fonte única. */
+  contatos: Contato[];
 }
 
 export function defaultState(): PersistedState {
@@ -52,6 +83,7 @@ export function defaultState(): PersistedState {
     extraHolidays: structuredClone(seedExtraHolidays),
     overrides: {},
     manualObligations: [],
+    contatos: structuredClone(seedContatos),
   };
 }
 
@@ -124,11 +156,20 @@ function migrate(state: any): PersistedState {
     }
   }
 
+  // Normaliza status antigos para o modelo de 4 status (§4.5).
+  for (const ov of Object.values(overrides)) {
+    if (ov.estado) ov.estado = migrarEstado(ov.estado);
+  }
+  for (const m of manualObligations) {
+    m.estado = migrarEstado(m.estado) ?? 'pendente';
+  }
+
   return {
     version: SCHEMA_VERSION,
     projects: state.projects ?? base.projects,
     extraHolidays: state.extraHolidays ?? base.extraHolidays,
     overrides,
     manualObligations,
+    contatos: state.contatos ?? base.contatos,
   };
 }

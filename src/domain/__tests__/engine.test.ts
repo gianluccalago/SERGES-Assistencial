@@ -3,7 +3,7 @@ import { deriveObligations, paymentDate, cardPagamentoPrazo } from '../engine';
 import { assembleMonth } from '../resolve';
 import { buildHolidaySet, easterSunday, brazilianHolidays, isBusinessDay } from '../holidays';
 import { toISODate, utcDate, fromISODate, dayOfWeek } from '../dateUtils';
-import { resolveEstado, registrarRetorno } from '../stateMachine';
+import { resolveEstado, registrarRetorno, marcadores } from '../stateMachine';
 import { seedProjects } from '../../data/projects';
 import type { CalendarItem, ManualObligation, Obligation, Override } from '../types';
 
@@ -93,15 +93,16 @@ describe('maio de 2026 (dia 10 cai num domingo)', () => {
 });
 
 describe('dependência de terceiro (faturamentoCard)', () => {
-  it('projeto com ordem de compra nasce em aguardandoRetorno, sem prazo', () => {
+  it('projeto com ordem de compra nasce aguardando o contratante, sem prazo', () => {
     const card = itemById(month(2026, 7), 'faturamentoCard:hrl:2026-07');
-    expect(card.baseEstado).toBe('aguardandoRetorno');
+    expect(card.baseEstado).toBe('aguardandoInput');
     expect(card.prazo).toBeUndefined();
     expect(card.dependenciaAguardada).toBe('ordemDeCompra');
   });
-  it('não vira atrasada pela passagem do tempo', () => {
+  it('não vira atrasada (por culpa nossa) pela passagem do tempo', () => {
     const card = itemById(month(2026, 7), 'faturamentoCard:hrl:2026-07');
-    expect(resolveEstado(card, '2027-01-01')).toBe('aguardandoRetorno');
+    expect(resolveEstado(card)).toBe('aguardandoInput');
+    expect(marcadores(card, '2027-01-01').atrasada).toBe(false);
   });
   it('após registrar o retorno passa a pendente com prazo (via override)', () => {
     const ov = registrarRetorno(undefined, '2026-07-20', '2026-07-25');
@@ -109,21 +110,24 @@ describe('dependência de terceiro (faturamentoCard)', () => {
     expect(ov.dataNova).toBe('2026-07-25');
     const card = itemById(month(2026, 7, { 'faturamentoCard:hrl:2026-07': ov }), 'faturamentoCard:hrl:2026-07');
     expect(card.prazo).toBe('2026-07-25');
-    expect(resolveEstado(card, '2026-07-21')).toBe('pendente');
-    expect(resolveEstado(card, '2026-07-26')).toBe('atrasada');
+    expect(resolveEstado(card)).toBe('pendente');
+    expect(marcadores(card, '2026-07-21').atrasada).toBe(false);
+    expect(marcadores(card, '2026-07-26').atrasada).toBe(true);
   });
 });
 
-describe('regra de atraso', () => {
-  it('obrigação com prazo vira atrasada após o prazo', () => {
+describe('marcador de atraso (selo, não status)', () => {
+  it('obrigação com prazo recebe o selo atrasada após o prazo', () => {
     const card = itemById(month(2026, 7), 'cardPagamento:dezEmergencias:2026-07');
-    expect(resolveEstado(card, '2026-07-09')).toBe('pendente');
-    expect(resolveEstado(card, '2026-07-11')).toBe('atrasada');
+    expect(marcadores(card, '2026-07-09').atrasada).toBe(false);
+    expect(marcadores(card, '2026-07-11').atrasada).toBe(true);
+    expect(resolveEstado(card)).toBe('pendente'); // status segue sendo pendente
   });
-  it('concluída tem precedência sobre o atraso', () => {
+  it('concluída não recebe selo de atraso', () => {
     const ov: Override = { estado: 'concluida' };
     const card = itemById(month(2026, 7, { 'cardPagamento:dezEmergencias:2026-07': ov }), 'cardPagamento:dezEmergencias:2026-07');
-    expect(resolveEstado(card, '2026-07-30')).toBe('concluida');
+    expect(resolveEstado(card)).toBe('concluida');
+    expect(marcadores(card, '2026-07-30').atrasada).toBe(false);
   });
 });
 
