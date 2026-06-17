@@ -41,6 +41,24 @@ export function LotePagamentoPanel({ item, contratoSocial }: { item: CalendarIte
         </div>
       )}
 
+      {/* Marcar fundamentais do lote inteiro (não cria obrigação). */}
+      {medicos.length > 0 && (
+        <div className="mb-2 flex gap-3">
+          <button
+            className="btn-ghost"
+            onClick={() => salvar(medicos.map((m) => ({ ...m, anexoPresente: true, pixConferido: true })))}
+          >
+            Marcar fundamentais do lote
+          </button>
+          <button
+            className="btn-ghost"
+            onClick={() => salvar(medicos.map((m) => ({ ...m, anexoPresente: false, pixConferido: false })))}
+          >
+            Desmarcar
+          </button>
+        </div>
+      )}
+
       <div className="space-y-2">
         {medicos.length === 0 && <div className="label">Nenhum médico no lote ainda.</div>}
         {medicos.map((m) => {
@@ -131,6 +149,12 @@ export function LotePagamentoPanel({ item, contratoSocial }: { item: CalendarIte
             Adicionar
           </button>
         </div>
+        {/* Aviso (não bloqueia) ao adicionar PJ em projeto com contrato social. */}
+        {contratoSocial && vinculo === 'PJ' && (
+          <p className="mt-1 text-[length:var(--text-caption)] text-[var(--color-overdue)]">
+            Projeto exige contrato social · nota fiscal não permitida · risco de quarteirização. (apenas alerta)
+          </p>
+        )}
       </div>
     </div>
   );
