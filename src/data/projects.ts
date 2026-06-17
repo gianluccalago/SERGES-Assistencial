@@ -122,10 +122,12 @@ export const seedProjects: Project[] = [
     nome: 'UPA Palmas',
     ativo: true,
     diaPagamento: 15,
-    afericao: '1-31',
+    afericao: '20-19',
     dependenciaFaturamento: 'nenhuma',
     contratoSocialObrigatorio: true,
     escalista: 'Danneline',
+    // Aferição fecha no dia 19; inicia o faturamento no dia 21.
+    diaFaturamentoIniciar: 21,
   },
   {
     id: 'guaira',

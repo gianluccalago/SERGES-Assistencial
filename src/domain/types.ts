@@ -25,6 +25,8 @@ export interface Project {
   excecaoLancamento?: string;
   /** Dia em que a obrigação deve estar lançada, quando difere do pagamento. */
   diaLancamento?: number;
+  /** Dia-âncora para iniciar o faturamento (padrão 1; ASF 16; UPA Palmas 21). */
+  diaFaturamentoIniciar?: number;
   /** Contato primário para cobrar o retorno (§11.8). */
   contatoPrimario?: string;
   /** Para quem escalar quando há silêncio do contato primário (§11.8). */

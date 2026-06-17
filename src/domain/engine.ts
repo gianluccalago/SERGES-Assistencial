@@ -174,7 +174,7 @@ export function deriveObligations(
 
     // --- Faturamento: iniciar (cobrança), exceto valor fixo e Academia ---
     if (p.dependenciaFaturamento !== 'fixo' && p.id !== 'academia') {
-      const dia = p.id === 'asf' ? 16 : 1;
+      const dia = p.diaFaturamentoIniciar ?? (p.id === 'asf' ? 16 : 1);
       const prazo = ajustarDiaUtil(utcDate(year, month, dia), holidays, 'adia');
       out.push({
         id: `faturamentoIniciar:${p.id}:${comp}`,
