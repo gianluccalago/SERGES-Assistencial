@@ -16,3 +16,10 @@ services:
     envVars:
       - key: NODE_VERSION
         value: "22"
+      # Definidas no painel do Render (Environment). sync:false faz o Render
+      # preservar os valores do dashboard em vez de sobrescrevê-los pelo blueprint.
+      # São lidas em tempo de BUILD pelo Vite (precisam existir antes do build).
+      - key: VITE_SUPABASE_URL
+        sync: false
+      - key: VITE_SUPABASE_ANON_KEY
+        sync: false
