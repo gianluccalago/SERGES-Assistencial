@@ -21,6 +21,19 @@ import { useGestorGate } from '../../auth/AuthProvider';
 
 const GRUPOS: GrupoDoc[] = ['especificos', 'gerais', 'profissionais'];
 
+// Fase anterior, para o botão "Voltar".
+const FASE_ANTERIOR: Partial<Record<FaseEdital, FaseEdital>> = {
+  decisao: 'triagem',
+  reunir: 'decisao',
+  conferencia: 'reunir',
+  correcao: 'conferencia',
+  envio: 'conferencia',
+  enviado: 'envio',
+  ativo: 'enviado',
+  perdido: 'enviado',
+  descartado: 'decisao',
+};
+
 export function EditalDetail({ edital, onClose }: { edital: Edital; onClose: () => void }) {
   const c = useComercial();
   const [draft, setDraft] = useState<Edital>(edital);
@@ -230,6 +243,11 @@ function FaseAcoes({
         </>
       )}
       {(f === 'descartado' || f === 'perdido') && <button className="btn-secondary" onClick={() => onMove('triagem')}>Reabrir → Triagem</button>}
+      {FASE_ANTERIOR[f] && (
+        <button className="btn-ghost ml-auto" onClick={() => onMove(FASE_ANTERIOR[f]!)} title={`Voltar para ${FASE_LABEL[FASE_ANTERIOR[f]!]}`}>
+          ← Voltar
+        </button>
+      )}
     </div>
   );
 }

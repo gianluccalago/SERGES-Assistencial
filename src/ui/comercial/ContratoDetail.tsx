@@ -35,26 +35,15 @@ export function ContratoDetail({ contrato, onClose }: { contrato: Contrato; onCl
       titulo={draft.titulo || (draft.cidade ? `${draft.cidade}/${draft.uf}` : 'Novo contrato')}
       onClose={onClose}
       footer={
-        <>
-          <button
-            className="btn-secondary"
-            onClick={() => {
-              c.criarRenovacao(draft);
-              onClose();
-            }}
-          >
-            Criar edital de renovação
-          </button>
-          <button
-            className="btn-ghost ml-auto text-[var(--color-overdue)]"
-            onClick={() => {
-              c.removeContrato(draft.id);
-              onClose();
-            }}
-          >
-            Excluir contrato
-          </button>
-        </>
+        <button
+          className="btn-ghost ml-auto text-[var(--color-overdue)]"
+          onClick={() => {
+            c.removeContrato(draft.id);
+            onClose();
+          }}
+        >
+          Excluir contrato
+        </button>
       }
     >
       <div className="flex flex-wrap items-center gap-2">
