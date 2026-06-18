@@ -72,7 +72,7 @@ export function ComercialPage() {
       {/* Seletor de seção */}
       <div className="flex flex-wrap items-center gap-3">
         <div className="segmented">
-          <button className="seg-btn" data-active={secao === 'editais'} onClick={() => setSecao('editais')}>Editais</button>
+          <button className="seg-btn" data-active={secao === 'editais'} onClick={() => setSecao('editais')}>Licitações</button>
           <button className="seg-btn" data-active={secao === 'contratos'} onClick={() => setSecao('contratos')}>Contratos</button>
         </div>
         {secao === 'editais' ? (
