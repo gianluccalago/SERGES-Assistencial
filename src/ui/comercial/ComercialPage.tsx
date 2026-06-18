@@ -23,8 +23,8 @@ type SubContratos = 'todos' | 'renovacao';
 const STATUS_LABEL: Record<Contrato['status'], string> = {
   ativo: 'Ativo',
   inativo: 'Inativo (rodízio)',
-  suspenso: 'Suspenso',
-  vencido: 'Vencido',
+  suspenso: 'Suspenso (empenho)',
+  vencido: 'Finalizado',
 };
 
 export function ComercialPage() {
@@ -129,12 +129,18 @@ export function ComercialPage() {
           </div>
 
           {subCt === 'todos' && (
-            <ContratosKanban contratos={contratos} hoje={hoje} janela={janelaRenovacaoDias} onOpen={setContrato} />
+            <ContratosKanban
+              contratos={contratos}
+              hoje={hoje}
+              janela={janelaRenovacaoDias}
+              onOpen={setContrato}
+              onStatus={(ct, status) => c.upsertContrato({ ...ct, status })}
+            />
           )}
           {subCt === 'renovacao' && (
             <Lista vazio="Nenhum contrato dentro da janela de renovação.">
               {renovacao.map((ct) => (
-                <ContratoCard key={ct.id} ct={ct} hoje={hoje} janela={janelaRenovacaoDias} onOpen={setContrato} acaoRenovar onRenovar={() => c.criarRenovacao(ct)} />
+                <ContratoCard key={ct.id} ct={ct} hoje={hoje} janela={janelaRenovacaoDias} onOpen={setContrato} onStatus={(s) => c.upsertContrato({ ...ct, status: s })} />
               ))}
             </Lista>
           )}
@@ -263,11 +269,13 @@ function ContratosKanban({
   hoje,
   janela,
   onOpen,
+  onStatus,
 }: {
   contratos: Contrato[];
   hoje: string;
   janela: number;
   onOpen: (c: Contrato) => void;
+  onStatus: (ct: Contrato, status: Contrato['status']) => void;
 }) {
   if (contratos.length === 0) {
     return <p className="text-[var(--color-ink-soft)]">Nenhum contrato cadastrado. Use “+ Novo contrato”.</p>;
@@ -288,7 +296,7 @@ function ContratosKanban({
               </span>
             </div>
             <div className="flex min-h-[120px] flex-1 flex-col gap-2 p-2">
-              {list.map((ct) => <ContratoCard key={ct.id} ct={ct} hoje={hoje} janela={janela} onOpen={onOpen} cor={col.cor} />)}
+              {list.map((ct) => <ContratoCard key={ct.id} ct={ct} hoje={hoje} janela={janela} onOpen={onOpen} cor={col.cor} onStatus={(s) => onStatus(ct, s)} />)}
               {list.length === 0 && (
                 <div className="flex flex-1 items-center justify-center rounded-[var(--radius-sm)] border border-dashed border-[var(--color-line)] py-6 text-[length:var(--text-caption)] text-[var(--color-ink-faint)]">
                   vazio
@@ -308,16 +316,14 @@ function ContratoCard({
   janela,
   onOpen,
   cor,
-  acaoRenovar,
-  onRenovar,
+  onStatus,
 }: {
   ct: Contrato;
   hoje: string;
   janela: number;
   onOpen: (c: Contrato) => void;
   cor?: string;
-  acaoRenovar?: boolean;
-  onRenovar?: () => void;
+  onStatus?: (status: Contrato['status']) => void;
 }) {
   const dias = ct.fimVencimento ? diasAte(ct.fimVencimento, hoje) : undefined;
   // Ativo perto da renovação/vencimento → alerta em vermelho.
@@ -350,8 +356,20 @@ function ContratoCard({
           </div>
         )}
       </button>
-      {acaoRenovar && (
-        <button className="btn-secondary mt-3" onClick={onRenovar}>Criar edital de renovação</button>
+      {onStatus && (
+        <div className="mt-3 flex items-center gap-2 border-t border-[var(--color-line)] pt-2">
+          <span className="label">Status</span>
+          <select
+            className="select w-auto py-1 text-[length:var(--text-caption)]"
+            value={ct.status}
+            onClick={(e) => e.stopPropagation()}
+            onChange={(e) => onStatus(e.target.value as Contrato['status'])}
+          >
+            {(Object.keys(STATUS_LABEL) as Contrato['status'][]).map((s) => (
+              <option key={s} value={s}>{STATUS_LABEL[s]}</option>
+            ))}
+          </select>
+        </div>
       )}
     </div>
   );
