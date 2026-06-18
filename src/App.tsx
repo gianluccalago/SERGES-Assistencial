@@ -182,7 +182,7 @@ export function App() {
           </div>
         </header>
 
-        <main className="mx-auto max-w-[1200px] px-[var(--spacing-16)] py-[var(--spacing-20)] md:px-[var(--spacing-24)]">
+        <main className={`mx-auto px-[var(--spacing-16)] py-[var(--spacing-20)] md:px-[var(--spacing-24)] ${screen === 'comercial' ? 'max-w-none' : 'max-w-[1200px]'}`}>
           {isCalendar && <OcultadasBar year={year} month={month} />}
           {screen === 'dia' && <DayView anchorISO={cursorISO} filtros={filtros} onSelect={setSelected} />}
           {screen === 'semana' && <WeekView anchorISO={cursorISO} filtros={filtros} onSelect={setSelected} />}
