@@ -3,8 +3,9 @@ import { useStore } from '../../state/store';
 import { resolveItem, type ResolvedObligation } from '../useObligations';
 import { applyFiltros, type Filtros } from '../filters';
 import { ObligationCard } from './ObligationCard';
+import { AguardandoContratante } from './DayView';
 import { addCalendarDays, fromISODate, toISODate } from '../../domain/dateUtils';
-import { DOW_LONGO, MESES, todayISO, estadoChipClass, ESTADO_LABEL } from '../format';
+import { DOW_LONGO, MESES, todayISO } from '../format';
 import { isAguardando } from '../../domain/resolve';
 import type { CalendarItem } from '../../domain/types';
 
@@ -117,16 +118,7 @@ export function WeekView({
       </div>
 
       {aguardando.length > 0 && (
-        <div className="mt-[var(--spacing-24)]">
-          <div className="label mb-2 uppercase">Aguardando retorno de terceiro (sem prazo)</div>
-          <div className="flex flex-wrap gap-2">
-            {aguardando.map((ro) => (
-              <button key={ro.item.id} onClick={() => onSelect(ro)} className={estadoChipClass(ro.estado)}>
-                {ro.item.titulo} · {ESTADO_LABEL[ro.estado]}
-              </button>
-            ))}
-          </div>
-        </div>
+        <AguardandoContratante itens={aguardando} onSelect={onSelect} />
       )}
     </div>
   );

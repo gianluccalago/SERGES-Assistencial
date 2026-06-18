@@ -3,18 +3,12 @@ import { useStore } from '../../state/store';
 import { resolveItem, type ResolvedObligation } from '../useObligations';
 import { applyFiltros, type Filtros } from '../filters';
 import { fromISODate } from '../../domain/dateUtils';
-import {
-  DOW_LONGO,
-  MESES,
-  todayISO,
-  TIPO_LABEL,
-  estadoChipClass,
-  itemAccentClass,
-} from '../format';
+import { DOW_LONGO, MESES, todayISO, TIPO_LABEL, itemAccentClass } from '../format';
 import { isAguardando } from '../../domain/resolve';
 import { progressoTexto } from '../../domain/stateMachine';
 import { Selos } from './Selos';
 import { QuickActions } from './QuickActions';
+import { ObligationCard } from './ObligationCard';
 import { TudoEmDia } from './TudoEmDia';
 
 export function DayView({
@@ -119,18 +113,37 @@ export function DayView({
         })}
       </div>
 
-      {aguardando.length > 0 && (
-        <div className="mt-[var(--spacing-24)]">
-          <div className="label mb-2 uppercase">Aguardando retorno de terceiro (no mês)</div>
-          <div className="flex flex-wrap gap-2">
-            {aguardando.map((ro) => (
-              <button key={ro.item.id} onClick={() => onSelect(ro)} className={estadoChipClass(ro.estado)}>
-                {ro.item.titulo}
-              </button>
-            ))}
-          </div>
-        </div>
-      )}
+      {aguardando.length > 0 && <AguardandoContratante itens={aguardando} onSelect={onSelect} />}
     </div>
+  );
+}
+
+// Bloco destacado das obrigações que dependem do contratante: sem data, mas
+// importantes. Renderizadas como cards de tarefa (com contato e status).
+export function AguardandoContratante({
+  itens,
+  onSelect,
+}: {
+  itens: ResolvedObligation[];
+  onSelect: (ro: ResolvedObligation) => void;
+}) {
+  return (
+    <section className="mt-[var(--spacing-24)] rounded-[var(--radius-md)] border border-[var(--color-line)] bg-[var(--color-surface-muted)] p-[var(--spacing-16)]">
+      <div className="mb-3 flex items-center gap-2">
+        <span className="flex h-6 w-6 items-center justify-center rounded-full bg-[var(--color-serges-blue-tint)] text-[var(--color-serges-blue)]">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <circle cx="12" cy="12" r="9" /><path d="M12 7v5l3 2" />
+          </svg>
+        </span>
+        <h3 className="text-[length:var(--text-subheading)]">Aguardando o contratante</h3>
+        <span className="chip">{itens.length}</span>
+      </div>
+      <p className="label mb-3">Sem data definida, mas críticas — cobre o contratante para liberar o faturamento.</p>
+      <div className="grid grid-cols-1 gap-2 lg:grid-cols-2">
+        {itens.map((ro) => (
+          <ObligationCard key={ro.item.id} ro={ro} onSelect={onSelect} />
+        ))}
+      </div>
+    </section>
   );
 }

@@ -71,8 +71,9 @@ export function estadoChipClass(estado: ObligationEstado): string {
 }
 
 /** Classe da borda lateral / acento conforme marcadores. */
-export function itemAccentClass(p: { atrasada?: boolean; concluido?: boolean; critico?: boolean }): string {
+export function itemAccentClass(p: { atrasada?: boolean; concluido?: boolean; critico?: boolean; aguardando?: boolean }): string {
   if (p.atrasada) return 'border-l-[3px] border-l-[var(--color-overdue)]';
+  if (p.aguardando) return 'border-l-[3px] border-dashed border-l-[var(--color-ink-faint)]';
   if (p.concluido) return 'border-l-[3px] border-l-[var(--color-done)] opacity-70';
   if (p.critico) return 'border-l-[3px] border-l-[var(--color-serges-blue)]';
   return 'border-l-[3px] border-l-transparent';

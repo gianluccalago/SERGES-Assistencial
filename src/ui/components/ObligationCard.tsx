@@ -1,6 +1,6 @@
 import { useStore } from '../../state/store';
 import type { ResolvedObligation } from '../useObligations';
-import { TIPO_LABEL, itemAccentClass, formatDateShort } from '../format';
+import { TIPO_LABEL, DEP_LABEL, itemAccentClass, formatDateShort } from '../format';
 import { progressoTexto } from '../../domain/stateMachine';
 import { Selos } from './Selos';
 import { QuickActions } from './QuickActions';
@@ -16,6 +16,7 @@ interface Props {
 export function ObligationCard({ ro, onSelect, draggable, onDragStart }: Props) {
   const store = useStore();
   const { item, estado, prazo } = ro;
+  const aguardando = estado === 'aguardandoInput';
   const projeto = item.projetoId
     ? store.state.projects.find((p) => p.id === item.projetoId)?.nome
     : undefined;
@@ -28,6 +29,7 @@ export function ObligationCard({ ro, onSelect, draggable, onDragStart }: Props) 
         atrasada: ro.atrasada,
         concluido: estado === 'concluida',
         critico: ro.critico,
+        aguardando,
       })} ${draggable ? 'cursor-grab active:cursor-grabbing' : ''}`}
     >
       <div className="flex items-start gap-3">
@@ -42,6 +44,9 @@ export function ObligationCard({ ro, onSelect, draggable, onDragStart }: Props) 
           <div className="label mt-1 flex flex-wrap items-center gap-x-2 gap-y-1">
             <span>{TIPO_LABEL[item.tipo]}</span>
             {projeto && <span>· {projeto}</span>}
+            {aguardando && item.dependenciaAguardada && (
+              <span className="font-medium text-[var(--color-ink)]">· aguardando {DEP_LABEL[item.dependenciaAguardada]}</span>
+            )}
             {item.responsavel && <span>· {item.responsavel}</span>}
             {prazo && <span>· {formatDateShort(prazo)}</span>}
             {item.isManual && <span className="text-[var(--color-serges-blue)]">· manual</span>}

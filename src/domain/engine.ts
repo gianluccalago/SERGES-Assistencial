@@ -193,7 +193,7 @@ export function deriveObligations(
     if (DEP_EXIGE_RETORNO.has(p.dependenciaFaturamento)) {
       out.push({
         id: `faturamentoCard:${p.id}:${comp}`,
-        titulo: `Card de faturamento — ${p.nome} (aguarda ${p.dependenciaFaturamento})`,
+        titulo: `Card de faturamento — ${p.nome}`,
         projetoId: p.id,
         tipo: 'faturamentoCard',
         regraOrigem:
