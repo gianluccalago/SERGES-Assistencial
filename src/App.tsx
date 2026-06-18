@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { DayView } from './ui/components/DayView';
 import { WeekView } from './ui/components/WeekView';
 import { MonthView } from './ui/components/MonthView';
@@ -204,8 +204,22 @@ export function App() {
 }
 
 function SaveIndicator({ status }: { status: 'idle' | 'saving' | 'saved' | 'error' }) {
-  if (status === 'idle') return null;
+  const [visivel, setVisivel] = useState(true);
+  useSavedFade(status, setVisivel);
+  if (status === 'idle' || (status === 'saved' && !visivel)) return null;
   const txt = status === 'saving' ? 'Salvando…' : status === 'saved' ? 'Salvo' : 'Erro ao salvar';
   const cor = status === 'error' ? 'text-[var(--color-overdue)]' : 'text-[var(--color-ink-faint)]';
   return <span className={`text-[length:var(--text-caption)] ${cor}`}>{txt}</span>;
+}
+
+// "Salvo" some sozinho após 2s; "Salvando…/Erro" permanecem.
+function useSavedFade(status: string, setVisivel: (v: boolean) => void) {
+  useEffect(() => {
+    if (status === 'saved') {
+      setVisivel(true);
+      const t = setTimeout(() => setVisivel(false), 2000);
+      return () => clearTimeout(t);
+    }
+    setVisivel(true);
+  }, [status]);
 }

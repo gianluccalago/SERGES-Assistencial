@@ -26,35 +26,33 @@ export function ProjectsAdmin() {
   const [editing, setEditing] = useState<Project | null>(null);
 
   return (
-    <div className="grid gap-[var(--spacing-24)] lg:grid-cols-[1fr_400px]">
-      <div className="space-y-2">
-        <div className="mb-1 flex items-center justify-between">
-          <h2 className="text-[length:var(--text-heading)]">Projetos</h2>
-          <button className="btn-primary" onClick={() => setEditing(emptyProject())}>
-            Novo projeto
+    <div className="mx-auto max-w-[760px] space-y-2">
+      <div className="mb-1 flex items-center justify-between">
+        <h2 className="text-[length:var(--text-heading)]">Projetos</h2>
+        <button className="btn-primary" onClick={() => setEditing(emptyProject())}>
+          Novo projeto
+        </button>
+      </div>
+      {store.state.projects.map((p) => (
+        <div key={p.id} className="card flex flex-wrap items-center gap-3 p-[var(--spacing-16)]">
+          <div className="min-w-0 flex-1">
+            <div className={p.ativo ? 'font-medium text-[var(--color-ink)]' : 'text-[var(--color-ink-soft)]'}>
+              {p.nome} {!p.ativo && '· inativo'}
+            </div>
+            <div className="label mt-1">
+              Pgto dia {p.diaPagamento} · aferição {p.afericao} · {DEP_LABEL[p.dependenciaFaturamento]}
+              {p.escalista ? ` · ${p.escalista}` : ''}
+              {p.contratoSocialObrigatorio ? ' · contrato social' : ''}
+            </div>
+          </div>
+          <button className="btn-secondary" onClick={() => setEditing({ ...p })}>
+            Editar
+          </button>
+          <button className="btn-ghost" onClick={() => store.setProjectAtivo(p.id, !p.ativo)}>
+            {p.ativo ? 'Inativar' : 'Ativar'}
           </button>
         </div>
-        {store.state.projects.map((p) => (
-          <div key={p.id} className="card flex items-center gap-4 p-[var(--spacing-16)]">
-            <div className="min-w-0 flex-1">
-              <div className={p.ativo ? 'font-medium text-[var(--color-ink)]' : 'text-[var(--color-ink-soft)]'}>
-                {p.nome} {!p.ativo && '· inativo'}
-              </div>
-              <div className="label mt-1">
-                Pgto dia {p.diaPagamento} · aferição {p.afericao} · {DEP_LABEL[p.dependenciaFaturamento]}
-                {p.escalista ? ` · ${p.escalista}` : ''}
-                {p.contratoSocialObrigatorio ? ' · contrato social' : ''}
-              </div>
-            </div>
-            <button className="btn-secondary" onClick={() => setEditing({ ...p })}>
-              Editar
-            </button>
-            <button className="btn-ghost" onClick={() => store.setProjectAtivo(p.id, !p.ativo)}>
-              {p.ativo ? 'Inativar' : 'Ativar'}
-            </button>
-          </div>
-        ))}
-      </div>
+      ))}
 
       {editing && (
         <ProjectForm
@@ -100,7 +98,8 @@ function ProjectForm({
     s.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/[^a-z0-9]+/g, '');
 
   return (
-    <div className="card h-fit space-y-3 p-[var(--spacing-20)]">
+    <div className="fixed inset-0 z-[60] flex items-start justify-center overflow-y-auto bg-black/40 p-4 py-[5vh]" onClick={onCancel}>
+      <div className="card w-full max-w-[480px] space-y-3 p-[var(--spacing-20)]" onClick={(e) => e.stopPropagation()}>
       <h3 className="text-[length:var(--text-subheading)]">{isNew ? 'Novo projeto' : `Editar ${project.nome}`}</h3>
 
       <Field label="Nome">
@@ -180,6 +179,7 @@ function ProjectForm({
         )}
       </div>
       <p className="label">Alterar um projeto recalcula o calendário automaticamente.</p>
+      </div>
     </div>
   );
 }
