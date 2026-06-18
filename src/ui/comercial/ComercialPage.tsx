@@ -129,14 +129,12 @@ export function ComercialPage() {
           </div>
 
           {subCt === 'todos' && (
-            <Lista vazio="Nenhum contrato cadastrado.">
-              {contratos.map((ct) => <ContratoCard key={ct.id} ct={ct} hoje={hoje} onOpen={setContrato} />)}
-            </Lista>
+            <ContratosKanban contratos={contratos} hoje={hoje} janela={janelaRenovacaoDias} onOpen={setContrato} />
           )}
           {subCt === 'renovacao' && (
             <Lista vazio="Nenhum contrato dentro da janela de renovação.">
               {renovacao.map((ct) => (
-                <ContratoCard key={ct.id} ct={ct} hoje={hoje} onOpen={setContrato} acaoRenovar onRenovar={() => c.criarRenovacao(ct)} />
+                <ContratoCard key={ct.id} ct={ct} hoje={hoje} janela={janelaRenovacaoDias} onOpen={setContrato} acaoRenovar onRenovar={() => c.criarRenovacao(ct)} />
               ))}
             </Lista>
           )}
@@ -226,7 +224,10 @@ function EditalCard({ e, hoje, onOpen, mostrarVerificacao, cor }: { e: Edital; h
       onClick={() => onOpen(e)}
     >
       <div className="flex items-start justify-between gap-2">
-        <span className="font-semibold text-[var(--color-ink)]">{e.cidade ? `${e.cidade}/${e.uf}` : 'Novo edital'}</span>
+        <div className="min-w-0">
+          <div className="truncate font-semibold text-[var(--color-ink)]">{e.titulo || (e.cidade ? `${e.cidade}/${e.uf}` : 'Nova licitação')}</div>
+          {(e.titulo && e.cidade) && <div className="text-[length:var(--text-caption)] text-[var(--color-ink-faint)]">{e.cidade}/{e.uf}</div>}
+        </div>
         {!cor && <span className="chip shrink-0">{FASE_LABEL[e.fase]}</span>}
       </div>
       {e.tipoServico && <div className="mt-1 line-clamp-2 text-[length:var(--text-caption)] text-[var(--color-ink-soft)]">{e.tipoServico}</div>}
@@ -244,36 +245,107 @@ function EditalCard({ e, hoje, onOpen, mostrarVerificacao, cor }: { e: Edital; h
   );
 }
 
+// Colunas do Kanban de contratos.
+const COLS_CONTRATO: { id: 'ativos' | 'inativos' | 'finalizados'; label: string; cor: string }[] = [
+  { id: 'ativos', label: 'Ativos', cor: '#1F9D55' },
+  { id: 'inativos', label: 'Inativos', cor: '#D97706' },
+  { id: 'finalizados', label: 'Finalizados', cor: '#94A3B8' },
+];
+
+function colunaContrato(s: Contrato['status']): 'ativos' | 'inativos' | 'finalizados' {
+  if (s === 'ativo') return 'ativos';
+  if (s === 'vencido') return 'finalizados';
+  return 'inativos'; // inativo (rodízio) ou suspenso (empenho esgotou)
+}
+
+function ContratosKanban({
+  contratos,
+  hoje,
+  janela,
+  onOpen,
+}: {
+  contratos: Contrato[];
+  hoje: string;
+  janela: number;
+  onOpen: (c: Contrato) => void;
+}) {
+  if (contratos.length === 0) {
+    return <p className="text-[var(--color-ink-soft)]">Nenhum contrato cadastrado. Use “+ Novo contrato”.</p>;
+  }
+  return (
+    <div className="flex gap-3 overflow-x-auto pb-4">
+      {COLS_CONTRATO.map((col) => {
+        const list = contratos.filter((ct) => colunaContrato(ct.status) === col.id);
+        return (
+          <div key={col.id} className="flex min-w-[260px] flex-1 flex-col overflow-hidden rounded-[var(--radius-md)] border border-[var(--color-line)] bg-[var(--color-canvas)]">
+            <div className="flex items-center justify-between gap-2 px-3 py-2" style={{ backgroundColor: `${col.cor}14`, borderTop: `3px solid ${col.cor}` }}>
+              <span className="flex items-center gap-2 truncate text-[length:var(--text-caption)] font-semibold uppercase tracking-wide" style={{ color: col.cor }}>
+                <span className="inline-block h-2 w-2 shrink-0 rounded-full" style={{ backgroundColor: col.cor }} />
+                {col.label}
+              </span>
+              <span className="shrink-0 rounded-full px-2 py-0.5 text-[length:var(--text-caption)] font-semibold" style={{ backgroundColor: `${col.cor}1F`, color: col.cor }}>
+                {list.length}
+              </span>
+            </div>
+            <div className="flex min-h-[120px] flex-1 flex-col gap-2 p-2">
+              {list.map((ct) => <ContratoCard key={ct.id} ct={ct} hoje={hoje} janela={janela} onOpen={onOpen} cor={col.cor} />)}
+              {list.length === 0 && (
+                <div className="flex flex-1 items-center justify-center rounded-[var(--radius-sm)] border border-dashed border-[var(--color-line)] py-6 text-[length:var(--text-caption)] text-[var(--color-ink-faint)]">
+                  vazio
+                </div>
+              )}
+            </div>
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
 function ContratoCard({
   ct,
   hoje,
+  janela,
   onOpen,
+  cor,
   acaoRenovar,
   onRenovar,
 }: {
   ct: Contrato;
   hoje: string;
+  janela: number;
   onOpen: (c: Contrato) => void;
+  cor?: string;
   acaoRenovar?: boolean;
   onRenovar?: () => void;
 }) {
   const dias = ct.fimVencimento ? diasAte(ct.fimVencimento, hoje) : undefined;
+  // Ativo perto da renovação/vencimento → alerta em vermelho.
+  const alerta = ct.status === 'ativo' && dias != null && dias <= janela;
+  const corBorda = alerta ? 'var(--color-overdue)' : cor;
   return (
-    <div className="card p-[var(--spacing-16)]">
+    <div
+      className="rounded-[var(--radius-sm)] border border-[var(--color-line)] bg-[var(--color-surface)] p-3 shadow-[var(--shadow-rest)] transition hover:shadow-[var(--shadow-pop)]"
+      style={corBorda ? { borderLeft: `3px solid ${corBorda}` } : undefined}
+    >
       <button className="block w-full text-left" onClick={() => onOpen(ct)}>
         <div className="flex items-start justify-between gap-2">
-          <span className="font-medium text-[var(--color-ink)]">{ct.cidade ? `${ct.cidade}/${ct.uf}` : 'Novo contrato'}</span>
-          <span className="chip shrink-0">{STATUS_LABEL[ct.status]}</span>
+          <div className="min-w-0">
+            <div className="truncate font-semibold text-[var(--color-ink)]">{ct.titulo || (ct.cidade ? `${ct.cidade}/${ct.uf}` : 'Novo contrato')}</div>
+            {(ct.titulo && ct.cidade) && <div className="text-[length:var(--text-caption)] text-[var(--color-ink-faint)]">{ct.cidade}/{ct.uf}</div>}
+          </div>
+          {!cor && <span className="chip shrink-0">{STATUS_LABEL[ct.status]}</span>}
         </div>
-        <div className="mt-1 text-[length:var(--text-label)] text-[var(--color-ink-soft)]">
-          {ct.tipoServico || 'Sem tipo definido'} · {fmtMoeda(ct.valor)}
-        </div>
+        {ct.tipoServico && <div className="mt-1 line-clamp-2 text-[length:var(--text-caption)] text-[var(--color-ink-soft)]">{ct.tipoServico}</div>}
+        {ct.valor != null && <div className="mt-1.5 text-[length:var(--text-caption)] font-medium text-[var(--color-ink)]">{fmtMoeda(ct.valor)}</div>}
         {dias != null && (
           <div className="mt-2 flex flex-wrap gap-1.5">
             {dias < 0 ? (
-              <span className="chip border-[var(--color-overdue)] text-[var(--color-overdue)]">Vencido</span>
+              <span className="chip border-[var(--color-overdue)] text-[var(--color-overdue)]">{ct.status === 'vencido' ? 'Finalizado' : 'Vencido'}</span>
             ) : (
-              <span className={`chip ${dias <= 90 ? 'border-[var(--color-overdue)] text-[var(--color-overdue)]' : ''}`}>Vence em {dias}d</span>
+              <span className={`chip ${alerta ? 'border-[var(--color-overdue)] text-[var(--color-overdue)]' : ''}`}>
+                {ct.status === 'ativo' ? `Renovar em ${dias}d` : `Vence em ${dias}d`}
+              </span>
             )}
           </div>
         )}

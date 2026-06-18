@@ -42,7 +42,7 @@ export function EditalDetail({ edital, onClose }: { edital: Edital; onClose: () 
 
   return (
     <Modal
-      titulo={draft.cidade ? `${draft.cidade}/${draft.uf}` : 'Novo edital'}
+      titulo={draft.titulo || (draft.cidade ? `${draft.cidade}/${draft.uf}` : 'Nova licitação')}
       onClose={onClose}
       footer={
         <button
@@ -99,6 +99,7 @@ export function EditalDetail({ edital, onClose }: { edital: Edital; onClose: () 
       )}
 
       {/* Campos base */}
+      <Field label="Título (hospital/UPA/UBS)"><input className="input" placeholder="Ex.: Hospital Municipal de…" value={draft.titulo ?? ''} onChange={(e) => patch({ titulo: e.target.value })} /></Field>
       <div className="grid grid-cols-2 gap-3">
         <Field label="Cidade"><input className="input" value={draft.cidade} onChange={(e) => patch({ cidade: e.target.value })} /></Field>
         <Field label="UF"><input className="input" maxLength={2} value={draft.uf} onChange={(e) => patch({ uf: e.target.value.toUpperCase() })} /></Field>
