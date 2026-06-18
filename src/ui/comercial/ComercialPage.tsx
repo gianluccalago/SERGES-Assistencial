@@ -160,29 +160,51 @@ function Lista({ children, vazio }: { children: React.ReactNode; vazio: string }
 // Colunas do Kanban: as fases do funil + as terminais.
 const COLUNAS_KANBAN: FaseEdital[] = [...FASES_FUNIL, 'ativo', 'perdido', 'descartado'];
 
+// Uma cor por fase (estilo Pipefy).
+const FASE_COR: Record<FaseEdital, string> = {
+  triagem: '#64748B', // slate
+  decisao: '#D97706', // âmbar
+  reunir: '#2563EB', // azul
+  conferencia: '#7C3AED', // roxo
+  correcao: '#EA580C', // laranja
+  envio: '#0891B2', // ciano
+  enviado: '#0D9488', // teal
+  ativo: '#1F9D55', // verde
+  perdido: '#D92D20', // vermelho
+  descartado: '#94A3B8', // cinza
+};
+
 function Funil({ editais, onOpen, hoje }: { editais: Edital[]; onOpen: (e: Edital) => void; hoje: string }) {
   if (editais.length === 0) {
     return <p className="text-[var(--color-ink-soft)]">Nenhum edital no funil. Use “+ Novo edital”.</p>;
   }
   return (
-    <div className="-mx-2 flex snap-x gap-3 overflow-x-auto px-2 pb-4">
+    <div className="flex gap-3 overflow-x-auto pb-4">
       {COLUNAS_KANBAN.map((fase) => {
         const list = editais.filter((e) => e.fase === fase);
-        const terminal = fase === 'ativo' || fase === 'perdido' || fase === 'descartado';
+        const cor = FASE_COR[fase];
         return (
-          <div key={fase} className="flex w-[270px] shrink-0 snap-start flex-col rounded-[var(--radius-md)] bg-[var(--color-canvas)] p-2">
-            <div className="mb-2 flex items-center justify-between px-1">
-              <span className={`text-[length:var(--text-label)] font-medium ${terminal ? 'text-[var(--color-ink-soft)]' : 'text-[var(--color-ink)]'}`}>
+          <div
+            key={fase}
+            className="flex min-w-[244px] flex-1 flex-col overflow-hidden rounded-[var(--radius-md)] border border-[var(--color-line)] bg-[var(--color-canvas)]"
+          >
+            {/* Cabeçalho colorido da fase */}
+            <div className="flex items-center justify-between gap-2 px-3 py-2" style={{ backgroundColor: `${cor}14`, borderTop: `3px solid ${cor}` }}>
+              <span className="flex items-center gap-2 truncate text-[length:var(--text-caption)] font-semibold uppercase tracking-wide" style={{ color: cor }}>
+                <span className="inline-block h-2 w-2 shrink-0 rounded-full" style={{ backgroundColor: cor }} />
                 {FASE_LABEL[fase]}
               </span>
-              <span className="chip">{list.length}</span>
+              <span className="shrink-0 rounded-full px-2 py-0.5 text-[length:var(--text-caption)] font-semibold" style={{ backgroundColor: `${cor}1F`, color: cor }}>
+                {list.length}
+              </span>
             </div>
-            <div className="flex flex-col gap-2">
+            {/* Cards */}
+            <div className="flex min-h-[120px] flex-1 flex-col gap-2 p-2">
               {list.map((e) => (
-                <EditalCard key={e.id} e={e} hoje={hoje} onOpen={onOpen} hideFase />
+                <EditalCard key={e.id} e={e} hoje={hoje} onOpen={onOpen} cor={cor} />
               ))}
               {list.length === 0 && (
-                <div className="rounded-[var(--radius-sm)] border border-dashed border-[var(--color-line)] py-6 text-center text-[length:var(--text-caption)] text-[var(--color-ink-faint)]">
+                <div className="flex flex-1 items-center justify-center rounded-[var(--radius-sm)] border border-dashed border-[var(--color-line)] py-6 text-[length:var(--text-caption)] text-[var(--color-ink-faint)]">
                   vazio
                 </div>
               )}
@@ -194,19 +216,21 @@ function Funil({ editais, onOpen, hoje }: { editais: Edital[]; onOpen: (e: Edita
   );
 }
 
-function EditalCard({ e, hoje, onOpen, mostrarVerificacao, hideFase }: { e: Edital; hoje: string; onOpen: (e: Edital) => void; mostrarVerificacao?: boolean; hideFase?: boolean }) {
+function EditalCard({ e, hoje, onOpen, mostrarVerificacao, cor }: { e: Edital; hoje: string; onOpen: (e: Edital) => void; mostrarVerificacao?: boolean; cor?: string }) {
   const sub = prazoStatus(e.submissaoFim, hoje);
   const venc = mostrarVerificacao && e.proximaVerificacao ? diasAte(e.proximaVerificacao, hoje) : undefined;
   return (
-    <button className="card w-full p-[var(--spacing-12)] text-left transition hover:shadow-[var(--shadow-pop)]" onClick={() => onOpen(e)}>
+    <button
+      className="group w-full rounded-[var(--radius-sm)] border border-[var(--color-line)] bg-[var(--color-surface)] p-3 text-left shadow-[var(--shadow-rest)] transition hover:-translate-y-0.5 hover:shadow-[var(--shadow-pop)]"
+      style={cor ? { borderLeft: `3px solid ${cor}` } : undefined}
+      onClick={() => onOpen(e)}
+    >
       <div className="flex items-start justify-between gap-2">
-        <span className="font-medium text-[var(--color-ink)]">{e.cidade ? `${e.cidade}/${e.uf}` : 'Novo edital'}</span>
-        {!hideFase && <span className="chip shrink-0">{FASE_LABEL[e.fase]}</span>}
+        <span className="font-semibold text-[var(--color-ink)]">{e.cidade ? `${e.cidade}/${e.uf}` : 'Novo edital'}</span>
+        {!cor && <span className="chip shrink-0">{FASE_LABEL[e.fase]}</span>}
       </div>
-      <div className="mt-1 line-clamp-2 text-[length:var(--text-caption)] text-[var(--color-ink-soft)]">
-        {e.tipoServico || 'Sem tipo definido'}
-      </div>
-      <div className="mt-1 text-[length:var(--text-caption)] text-[var(--color-ink-soft)]">{fmtMoeda(e.valor)}</div>
+      {e.tipoServico && <div className="mt-1 line-clamp-2 text-[length:var(--text-caption)] text-[var(--color-ink-soft)]">{e.tipoServico}</div>}
+      {e.valor != null && <div className="mt-1.5 text-[length:var(--text-caption)] font-medium text-[var(--color-ink)]">{fmtMoeda(e.valor)}</div>}
       <div className="mt-2 flex flex-wrap gap-1.5">
         {sub === 'vencido' && <span className="chip border-[var(--color-overdue)] text-[var(--color-overdue)]">Submissão vencida</span>}
         {sub === 'proximo' && <span className="chip border-[var(--color-overdue)] text-[var(--color-overdue)]">Submissão próxima</span>}
