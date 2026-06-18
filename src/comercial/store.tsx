@@ -105,7 +105,7 @@ export function ComercialProvider({ children }: { children: ReactNode }) {
 
   const reload = async () => {
     const { state: loaded } = await syncer.load();
-    setState(loaded);
+    setState((prev) => (JSON.stringify(prev) === JSON.stringify(loaded) ? prev : loaded));
   };
 
   useEffect(() => {

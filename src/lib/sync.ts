@@ -43,14 +43,16 @@ export class Syncer<S> {
     let state = this.base();
     let hadRows = false;
     for (const s of this.slices) {
-      const { data, error } = await supabase.from(s.table).select('*');
+      const pk = this.pkOf(s);
+      // Ordena pela PK para um resultado estável (evita a lista "pular de lugar").
+      const { data, error } = await supabase.from(s.table).select('*').order(pk);
       if (error) throw error;
       const rows = (data ?? []) as Record<string, unknown>[];
       if (rows.length) hadRows = true;
       // Atualiza snapshot para que o primeiro push seja no-op.
       const snap = this.snapshot.get(s.table)!;
       snap.clear();
-      for (const r of rows) snap.set(String(r[this.pkOf(s)]), JSON.stringify(r));
+      for (const r of rows) snap.set(String(r[pk]), JSON.stringify(r));
       state = s.apply(state, rows);
     }
     return { state, hadRows };

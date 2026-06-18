@@ -181,8 +181,9 @@ export function StoreProvider({ children }: { children: ReactNode }) {
   const reload = async () => {
     const { state: loaded } = await syncer.load();
     const { config: cfg, ...rest } = loaded;
-    setState(rest);
-    setConfigState(cfg);
+    // Só re-renderiza se algo realmente mudou (evita "piscar" no eco do realtime).
+    setState((prev) => (JSON.stringify(prev) === JSON.stringify(rest) ? prev : (rest as PersistedState)));
+    setConfigState((prev) => (JSON.stringify(prev) === JSON.stringify(cfg) ? prev : cfg));
   };
 
   // Persiste no Supabase a cada mudança (otimista; diff calcula o que mudou).
