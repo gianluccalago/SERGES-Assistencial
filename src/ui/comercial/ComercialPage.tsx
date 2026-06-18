@@ -3,6 +3,7 @@ import { useComercial } from '../../comercial/store';
 import {
   type Contrato,
   type Edital,
+  type FaseEdital,
   FASE_LABEL,
   FASES_FUNIL,
   diasAte,
@@ -156,47 +157,56 @@ function Lista({ children, vazio }: { children: React.ReactNode; vazio: string }
   return <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">{children}</div>;
 }
 
+// Colunas do Kanban: as fases do funil + as terminais.
+const COLUNAS_KANBAN: FaseEdital[] = [...FASES_FUNIL, 'ativo', 'perdido', 'descartado'];
+
 function Funil({ editais, onOpen, hoje }: { editais: Edital[]; onOpen: (e: Edital) => void; hoje: string }) {
-  const terminais = editais.filter((e) => e.fase === 'descartado' || e.fase === 'perdido' || e.fase === 'ativo');
+  if (editais.length === 0) {
+    return <p className="text-[var(--color-ink-soft)]">Nenhum edital no funil. Use “+ Novo edital”.</p>;
+  }
   return (
-    <div className="space-y-[var(--spacing-20)]">
-      {FASES_FUNIL.map((fase) => {
+    <div className="-mx-2 flex snap-x gap-3 overflow-x-auto px-2 pb-4">
+      {COLUNAS_KANBAN.map((fase) => {
         const list = editais.filter((e) => e.fase === fase);
-        if (list.length === 0) return null;
+        const terminal = fase === 'ativo' || fase === 'perdido' || fase === 'descartado';
         return (
-          <section key={fase}>
-            <h3 className="mb-2 text-[length:var(--text-subheading)]">{FASE_LABEL[fase]} <span className="text-[var(--color-ink-faint)]">({list.length})</span></h3>
-            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
-              {list.map((e) => <EditalCard key={e.id} e={e} hoje={hoje} onOpen={onOpen} />)}
+          <div key={fase} className="flex w-[270px] shrink-0 snap-start flex-col rounded-[var(--radius-md)] bg-[var(--color-canvas)] p-2">
+            <div className="mb-2 flex items-center justify-between px-1">
+              <span className={`text-[length:var(--text-label)] font-medium ${terminal ? 'text-[var(--color-ink-soft)]' : 'text-[var(--color-ink)]'}`}>
+                {FASE_LABEL[fase]}
+              </span>
+              <span className="chip">{list.length}</span>
             </div>
-          </section>
+            <div className="flex flex-col gap-2">
+              {list.map((e) => (
+                <EditalCard key={e.id} e={e} hoje={hoje} onOpen={onOpen} hideFase />
+              ))}
+              {list.length === 0 && (
+                <div className="rounded-[var(--radius-sm)] border border-dashed border-[var(--color-line)] py-6 text-center text-[length:var(--text-caption)] text-[var(--color-ink-faint)]">
+                  vazio
+                </div>
+              )}
+            </div>
+          </div>
         );
       })}
-      {editais.length === 0 && <p className="text-[var(--color-ink-soft)]">Nenhum edital no funil. Use “+ Novo edital”.</p>}
-      {terminais.length > 0 && (
-        <section>
-          <h3 className="mb-2 text-[length:var(--text-subheading)] text-[var(--color-ink-soft)]">Encerrados <span className="text-[var(--color-ink-faint)]">({terminais.length})</span></h3>
-          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
-            {terminais.map((e) => <EditalCard key={e.id} e={e} hoje={hoje} onOpen={onOpen} />)}
-          </div>
-        </section>
-      )}
     </div>
   );
 }
 
-function EditalCard({ e, hoje, onOpen, mostrarVerificacao }: { e: Edital; hoje: string; onOpen: (e: Edital) => void; mostrarVerificacao?: boolean }) {
+function EditalCard({ e, hoje, onOpen, mostrarVerificacao, hideFase }: { e: Edital; hoje: string; onOpen: (e: Edital) => void; mostrarVerificacao?: boolean; hideFase?: boolean }) {
   const sub = prazoStatus(e.submissaoFim, hoje);
   const venc = mostrarVerificacao && e.proximaVerificacao ? diasAte(e.proximaVerificacao, hoje) : undefined;
   return (
-    <button className="card w-full p-[var(--spacing-16)] text-left transition hover:shadow-[var(--shadow-pop)]" onClick={() => onOpen(e)}>
+    <button className="card w-full p-[var(--spacing-12)] text-left transition hover:shadow-[var(--shadow-pop)]" onClick={() => onOpen(e)}>
       <div className="flex items-start justify-between gap-2">
         <span className="font-medium text-[var(--color-ink)]">{e.cidade ? `${e.cidade}/${e.uf}` : 'Novo edital'}</span>
-        <span className="chip shrink-0">{FASE_LABEL[e.fase]}</span>
+        {!hideFase && <span className="chip shrink-0">{FASE_LABEL[e.fase]}</span>}
       </div>
-      <div className="mt-1 text-[length:var(--text-label)] text-[var(--color-ink-soft)]">
-        {e.tipoServico || 'Sem tipo definido'} · {fmtMoeda(e.valor)}
+      <div className="mt-1 line-clamp-2 text-[length:var(--text-caption)] text-[var(--color-ink-soft)]">
+        {e.tipoServico || 'Sem tipo definido'}
       </div>
+      <div className="mt-1 text-[length:var(--text-caption)] text-[var(--color-ink-soft)]">{fmtMoeda(e.valor)}</div>
       <div className="mt-2 flex flex-wrap gap-1.5">
         {sub === 'vencido' && <span className="chip border-[var(--color-overdue)] text-[var(--color-overdue)]">Submissão vencida</span>}
         {sub === 'proximo' && <span className="chip border-[var(--color-overdue)] text-[var(--color-overdue)]">Submissão próxima</span>}
