@@ -11,6 +11,7 @@ import { ObligationDetail } from './ui/components/ObligationDetail';
 import { ManualForm } from './ui/components/ManualForm';
 import { OcultadasBar } from './ui/components/OcultadasBar';
 import { Sidebar } from './ui/components/Sidebar';
+import { ComercialPage } from './ui/comercial/ComercialPage';
 import { useStore } from './state/store';
 import { useMonthObligations, type ResolvedObligation } from './ui/useObligations';
 import type { Filtros } from './ui/filters';
@@ -18,7 +19,7 @@ import { MESES, todayISO, formatDateShort } from './ui/format';
 import { addCalendarDays, fromISODate, toISODate } from './domain/dateUtils';
 
 type View = 'dia' | 'semana' | 'mes' | 'lista' | 'checklist';
-type Screen = View | 'contatos' | 'projetos' | 'feriados';
+type Screen = View | 'contatos' | 'projetos' | 'feriados' | 'comercial';
 
 const VIEW_TABS: Array<{ id: View; label: string }> = [
   { id: 'dia', label: 'Dia' },
@@ -37,6 +38,7 @@ const TITULO_PAGINA: Record<Screen, string> = {
   contatos: 'Contatos',
   projetos: 'Projetos',
   feriados: 'Feriados',
+  comercial: 'Setor Comercial Público',
 };
 
 export function App() {
@@ -97,7 +99,7 @@ export function App() {
     return `${MESES[month - 1]} de ${year}`;
   }, [screen, cursorISO, month, year]);
 
-  function navegar(d: 'calendario' | 'contatos' | 'projetos' | 'feriados') {
+  function navegar(d: 'calendario' | 'contatos' | 'projetos' | 'feriados' | 'comercial') {
     setScreen(d === 'calendario' ? view : d);
   }
   function trocarView(v: View) {
@@ -107,7 +109,7 @@ export function App() {
 
   return (
     <div className="flex min-h-full">
-      <Sidebar active={isCalendar ? 'calendario' : (screen as 'contatos' | 'projetos' | 'feriados')} onNavigate={navegar} />
+      <Sidebar active={isCalendar ? 'calendario' : (screen as 'contatos' | 'projetos' | 'feriados' | 'comercial')} onNavigate={navegar} />
 
       <div className="min-w-0 flex-1">
         {/* Cabeçalho de página padrão */}
@@ -133,9 +135,11 @@ export function App() {
                 </div>
               )}
 
-              <button className={`btn-primary ${isCalendar ? '' : 'ml-auto'}`} onClick={() => setFormOpen(true)}>
-                + Nova obrigação
-              </button>
+              {screen !== 'comercial' && (
+                <button className={`btn-primary ${isCalendar ? '' : 'ml-auto'}`} onClick={() => setFormOpen(true)}>
+                  + Nova obrigação
+                </button>
+              )}
             </div>
 
             {isCalendar && (
@@ -184,6 +188,7 @@ export function App() {
           {screen === 'contatos' && <ContatosPage />}
           {screen === 'projetos' && <ProjectsAdmin />}
           {screen === 'feriados' && <HolidaysAdmin year={year} />}
+          {screen === 'comercial' && <ComercialPage />}
         </main>
       </div>
 

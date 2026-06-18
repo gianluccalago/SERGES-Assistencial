@@ -2,7 +2,7 @@ import { useState, type ReactNode } from 'react';
 import { useStore } from '../../state/store';
 import { SergesLogo, SergesMark } from './Logo';
 
-type Dest = 'calendario' | 'contatos' | 'projetos' | 'feriados';
+type Dest = 'calendario' | 'contatos' | 'projetos' | 'feriados' | 'comercial';
 
 function Icon({ path }: { path: ReactNode }) {
   return (
@@ -17,6 +17,7 @@ const ICONS: Record<Dest | 'oraculo', ReactNode> = {
   contatos: <><path d="M16 21v-2a4 4 0 0 0-8 0v2" /><circle cx="12" cy="7" r="4" /></>,
   projetos: <><path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" /></>,
   feriados: <><path d="M4 4v16M4 4h13l-2 4 2 4H4" /></>,
+  comercial: <><path d="M3 21h18M5 21V7l8-4v18M19 21V11l-6-3" /><path d="M9 9v.01M9 12v.01M9 15v.01" /></>,
   oraculo: <><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z" /></>,
 };
 
@@ -36,6 +37,7 @@ export function Sidebar({
     { id: 'contatos', label: 'Contatos' },
     { id: 'projetos', label: 'Projetos' },
     { id: 'feriados', label: 'Feriados' },
+    { id: 'comercial', label: 'Setor Comercial Público' },
   ];
 
   const nav = (
