@@ -60,6 +60,8 @@ export interface Edital {
   id: string;
   cidade: string;
   uf: string;
+  /** Título do card (ex.: nome do hospital/UPA/UBS). */
+  titulo?: string;
   tipoServico?: string;
   valor?: number;
   submissaoInicio?: string;
@@ -87,6 +89,8 @@ export interface Contrato {
   id: string;
   cidade: string;
   uf: string;
+  /** Título do card (ex.: nome do hospital/UPA/UBS). */
+  titulo?: string;
   tipoServico?: string;
   valor?: number;
   inicio?: string;
@@ -179,6 +183,7 @@ export function contratoDeEdital(e: Edital): Contrato {
     id: `ct-${crypto.randomUUID().slice(0, 8)}`,
     cidade: e.cidade,
     uf: e.uf,
+    titulo: e.titulo,
     tipoServico: e.tipoServico,
     valor: e.valor,
     inicio: toISODate(new Date()),
@@ -197,6 +202,7 @@ export function editalDeRenovacao(c: Contrato): Edital {
     id: `ed-${crypto.randomUUID().slice(0, 8)}`,
     cidade: c.cidade,
     uf: c.uf,
+    titulo: c.titulo,
     tipoServico: c.tipoServico,
     valor: c.valor,
     modalidade: c.modalidade,

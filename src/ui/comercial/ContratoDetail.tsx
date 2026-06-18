@@ -32,7 +32,7 @@ export function ContratoDetail({ contrato, onClose }: { contrato: Contrato; onCl
 
   return (
     <Modal
-      titulo={draft.cidade ? `${draft.cidade}/${draft.uf}` : 'Novo contrato'}
+      titulo={draft.titulo || (draft.cidade ? `${draft.cidade}/${draft.uf}` : 'Novo contrato')}
       onClose={onClose}
       footer={
         <>
@@ -66,6 +66,7 @@ export function ContratoDetail({ contrato, onClose }: { contrato: Contrato; onCl
         {dias != null && dias < 0 && <span className="chip border-[var(--color-overdue)] text-[var(--color-overdue)]">Vencido</span>}
       </div>
 
+      <Field label="Título (hospital/UPA/UBS)"><input className="input" placeholder="Ex.: UPA de…" value={draft.titulo ?? ''} onChange={(e) => patch({ titulo: e.target.value })} /></Field>
       <div className="grid grid-cols-2 gap-3">
         <Field label="Cidade"><input className="input" value={draft.cidade} onChange={(e) => patch({ cidade: e.target.value })} /></Field>
         <Field label="UF"><input className="input" maxLength={2} value={draft.uf} onChange={(e) => patch({ uf: e.target.value.toUpperCase() })} /></Field>
