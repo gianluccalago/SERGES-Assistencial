@@ -16,7 +16,8 @@ import {
   prazoStatus,
 } from '../../comercial/model';
 import { todayISO } from '../format';
-import { Modal, Field, AnexosEditor, ContatoFields, ContatoAcoes } from './shared';
+import { Modal, Field, AnexosEditor, AnexoUploadButton, ContatoFields, ContatoAcoes, abrirAnexo } from './shared';
+import { useGestorGate } from '../../auth/AuthProvider';
 
 const GRUPOS: GrupoDoc[] = ['especificos', 'gerais', 'profissionais'];
 
@@ -120,7 +121,7 @@ export function EditalDetail({ edital, onClose }: { edital: Edital; onClose: () 
         <Field label="Link do edital"><input className="input" placeholder="https://" value={draft.linkEdital ?? ''} onChange={(e) => patch({ linkEdital: e.target.value })} /></Field>
       </div>
 
-      <AnexosEditor anexos={draft.anexos} onChange={(anexos) => patch({ anexos })} />
+      <AnexosEditor anexos={draft.anexos} onChange={(anexos) => patch({ anexos })} prefixo={`editais/${draft.id}/iniciais`} />
 
       <div>
         <span className="label mb-1 block">Contato da prefeitura</span>
@@ -130,19 +131,33 @@ export function EditalDetail({ edital, onClose }: { edital: Edital; onClose: () 
 
       {/* Checklist de documentos */}
       {['reunir', 'conferencia', 'correcao', 'envio', 'enviado', 'ativo', 'perdido'].includes(draft.fase) && (
-        <Checklist itens={draft.checklist} onChange={setChecklist} />
+        <Checklist itens={draft.checklist} onChange={setChecklist} editalId={draft.id} />
       )}
 
-      {/* Comprovação de envio */}
+      {/* Comprovação de envio (arquivo real ou link) */}
       {['envio', 'enviado', 'ativo', 'perdido'].includes(draft.fase) && (
-        <Field label="Comprovação de envio (link do protocolo/print)">
-          <input
-            className="input"
-            placeholder="https://"
-            value={draft.comprovacao?.url ?? ''}
-            onChange={(e) => patch({ comprovacao: e.target.value ? { id: 'comp', rotulo: 'Comprovação', url: e.target.value } : undefined })}
-          />
-        </Field>
+        <div>
+          <span className="label mb-1 block">Comprovação de envio (protocolo/print)</span>
+          {draft.comprovacao && (
+            <div className="mb-2 flex items-center justify-between gap-2 rounded-[var(--radius-sm)] border border-[var(--color-line)] px-2 py-1.5">
+              <span className="min-w-0 truncate text-[length:var(--text-label)]">{draft.comprovacao.path ? '📎 ' : '🔗 '}{draft.comprovacao.rotulo}</span>
+              <span className="flex shrink-0 gap-1">
+                <button className="btn-secondary" onClick={() => draft.comprovacao && abrirAnexo(draft.comprovacao)}>Abrir</button>
+                <button className="btn-ghost text-[var(--color-overdue)]" onClick={() => patch({ comprovacao: undefined })}>remover</button>
+              </span>
+            </div>
+          )}
+          <div className="flex flex-wrap items-center gap-2">
+            <AnexoUploadButton prefixo={`editais/${draft.id}/comprovacao`} onUploaded={(r) => patch({ comprovacao: { id: 'comp', rotulo: r.nome, path: r.path, nome: r.nome } })} />
+            <span className="label">ou link:</span>
+            <input
+              className="input flex-1"
+              placeholder="https:// (protocolo/print)"
+              value={draft.comprovacao?.url ?? ''}
+              onChange={(e) => patch({ comprovacao: e.target.value ? { id: 'comp', rotulo: 'Comprovação', url: e.target.value } : undefined })}
+            />
+          </div>
+        </div>
       )}
 
       {/* Acompanhamento (enviados) */}
@@ -186,20 +201,23 @@ function FaseAcoes({
   onIniciarChecklist: () => void;
 }) {
   const f = edital.fase;
+  const { isGestor, gestorProps } = useGestorGate();
   return (
     <div className="flex flex-wrap gap-2">
       {f === 'triagem' && <button className="btn-primary" onClick={() => onMove('decisao')}>Enviar para decisão</button>}
       {f === 'decisao' && (
         <>
-          <button className="btn-primary" onClick={onIniciarChecklist}>Participar</button>
-          <button className="btn-secondary" onClick={() => onPedirMotivo('motivoDescarte', 'descartado')}>Descartar</button>
+          <button className="btn-primary" {...gestorProps} onClick={isGestor ? onIniciarChecklist : undefined}>Participar</button>
+          <button className="btn-secondary" {...gestorProps} onClick={isGestor ? () => onPedirMotivo('motivoDescarte', 'descartado') : undefined}>Descartar</button>
+          {!isGestor && <span className="label self-center">Decisão é ação exclusiva do gestor.</span>}
         </>
       )}
       {f === 'reunir' && <button className="btn-primary" onClick={() => onMove('conferencia')}>Tudo reunido → Conferência</button>}
       {f === 'conferencia' && (
         <>
-          <button className="btn-primary" onClick={() => onMove('envio')}>Aprovar → Envio</button>
-          <button className="btn-secondary" onClick={() => onMove('correcao')}>Comentar → Correção</button>
+          <button className="btn-primary" {...gestorProps} onClick={isGestor ? () => onMove('envio') : undefined}>Aprovar → Envio</button>
+          <button className="btn-secondary" {...gestorProps} onClick={isGestor ? () => onMove('correcao') : undefined}>Comentar → Correção</button>
+          {!isGestor && <span className="label self-center">Conferência é ação exclusiva do gestor.</span>}
         </>
       )}
       {f === 'correcao' && <button className="btn-primary" onClick={() => onMove('conferencia')}>Devolver → Conferência</button>}
@@ -215,7 +233,7 @@ function FaseAcoes({
   );
 }
 
-function Checklist({ itens, onChange }: { itens: DocItem[]; onChange: (i: DocItem[]) => void }) {
+function Checklist({ itens, onChange, editalId }: { itens: DocItem[]; onChange: (i: DocItem[]) => void; editalId: string }) {
   const [novo, setNovo] = useState<Record<GrupoDoc, string>>({ especificos: '', gerais: '', profissionais: '' });
   const prontos = itens.filter((i) => i.pronto).length;
   return (
@@ -229,11 +247,23 @@ function Checklist({ itens, onChange }: { itens: DocItem[]; onChange: (i: DocIte
           <div className="label mb-1">{GRUPO_LABEL[g]}</div>
           <div className="space-y-1">
             {itens.filter((i) => i.grupo === g).map((i) => (
-              <div key={i.id} className="flex items-center gap-2">
+              <div key={i.id} className="flex flex-wrap items-center gap-2">
                 <input type="checkbox" className="h-4 w-4 accent-[var(--color-serges-blue)]" checked={!!i.pronto} onChange={(e) => onChange(itens.map((x) => (x.id === i.id ? { ...x, pronto: e.target.checked } : x)))} />
-                <input className="input flex-1 py-1" value={i.nome} onChange={(e) => onChange(itens.map((x) => (x.id === i.id ? { ...x, nome: e.target.value } : x)))} />
-                <input className="input w-[110px] py-1" placeholder="link" value={i.url ?? ''} onChange={(e) => onChange(itens.map((x) => (x.id === i.id ? { ...x, url: e.target.value } : x)))} />
-                {i.url && <a className="btn-ghost" href={i.url} target="_blank" rel="noreferrer">abrir</a>}
+                <input className="input min-w-[120px] flex-1 py-1" value={i.nome} onChange={(e) => onChange(itens.map((x) => (x.id === i.id ? { ...x, nome: e.target.value } : x)))} />
+                {i.path ? (
+                  <>
+                    <button className="btn-ghost" onClick={() => abrirAnexo({ id: i.id, rotulo: i.nomeArquivo ?? 'arquivo', path: i.path })}>📎 abrir</button>
+                    <button className="btn-ghost" onClick={() => onChange(itens.map((x) => (x.id === i.id ? { ...x, path: undefined, nomeArquivo: undefined } : x)))}>tirar</button>
+                  </>
+                ) : (
+                  <AnexoUploadButton
+                    prefixo={`editais/${editalId}/${g}`}
+                    label="anexar"
+                    onUploaded={(r) => onChange(itens.map((x) => (x.id === i.id ? { ...x, path: r.path, nomeArquivo: r.nome, pronto: true } : x)))}
+                  />
+                )}
+                <input className="input w-[110px] py-1" placeholder="ou link" value={i.url ?? ''} onChange={(e) => onChange(itens.map((x) => (x.id === i.id ? { ...x, url: e.target.value } : x)))} />
+                {i.url && <a className="btn-ghost" href={i.url} target="_blank" rel="noreferrer">↗</a>}
                 <button className="btn-ghost text-[var(--color-overdue)]" onClick={() => onChange(itens.filter((x) => x.id !== i.id))}>×</button>
               </div>
             ))}

@@ -12,6 +12,8 @@ import { ManualForm } from './ui/components/ManualForm';
 import { OcultadasBar } from './ui/components/OcultadasBar';
 import { Sidebar } from './ui/components/Sidebar';
 import { ComercialPage } from './ui/comercial/ComercialPage';
+import { UsersAdmin } from './ui/components/UsersAdmin';
+import { AdminGuard } from './ui/components/AdminGuard';
 import { useStore } from './state/store';
 import { useMonthObligations, type ResolvedObligation } from './ui/useObligations';
 import type { Filtros } from './ui/filters';
@@ -19,7 +21,7 @@ import { MESES, todayISO, formatDateShort } from './ui/format';
 import { addCalendarDays, fromISODate, toISODate } from './domain/dateUtils';
 
 type View = 'dia' | 'semana' | 'mes' | 'lista' | 'checklist';
-type Screen = View | 'contatos' | 'projetos' | 'feriados' | 'comercial';
+type Screen = View | 'contatos' | 'projetos' | 'feriados' | 'comercial' | 'usuarios';
 
 const VIEW_TABS: Array<{ id: View; label: string }> = [
   { id: 'dia', label: 'Dia' },
@@ -39,6 +41,7 @@ const TITULO_PAGINA: Record<Screen, string> = {
   projetos: 'Projetos',
   feriados: 'Feriados',
   comercial: 'Setor Comercial Público',
+  usuarios: 'Usuários',
 };
 
 export function App() {
@@ -99,7 +102,7 @@ export function App() {
     return `${MESES[month - 1]} de ${year}`;
   }, [screen, cursorISO, month, year]);
 
-  function navegar(d: 'calendario' | 'contatos' | 'projetos' | 'feriados' | 'comercial') {
+  function navegar(d: 'calendario' | 'contatos' | 'projetos' | 'feriados' | 'comercial' | 'usuarios') {
     setScreen(d === 'calendario' ? view : d);
   }
   function trocarView(v: View) {
@@ -109,7 +112,7 @@ export function App() {
 
   return (
     <div className="flex min-h-full">
-      <Sidebar active={isCalendar ? 'calendario' : (screen as 'contatos' | 'projetos' | 'feriados' | 'comercial')} onNavigate={navegar} />
+      <Sidebar active={isCalendar ? 'calendario' : (screen as 'contatos' | 'projetos' | 'feriados' | 'comercial' | 'usuarios')} onNavigate={navegar} />
 
       <div className="min-w-0 flex-1">
         {/* Cabeçalho de página padrão */}
@@ -117,6 +120,7 @@ export function App() {
           <div className="px-[var(--spacing-16)] py-[var(--spacing-12)] md:px-[var(--spacing-24)]">
             <div className="flex flex-wrap items-center gap-3 pl-12 md:pl-0">
               <h1 className="text-[length:var(--text-heading)]">{TITULO_PAGINA[screen]}</h1>
+              <SaveIndicator status={store.saveStatus} />
 
               {isCalendar && (
                 <div className="ml-auto flex flex-wrap items-center gap-2">
@@ -186,9 +190,10 @@ export function App() {
           {screen === 'lista' && <ListView year={year} month={month} filtros={filtros} onSelect={setSelected} />}
           {screen === 'checklist' && <ChecklistView year={year} month={month} filtros={filtros} onSelect={setSelected} />}
           {screen === 'contatos' && <ContatosPage />}
-          {screen === 'projetos' && <ProjectsAdmin />}
-          {screen === 'feriados' && <HolidaysAdmin year={year} />}
+          {screen === 'projetos' && <AdminGuard><ProjectsAdmin /></AdminGuard>}
+          {screen === 'feriados' && <AdminGuard><HolidaysAdmin year={year} /></AdminGuard>}
           {screen === 'comercial' && <ComercialPage />}
+          {screen === 'usuarios' && <AdminGuard><UsersAdmin /></AdminGuard>}
         </main>
       </div>
 
@@ -196,4 +201,11 @@ export function App() {
       {formOpen && <ManualForm onClose={() => setFormOpen(false)} />}
     </div>
   );
+}
+
+function SaveIndicator({ status }: { status: 'idle' | 'saving' | 'saved' | 'error' }) {
+  if (status === 'idle') return null;
+  const txt = status === 'saving' ? 'Salvando…' : status === 'saved' ? 'Salvo' : 'Erro ao salvar';
+  const cor = status === 'error' ? 'text-[var(--color-overdue)]' : 'text-[var(--color-ink-faint)]';
+  return <span className={`text-[length:var(--text-caption)] ${cor}`}>{txt}</span>;
 }

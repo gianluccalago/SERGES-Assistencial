@@ -103,7 +103,7 @@ export function ContratoDetail({ contrato, onClose }: { contrato: Contrato; onCl
         <Field label="Link do contrato"><input className="input" placeholder="https://" value={draft.linkContrato ?? ''} onChange={(e) => patch({ linkContrato: e.target.value })} /></Field>
       </div>
 
-      <AnexosEditor anexos={draft.anexos} onChange={(anexos) => patch({ anexos })} />
+      <AnexosEditor anexos={draft.anexos} onChange={(anexos) => patch({ anexos })} prefixo={`contratos/${draft.id}`} />
 
       <div>
         <span className="label mb-1 block">Contato da prefeitura</span>

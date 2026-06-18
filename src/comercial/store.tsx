@@ -1,11 +1,14 @@
-import { createContext, useContext, useEffect, useMemo, useState, type ReactNode } from 'react';
+import { createContext, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import type { Contrato, Edital } from './model';
 import { contratoDeEdital, editalDeRenovacao } from './model';
+import { Syncer, type Slice, type SaveStatus } from '../lib/sync';
+import { supabaseConfigured } from '../lib/supabase';
 
-// Estado e persistência PRÓPRIOS do módulo comercial (localStorage à parte).
-// Não toca em obrigações, calendário ou contatos operacionais.
+// Estado do módulo comercial, agora persistido no Supabase (tabelas editais,
+// contratos e comercial_config). Mantém a API e o formato anteriores; só a
+// camada de dados mudou. Migra automaticamente o localStorage na primeira carga.
 
-const KEY = 'serges.comercial.v1';
+const LEGACY_KEY = 'serges.comercial.v1';
 
 interface ComercialState {
   editais: Edital[];
@@ -17,18 +20,38 @@ function defaultState(): ComercialState {
   return { editais: [], contratos: [], janelaRenovacaoDias: 90 };
 }
 
-function load(): ComercialState {
+function loadLegacy(): ComercialState | null {
   try {
-    const raw = localStorage.getItem(KEY);
-    if (!raw) return defaultState();
+    const raw = localStorage.getItem(LEGACY_KEY);
+    if (!raw) return null;
     return { ...defaultState(), ...JSON.parse(raw) };
   } catch {
-    return defaultState();
+    return null;
   }
 }
 
+const SLICES: Slice<ComercialState>[] = [
+  {
+    table: 'editais',
+    extract: (s) => s.editais.map((e) => ({ key: e.id, row: { id: e.id, data: e } })),
+    apply: (b, rows) => ({ ...b, editais: rows.map((r) => r.data as Edital) }),
+  },
+  {
+    table: 'contratos',
+    extract: (s) => s.contratos.map((c) => ({ key: c.id, row: { id: c.id, data: c } })),
+    apply: (b, rows) => ({ ...b, contratos: rows.map((r) => r.data as Contrato) }),
+  },
+  {
+    table: 'comercial_config',
+    extract: (s) => [{ key: '1', row: { id: 1, data: { janelaRenovacaoDias: s.janelaRenovacaoDias } } }],
+    apply: (b, rows) =>
+      rows.length ? { ...b, janelaRenovacaoDias: (rows[0].data as { janelaRenovacaoDias: number }).janelaRenovacaoDias ?? 90 } : b,
+  },
+];
+
 interface ComercialApi {
   state: ComercialState;
+  saveStatus: SaveStatus;
   upsertEdital: (e: Edital) => void;
   removeEdital: (id: string) => void;
   upsertContrato: (c: Contrato) => void;
@@ -43,18 +66,66 @@ interface ComercialApi {
 const Ctx = createContext<ComercialApi | null>(null);
 
 export function ComercialProvider({ children }: { children: ReactNode }) {
-  const [state, setState] = useState<ComercialState>(() => load());
+  const [state, setState] = useState<ComercialState>(() => (supabaseConfigured ? defaultState() : loadLegacy() ?? defaultState()));
+  const [saveStatus, setSaveStatus] = useState<SaveStatus>('idle');
+  const syncerRef = useRef<Syncer<ComercialState>>();
+  if (!syncerRef.current) syncerRef.current = new Syncer<ComercialState>(SLICES, defaultState);
+  const syncer = syncerRef.current;
+  const loadedRef = useRef(!supabaseConfigured);
+
   useEffect(() => {
-    try {
-      localStorage.setItem(KEY, JSON.stringify(state));
-    } catch {
-      /* ignora */
-    }
+    if (!supabaseConfigured) return;
+    let cancelado = false;
+    (async () => {
+      try {
+        const { state: loaded, hadRows } = await syncer.load();
+        if (cancelado) return;
+        if (!hadRows) {
+          const legacy = loadLegacy();
+          if (legacy) {
+            setState(legacy);
+            loadedRef.current = true;
+            await syncer.push(legacy, setSaveStatus);
+          } else {
+            loadedRef.current = true;
+          }
+        } else {
+          setState(loaded);
+          loadedRef.current = true;
+        }
+      } catch (e) {
+        console.error('[comercial] falha ao carregar', e);
+        loadedRef.current = true;
+      }
+    })();
+    return () => {
+      cancelado = true;
+    };
+  }, []);
+
+  const reload = async () => {
+    const { state: loaded } = await syncer.load();
+    setState(loaded);
+  };
+
+  useEffect(() => {
+    if (!supabaseConfigured || !loadedRef.current) return;
+    syncer.push(state, setSaveStatus).catch(() => {
+      void reload();
+    });
   }, [state]);
+
+  useEffect(() => {
+    if (!supabaseConfigured) return;
+    return syncer.subscribe(() => {
+      void reload().catch(() => {});
+    });
+  }, []);
 
   const api = useMemo<ComercialApi>(
     () => ({
       state,
+      saveStatus,
       upsertEdital(e) {
         setState((s) => {
           const i = s.editais.findIndex((x) => x.id === e.id);
@@ -98,7 +169,7 @@ export function ComercialProvider({ children }: { children: ReactNode }) {
         setState((s) => ({ ...s, editais: [editalDeRenovacao(c), ...s.editais] }));
       },
     }),
-    [state],
+    [state, saveStatus],
   );
 
   return <Ctx.Provider value={api}>{children}</Ctx.Provider>;

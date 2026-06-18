@@ -21,10 +21,15 @@ export type FaseEdital =
 
 export type ContratoStatus = 'ativo' | 'inativo' | 'suspenso' | 'vencido';
 
+/** Um anexo é OU um link externo (url) OU um arquivo no Storage (path+nome). */
 export interface Anexo {
   id: string;
   rotulo: string;
-  url: string;
+  url?: string;
+  /** Caminho no Supabase Storage, quando for upload real. */
+  path?: string;
+  /** Nome original do arquivo enviado. */
+  nome?: string;
 }
 
 export interface ContatoPref {
@@ -39,6 +44,10 @@ export interface DocItem {
   nome: string;
   pronto?: boolean;
   url?: string;
+  /** Caminho no Storage, quando o documento for um arquivo enviado. */
+  path?: string;
+  /** Nome original do arquivo enviado. */
+  nomeArquivo?: string;
 }
 
 export interface Verificacao {

@@ -1,8 +1,9 @@
 import { useState, type ReactNode } from 'react';
 import { useStore } from '../../state/store';
+import { useAuth } from '../../auth/AuthProvider';
 import { SergesLogo, SergesMark } from './Logo';
 
-type Dest = 'calendario' | 'contatos' | 'projetos' | 'feriados' | 'comercial';
+type Dest = 'calendario' | 'contatos' | 'projetos' | 'feriados' | 'comercial' | 'usuarios';
 
 function Icon({ path }: { path: ReactNode }) {
   return (
@@ -18,6 +19,7 @@ const ICONS: Record<Dest | 'oraculo', ReactNode> = {
   projetos: <><path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" /></>,
   feriados: <><path d="M4 4v16M4 4h13l-2 4 2 4H4" /></>,
   comercial: <><path d="M3 21h18M5 21V7l8-4v18M19 21V11l-6-3" /><path d="M9 9v.01M9 12v.01M9 15v.01" /></>,
+  usuarios: <><path d="M17 21v-2a4 4 0 0 0-3-3.87M9 21v-2a4 4 0 0 1 3-3.87M12 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8z" /></>,
   oraculo: <><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z" /></>,
 };
 
@@ -29,6 +31,7 @@ export function Sidebar({
   onNavigate: (d: Dest) => void;
 }) {
   const store = useStore();
+  const { perfil, isGestor, signOut } = useAuth();
   const [collapsed, setCollapsed] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
 
@@ -38,6 +41,7 @@ export function Sidebar({
     { id: 'projetos', label: 'Projetos' },
     { id: 'feriados', label: 'Feriados' },
     { id: 'comercial', label: 'Setor Comercial Público' },
+    { id: 'usuarios', label: 'Usuários' },
   ];
 
   const nav = (
@@ -70,14 +74,26 @@ export function Sidebar({
         </button>
       ))}
 
-      <a className="nav-item mt-auto" href={store.config.oraculoUrl} target="_blank" rel="noreferrer" title="Oráculo (NotebookLM)">
-        <Icon path={ICONS.oraculo} />
-        {!collapsed && (
-          <span className="flex items-center gap-1">
-            Oráculo <span className="text-[var(--color-ink-faint)]">↗</span>
-          </span>
+      <div className="mt-auto space-y-1 border-t border-[var(--color-line)] pt-2">
+        <a className="nav-item" href={store.config.oraculoUrl} target="_blank" rel="noreferrer" title="Oráculo (NotebookLM)">
+          <Icon path={ICONS.oraculo} />
+          {!collapsed && (
+            <span className="flex items-center gap-1">
+              Oráculo <span className="text-[var(--color-ink-faint)]">↗</span>
+            </span>
+          )}
+        </a>
+        {perfil && !collapsed && (
+          <div className="px-2 pt-1">
+            <div className="truncate text-[length:var(--text-caption)] text-[var(--color-ink-soft)]" title={perfil.email}>{perfil.email}</div>
+            <div className="text-[length:var(--text-caption)] text-[var(--color-ink-faint)]">{isGestor ? 'Gestor' : 'Equipe'}</div>
+          </div>
         )}
-      </a>
+        <button className="nav-item w-full" onClick={() => void signOut()} title="Sair">
+          <Icon path={<><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" /><path d="M16 17l5-5-5-5M21 12H9" /></>} />
+          {!collapsed && <span>Sair</span>}
+        </button>
+      </div>
     </nav>
   );
 

@@ -1,4 +1,5 @@
 import { useStore } from '../../state/store';
+import { useGestorGate } from '../../auth/AuthProvider';
 import type { ResolvedObligation } from '../useObligations';
 import type { ObligationEstado } from '../../domain/types';
 import { ESTADO_LABEL } from '../format';
@@ -17,14 +18,19 @@ const COR: Record<ObligationEstado, string> = {
 // para frente e para trás, sem bloqueios.
 export function StatusSelector({ ro }: { ro: ResolvedObligation }) {
   const store = useStore();
+  const { isGestor } = useGestorGate();
   const { item, estado } = ro;
+  // Aprovar o SLA (concluir a partir de "Em aprovação") é exclusivo do gestor.
+  const aprovacaoBloqueada = (s: ObligationEstado) => !isGestor && estado === 'emAprovacao' && s === 'concluida';
   return (
     <select
       value={estado}
       onClick={(e) => e.stopPropagation()}
       onChange={(e) => {
         e.stopPropagation();
-        store.setEstado(item, e.target.value as ObligationEstado);
+        const novo = e.target.value as ObligationEstado;
+        if (aprovacaoBloqueada(novo)) return;
+        store.setEstado(item, novo);
       }}
       aria-label="Status"
       className={`w-auto cursor-pointer appearance-none rounded-full border border-[var(--color-line)] bg-[var(--color-surface)] bg-[length:14px] bg-[right_8px_center] bg-no-repeat py-1 pl-3 pr-7 text-[length:var(--text-caption)] font-medium hover:border-[var(--color-serges-blue)] focus:border-[var(--color-serges-blue)] focus:outline-none ${COR[estado]}`}
@@ -34,8 +40,9 @@ export function StatusSelector({ ro }: { ro: ResolvedObligation }) {
       }}
     >
       {ORDEM.map((s) => (
-        <option key={s} value={s} className="text-[var(--color-ink)]">
+        <option key={s} value={s} disabled={aprovacaoBloqueada(s)} className="text-[var(--color-ink)]">
           {ESTADO_LABEL[s]}
+          {aprovacaoBloqueada(s) ? ' (gestor)' : ''}
         </option>
       ))}
     </select>
