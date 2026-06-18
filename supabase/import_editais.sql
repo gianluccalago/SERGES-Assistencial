@@ -1,17 +1,16 @@
 -- ============================================================================
--- Importação única de editais (extraídos dos PDFs enviados em 18/06/2026).
--- Rode UMA VEZ no SQL Editor do Supabase. Idempotente (ON CONFLICT DO NOTHING).
--- Os cards entram na fase "Triagem" do Setor Comercial Público.
---
--- Obs.: os anexos ficam vazios — os PDFs não estão no Storage. Abra cada card
--- e use "Enviar arquivo" para anexar o PDF correspondente (ou cole o link).
+-- Importação dos editais extraídos dos PDFs (18/06/2026), com título.
+-- Rode no SQL Editor do Supabase. Seguro reexecutar:
+--   • o INSERT cria os que faltam (ON CONFLICT DO NOTHING);
+--   • o bloco UPDATE no fim preenche/atualiza o título de linhas já existentes.
+-- Os cards entram na fase "Triagem". Anexos vazios — anexe os PDFs pelo card.
 -- ============================================================================
 
 insert into public.editais (id, data) values
 (
   'ed-imp-palotina',
   '{
-    "id":"ed-imp-palotina","cidade":"Palotina","uf":"PR",
+    "id":"ed-imp-palotina","titulo":"UBS de Palotina","cidade":"Palotina","uf":"PR",
     "tipoServico":"Credenciamento de PJ — serviços médicos (clínica geral) nas UBS · Chamamento Público 002/2026",
     "submissaoInicio":"2026-05-26","submissaoFim":"2027-05-26",
     "modalidade":"ambos",
@@ -25,7 +24,7 @@ insert into public.editais (id, data) values
 (
   'ed-imp-mandirituba',
   '{
-    "id":"ed-imp-mandirituba","cidade":"Mandirituba","uf":"PR",
+    "id":"ed-imp-mandirituba","titulo":"Hospital Municipal de Mandirituba","cidade":"Mandirituba","uf":"PR",
     "tipoServico":"Credenciamento de PJ — médicos plantonistas (clínico geral), enfermeiros, técnicos de enfermagem, neurologista clínico/pediátrico (Hospital, Policlínica, CAPS) · Credenciamento 005/2026 (retificado), vigência 6 meses",
     "modalidade":"ambos",
     "linkEdital":"https://mandirituba.pr.gov.br/chamamento-para-credenciamento-de-pessoas-juridicas-especializadas-na-prestacao-de-servicos-de-saude",
@@ -38,7 +37,7 @@ insert into public.editais (id, data) values
 (
   'ed-imp-curitiba-mpt',
   '{
-    "id":"ed-imp-curitiba-mpt","cidade":"Curitiba","uf":"PR",
+    "id":"ed-imp-curitiba-mpt","titulo":"MPT — Procuradoria Regional do Trabalho 9ª Região","cidade":"Curitiba","uf":"PR",
     "tipoServico":"Perícia médica e junta médica oficial — Pregão Eletrônico 90004/2026 (MPT / PRT 9ª Região)",
     "valor":176911.00,
     "submissaoFim":"2026-06-12",
@@ -53,7 +52,7 @@ insert into public.editais (id, data) values
 (
   'ed-imp-itabera',
   '{
-    "id":"ed-imp-itabera","cidade":"Itaberá","uf":"SP",
+    "id":"ed-imp-itabera","titulo":"Hospital Municipal de Itaberá","cidade":"Itaberá","uf":"SP",
     "tipoServico":"Credenciamento de médicos (retaguarda de transferência, plantonista, visitador, cardiologista, pediatra) · Credenciamento 02/2026 — Edital 33/2026, vigência 12 meses",
     "modalidade":"ambos",
     "linkEdital":"https://www.itabera.sp.gov.br",
@@ -66,7 +65,7 @@ insert into public.editais (id, data) values
 (
   'ed-imp-1781286094',
   '{
-    "id":"ed-imp-1781286094","cidade":"","uf":"",
+    "id":"ed-imp-1781286094","titulo":"(revisar) edital1781286094","cidade":"","uf":"",
     "tipoServico":"REVISAR — edital digitalizado sem camada de texto (arquivo edital1781286094.pdf). Abrir, preencher Cidade/UF e demais dados, e anexar o PDF.",
     "modalidade":"ambos",
     "anexos":[],
@@ -76,3 +75,10 @@ insert into public.editais (id, data) values
   }'::jsonb
 )
 on conflict (id) do nothing;
+
+-- Preenche/atualiza o título caso as linhas já tenham sido importadas antes.
+update public.editais set data = jsonb_set(data, '{titulo}', '"UBS de Palotina"')                                   where id = 'ed-imp-palotina';
+update public.editais set data = jsonb_set(data, '{titulo}', '"Hospital Municipal de Mandirituba"')                  where id = 'ed-imp-mandirituba';
+update public.editais set data = jsonb_set(data, '{titulo}', '"MPT — Procuradoria Regional do Trabalho 9ª Região"')  where id = 'ed-imp-curitiba-mpt';
+update public.editais set data = jsonb_set(data, '{titulo}', '"Hospital Municipal de Itaberá"')                      where id = 'ed-imp-itabera';
+update public.editais set data = jsonb_set(data, '{titulo}', '"(revisar) edital1781286094"')                         where id = 'ed-imp-1781286094';
