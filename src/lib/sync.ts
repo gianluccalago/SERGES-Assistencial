@@ -46,7 +46,12 @@ export class Syncer<S> {
       const pk = this.pkOf(s);
       // Ordena pela PK para um resultado estável (evita a lista "pular de lugar").
       const { data, error } = await supabase.from(s.table).select('*').order(pk);
-      if (error) throw error;
+      if (error) {
+        // Uma tabela ausente/indisponível não pode derrubar o carregamento das
+        // demais (ex.: tabela nova ainda não criada no banco). Ignora esta fatia.
+        console.warn(`[sync] tabela "${s.table}" indisponível, ignorando:`, error.message);
+        continue;
+      }
       const rows = (data ?? []) as Record<string, unknown>[];
       if (rows.length) hadRows = true;
       // Atualiza snapshot para que o primeiro push seja no-op.
