@@ -16,8 +16,9 @@ import { fmtMoeda } from './shared';
 import { EditalDetail } from './EditalDetail';
 import { ContratoDetail } from './ContratoDetail';
 import { AcompanhamentoPanel } from './AcompanhamentoPanel';
+import { DocumentosPanel } from './DocumentosPanel';
 
-type Secao = 'licitacoes' | 'acompanhamento' | 'contratos';
+type Secao = 'licitacoes' | 'acompanhamento' | 'contratos' | 'documentos';
 type SubEditais = 'funil' | 'decisao';
 type SubContratos = 'todos' | 'renovacao';
 
@@ -76,6 +77,7 @@ export function ComercialPage() {
             Acompanhamento de Licitações{enviados.length ? ` (${enviados.length})` : ''}
           </button>
           <button className="seg-btn" data-active={secao === 'contratos'} onClick={() => setSecao('contratos')}>Contratos</button>
+          <button className="seg-btn" data-active={secao === 'documentos'} onClick={() => setSecao('documentos')}>Documentos</button>
         </div>
         {secao === 'licitacoes' && <button className="btn-primary ml-auto" onClick={novoEdital}>+ Nova licitação</button>}
         {secao === 'contratos' && <button className="btn-primary ml-auto" onClick={novoContrato}>+ Novo contrato</button>}
@@ -103,6 +105,8 @@ export function ComercialPage() {
       )}
 
       {secao === 'acompanhamento' && <AcompanhamentoPanel onAbrirFicha={setEdital} />}
+
+      {secao === 'documentos' && <DocumentosPanel />}
 
       {secao === 'contratos' && (
         <>

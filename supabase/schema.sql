@@ -48,6 +48,7 @@ create table if not exists public.app_config         (id int    primary key, dat
 -- Módulo Setor Comercial Público
 create table if not exists public.editais            (id text   primary key, data jsonb not null, updated_at timestamptz default now());
 create table if not exists public.contratos          (id text   primary key, data jsonb not null, updated_at timestamptz default now());
+create table if not exists public.documentos         (id text   primary key, data jsonb not null, updated_at timestamptz default now());
 create table if not exists public.comercial_config   (id int    primary key, data jsonb not null);
 
 -- ---------------------------------------------------------------------------
@@ -62,6 +63,7 @@ alter table public.contatos           enable row level security;
 alter table public.app_config         enable row level security;
 alter table public.editais            enable row level security;
 alter table public.contratos          enable row level security;
+alter table public.documentos         enable row level security;
 alter table public.comercial_config   enable row level security;
 
 -- Helper para recriar policies de forma idempotente.
@@ -79,7 +81,7 @@ create policy profiles_update on public.profiles for update to authenticated
 do $$
 declare t text;
 begin
-  foreach t in array array['overrides','manual_obligations','contatos','app_config','editais','contratos','comercial_config'] loop
+  foreach t in array array['overrides','manual_obligations','contatos','app_config','editais','contratos','documentos','comercial_config'] loop
     execute format('drop policy if exists %I_rw on public.%I', t, t);
     execute format(
       'create policy %I_rw on public.%I for all to authenticated using (true) with check (true)', t, t);
@@ -145,7 +147,7 @@ create trigger trg_gate_aprov_mo before update on public.manual_obligations
 do $$
 declare t text;
 begin
-  foreach t in array array['projects','holidays','overrides','manual_obligations','contatos','app_config','editais','contratos','comercial_config'] loop
+  foreach t in array array['projects','holidays','overrides','manual_obligations','contatos','app_config','editais','contratos','documentos','comercial_config'] loop
     begin
       execute format('alter publication supabase_realtime add table public.%I', t);
     exception when duplicate_object then null; -- já está na publicação
