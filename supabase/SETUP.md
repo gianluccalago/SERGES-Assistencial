@@ -49,6 +49,23 @@ A migração é **automática e sem perda**:
 - **Gestor** (CEO/Gian/Giuliano): faz tudo, incluindo as ações exclusivas — decidir participar/descartar editais, aprovar/comentar na conferência documental, aprovar o SLA de 24h, e administrar projetos, feriados e usuários.
 - **Equipe** (faturista/Julyane): toda a operação. Vê as ações de gestor desabilitadas, com o motivo "Ação exclusiva do gestor". As mutações sensíveis também são barradas **no banco** (triggers do `schema.sql`), não só na interface.
 
+### Administração de usuários (criar/excluir pela tela "Usuários")
+
+Criar e excluir usuários usa a Admin API do Supabase, que exige a chave secreta — por isso fica numa **Edge Function** (`supabase/functions/admin-users`), nunca no navegador. Publique uma vez:
+
+**Opção A — pelo painel (sem instalar nada):**
+1. No Supabase, vá em **Edge Functions → Create a function**, nome **`admin-users`**.
+2. Cole o conteúdo de [`functions/admin-users/index.ts`](./functions/admin-users/index.ts) e **Deploy**.
+
+**Opção B — pela CLI:**
+```bash
+supabase functions deploy admin-users
+```
+
+> Não precisa configurar segredos: `SUPABASE_URL`, `SUPABASE_ANON_KEY` e `SUPABASE_SERVICE_ROLE_KEY` já existem no ambiente das Edge Functions. A função verifica que o chamador é **gestor** antes de qualquer ação.
+
+Depois disso, na tela **Usuários** (logado como gestor) dá para **criar, renomear, mudar o papel e excluir** usuários direto pelo app.
+
 ## 5. Verificação
 
 - [ ] Logado como gestor: dados antigos aparecem intactos (calendário, contatos, projetos, editais, contratos).
@@ -56,3 +73,4 @@ A migração é **automática e sem perda**:
 - [ ] Logado como equipe: botões de decisão/conferência e a aprovação do SLA aparecem **desabilitados**.
 - [ ] Logado como equipe, tentando forçar uma dessas mutações: o banco **rejeita** (o app recarrega e reverte).
 - [ ] Upload de um PDF num edital: abre e baixa por URL assinada; remover funciona.
+- [ ] Tela **Usuários** (gestor): criar, renomear, mudar papel e excluir funcionam (requer a Edge Function `admin-users` publicada).
