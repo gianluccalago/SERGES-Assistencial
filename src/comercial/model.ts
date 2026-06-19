@@ -85,6 +85,24 @@ export interface Edital {
   criadoEm: string;
 }
 
+/** Documento de uso recorrente nas licitações (CND, contrato social, etc.). */
+export interface Documento {
+  id: string;
+  titulo: string;
+  /** O documento em si (arquivo no Storage ou link). */
+  anexo?: Anexo;
+  /** Link para extrair/emitir uma nova via quando vencer. */
+  linkOrigem?: string;
+  /** Data de validade/vencimento (ISO). */
+  validade?: string;
+  obs?: string;
+  criadoEm: string;
+}
+
+export function documentoNovo(over: Partial<Documento> = {}): Documento {
+  return { id: `doc-${crypto.randomUUID().slice(0, 8)}`, titulo: '', criadoEm: new Date().toISOString(), ...over };
+}
+
 export interface Contrato {
   id: string;
   cidade: string;

@@ -1,5 +1,5 @@
 import { createContext, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
-import type { Contrato, Edital } from './model';
+import type { Contrato, Documento, Edital } from './model';
 import { contratoDeEdital, editalDeRenovacao } from './model';
 import { Syncer, type Slice, type SaveStatus } from '../lib/sync';
 import { supabaseConfigured } from '../lib/supabase';
@@ -13,11 +13,12 @@ const LEGACY_KEY = 'serges.comercial.v1';
 interface ComercialState {
   editais: Edital[];
   contratos: Contrato[];
+  documentos: Documento[];
   janelaRenovacaoDias: number;
 }
 
 function defaultState(): ComercialState {
-  return { editais: [], contratos: [], janelaRenovacaoDias: 90 };
+  return { editais: [], contratos: [], documentos: [], janelaRenovacaoDias: 90 };
 }
 
 function loadLegacy(): ComercialState | null {
@@ -42,6 +43,11 @@ const SLICES: Slice<ComercialState>[] = [
     apply: (b, rows) => ({ ...b, contratos: rows.map((r) => r.data as Contrato) }),
   },
   {
+    table: 'documentos',
+    extract: (s) => s.documentos.map((d) => ({ key: d.id, row: { id: d.id, data: d } })),
+    apply: (b, rows) => ({ ...b, documentos: rows.map((r) => r.data as Documento) }),
+  },
+  {
     table: 'comercial_config',
     extract: (s) => [{ key: '1', row: { id: 1, data: { janelaRenovacaoDias: s.janelaRenovacaoDias } } }],
     apply: (b, rows) =>
@@ -57,6 +63,8 @@ interface ComercialApi {
   upsertContrato: (c: Contrato) => void;
   removeContrato: (id: string) => void;
   setJanela: (dias: number) => void;
+  upsertDocumento: (d: Documento) => void;
+  removeDocumento: (id: string) => void;
   /** Move o edital para Ativos e gera/ativa o contrato correspondente. */
   ganharEdital: (e: Edital) => void;
   /** Cria um edital de renovação na Triagem a partir de um contrato. */
@@ -152,6 +160,18 @@ export function ComercialProvider({ children }: { children: ReactNode }) {
       },
       setJanela(dias) {
         setState((s) => ({ ...s, janelaRenovacaoDias: dias }));
+      },
+      upsertDocumento(d) {
+        setState((s) => {
+          const i = s.documentos.findIndex((x) => x.id === d.id);
+          const documentos = [...s.documentos];
+          if (i >= 0) documentos[i] = d;
+          else documentos.unshift(d);
+          return { ...s, documentos };
+        });
+      },
+      removeDocumento(id) {
+        setState((s) => ({ ...s, documentos: s.documentos.filter((x) => x.id !== id) }));
       },
       ganharEdital(e) {
         setState((s) => {

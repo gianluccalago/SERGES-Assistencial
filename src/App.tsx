@@ -6,7 +6,6 @@ import { ListView } from './ui/components/ListView';
 import { ChecklistView } from './ui/components/ChecklistView';
 import { ContatosPage } from './ui/components/ContatosPage';
 import { ProjectsAdmin } from './ui/components/ProjectsAdmin';
-import { HolidaysAdmin } from './ui/components/HolidaysAdmin';
 import { ObligationDetail } from './ui/components/ObligationDetail';
 import { ManualForm } from './ui/components/ManualForm';
 import { OcultadasBar } from './ui/components/OcultadasBar';
@@ -15,13 +14,14 @@ import { ComercialPage } from './ui/comercial/ComercialPage';
 import { UsersAdmin } from './ui/components/UsersAdmin';
 import { AdminGuard } from './ui/components/AdminGuard';
 import { useStore } from './state/store';
+import { useAuth } from './auth/AuthProvider';
 import { useMonthObligations, type ResolvedObligation } from './ui/useObligations';
 import type { Filtros } from './ui/filters';
 import { MESES, todayISO, formatDateShort } from './ui/format';
 import { addCalendarDays, fromISODate, toISODate } from './domain/dateUtils';
 
 type View = 'dia' | 'semana' | 'mes' | 'lista' | 'checklist';
-type Screen = View | 'contatos' | 'projetos' | 'feriados' | 'comercial' | 'usuarios';
+type Screen = View | 'contatos' | 'projetos' | 'comercial' | 'usuarios';
 
 const VIEW_TABS: Array<{ id: View; label: string }> = [
   { id: 'dia', label: 'Dia' },
@@ -39,13 +39,13 @@ const TITULO_PAGINA: Record<Screen, string> = {
   checklist: 'Calendário de Obrigações',
   contatos: 'Contatos',
   projetos: 'Projetos',
-  feriados: 'Feriados',
   comercial: 'Setor Comercial Público',
   usuarios: 'Usuários',
 };
 
 export function App() {
   const store = useStore();
+  const { isGestor } = useAuth();
   const [screen, setScreen] = useState<Screen>('dia');
   const [view, setView] = useState<View>('dia');
   const [cursorISO, setCursorISO] = useState<string>(todayISO());
@@ -102,7 +102,7 @@ export function App() {
     return `${MESES[month - 1]} de ${year}`;
   }, [screen, cursorISO, month, year]);
 
-  function navegar(d: 'calendario' | 'contatos' | 'projetos' | 'feriados' | 'comercial' | 'usuarios') {
+  function navegar(d: 'calendario' | 'contatos' | 'projetos' | 'comercial' | 'usuarios') {
     setScreen(d === 'calendario' ? view : d);
   }
   function trocarView(v: View) {
@@ -112,7 +112,7 @@ export function App() {
 
   return (
     <div className="flex min-h-full">
-      <Sidebar active={isCalendar ? 'calendario' : (screen as 'contatos' | 'projetos' | 'feriados' | 'comercial' | 'usuarios')} onNavigate={navegar} />
+      <Sidebar active={isCalendar ? 'calendario' : (screen as 'contatos' | 'projetos' | 'comercial' | 'usuarios')} onNavigate={navegar} />
 
       <div className="min-w-0 flex-1">
         {/* Cabeçalho de página padrão */}
@@ -191,8 +191,7 @@ export function App() {
           {screen === 'checklist' && <ChecklistView year={year} month={month} filtros={filtros} onSelect={setSelected} />}
           {screen === 'contatos' && <ContatosPage />}
           {screen === 'projetos' && <AdminGuard><ProjectsAdmin /></AdminGuard>}
-          {screen === 'feriados' && <AdminGuard><HolidaysAdmin year={year} /></AdminGuard>}
-          {screen === 'comercial' && <ComercialPage />}
+          {screen === 'comercial' && (isGestor ? <ComercialPage /> : <p className="text-[var(--color-ink-soft)]">Área exclusiva do gestor.</p>)}
           {screen === 'usuarios' && <AdminGuard><UsersAdmin /></AdminGuard>}
         </main>
       </div>
