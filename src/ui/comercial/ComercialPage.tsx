@@ -15,9 +15,10 @@ import { todayISO } from '../format';
 import { fmtMoeda } from './shared';
 import { EditalDetail } from './EditalDetail';
 import { ContratoDetail } from './ContratoDetail';
+import { AcompanhamentoPanel } from './AcompanhamentoPanel';
 
-type Secao = 'editais' | 'contratos';
-type SubEditais = 'funil' | 'decisao' | 'verificar';
+type Secao = 'licitacoes' | 'acompanhamento' | 'contratos';
+type SubEditais = 'funil' | 'decisao';
 type SubContratos = 'todos' | 'renovacao';
 
 const STATUS_LABEL: Record<Contrato['status'], string> = {
@@ -29,7 +30,7 @@ const STATUS_LABEL: Record<Contrato['status'], string> = {
 
 export function ComercialPage() {
   const c = useComercial();
-  const [secao, setSecao] = useState<Secao>('editais');
+  const [secao, setSecao] = useState<Secao>('licitacoes');
   const [subEd, setSubEd] = useState<SubEditais>('funil');
   const [subCt, setSubCt] = useState<SubContratos>('todos');
   const [edital, setEdital] = useState<Edital | null>(null);
@@ -39,12 +40,10 @@ export function ComercialPage() {
   const { editais, contratos, janelaRenovacaoDias } = c.state;
 
   const aguardando = useMemo(() => editais.filter((e) => e.fase === 'decisao'), [editais]);
-  const verificar = useMemo(
-    () =>
-      editais
-        .filter((e) => e.fase === 'enviado')
-        .sort((a, b) => (a.proximaVerificacao ?? '9999').localeCompare(b.proximaVerificacao ?? '9999')),
-    [editais],
+  const enviados = useMemo(() => editais.filter((e) => e.fase === 'enviado'), [editais]);
+  const aVerificarHoje = useMemo(
+    () => enviados.filter((e) => e.proximaVerificacao && diasAte(e.proximaVerificacao, hoje) <= 0).length,
+    [enviados, hoje],
   );
   const renovacao = useMemo(
     () =>
@@ -72,41 +71,38 @@ export function ComercialPage() {
       {/* Seletor de seção */}
       <div className="flex flex-wrap items-center gap-3">
         <div className="segmented">
-          <button className="seg-btn" data-active={secao === 'editais'} onClick={() => setSecao('editais')}>Licitações</button>
+          <button className="seg-btn" data-active={secao === 'licitacoes'} onClick={() => setSecao('licitacoes')}>Licitações</button>
+          <button className="seg-btn" data-active={secao === 'acompanhamento'} onClick={() => setSecao('acompanhamento')}>
+            Acompanhamento de Licitações{enviados.length ? ` (${enviados.length})` : ''}
+          </button>
           <button className="seg-btn" data-active={secao === 'contratos'} onClick={() => setSecao('contratos')}>Contratos</button>
         </div>
-        {secao === 'editais' ? (
-          <button className="btn-primary ml-auto" onClick={novoEdital}>+ Novo edital</button>
-        ) : (
-          <button className="btn-primary ml-auto" onClick={novoContrato}>+ Novo contrato</button>
+        {secao === 'licitacoes' && <button className="btn-primary ml-auto" onClick={novoEdital}>+ Nova licitação</button>}
+        {secao === 'contratos' && <button className="btn-primary ml-auto" onClick={novoContrato}>+ Novo contrato</button>}
+        {secao === 'acompanhamento' && aVerificarHoje > 0 && (
+          <span className="chip ml-auto border-[var(--color-overdue)] text-[var(--color-overdue)]">{aVerificarHoje} para verificar hoje/atrasadas</span>
         )}
       </div>
 
-      {secao === 'editais' && (
+      {secao === 'licitacoes' && (
         <>
           <div className="segmented w-fit">
             <button className="seg-btn" data-active={subEd === 'funil'} onClick={() => setSubEd('funil')}>Funil</button>
             <button className="seg-btn" data-active={subEd === 'decisao'} onClick={() => setSubEd('decisao')}>
               Aguardando decisão{aguardando.length ? ` (${aguardando.length})` : ''}
             </button>
-            <button className="seg-btn" data-active={subEd === 'verificar'} onClick={() => setSubEd('verificar')}>
-              A verificar{verificar.length ? ` (${verificar.length})` : ''}
-            </button>
           </div>
 
           {subEd === 'funil' && <Funil editais={editais} onOpen={setEdital} hoje={hoje} />}
           {subEd === 'decisao' && (
-            <Lista vazio="Nenhum edital aguardando decisão.">
+            <Lista vazio="Nenhuma licitação aguardando decisão.">
               {aguardando.map((e) => <EditalCard key={e.id} e={e} hoje={hoje} onOpen={setEdital} />)}
-            </Lista>
-          )}
-          {subEd === 'verificar' && (
-            <Lista vazio="Nenhum edital enviado em acompanhamento.">
-              {verificar.map((e) => <EditalCard key={e.id} e={e} hoje={hoje} onOpen={setEdital} mostrarVerificacao />)}
             </Lista>
           )}
         </>
       )}
+
+      {secao === 'acompanhamento' && <AcompanhamentoPanel onAbrirFicha={setEdital} />}
 
       {secao === 'contratos' && (
         <>
@@ -220,9 +216,8 @@ function Funil({ editais, onOpen, hoje }: { editais: Edital[]; onOpen: (e: Edita
   );
 }
 
-function EditalCard({ e, hoje, onOpen, mostrarVerificacao, cor }: { e: Edital; hoje: string; onOpen: (e: Edital) => void; mostrarVerificacao?: boolean; cor?: string }) {
+function EditalCard({ e, hoje, onOpen, cor }: { e: Edital; hoje: string; onOpen: (e: Edital) => void; cor?: string }) {
   const sub = prazoStatus(e.submissaoFim, hoje);
-  const venc = mostrarVerificacao && e.proximaVerificacao ? diasAte(e.proximaVerificacao, hoje) : undefined;
   return (
     <button
       className="group w-full rounded-[var(--radius-sm)] border border-[var(--color-line)] bg-[var(--color-surface)] p-3 text-left shadow-[var(--shadow-rest)] transition hover:-translate-y-0.5 hover:shadow-[var(--shadow-pop)]"
@@ -241,11 +236,6 @@ function EditalCard({ e, hoje, onOpen, mostrarVerificacao, cor }: { e: Edital; h
       <div className="mt-2 flex flex-wrap gap-1.5">
         {sub === 'vencido' && <span className="chip border-[var(--color-overdue)] text-[var(--color-overdue)]">Submissão vencida</span>}
         {sub === 'proximo' && <span className="chip border-[var(--color-overdue)] text-[var(--color-overdue)]">Submissão próxima</span>}
-        {mostrarVerificacao && venc != null && (
-          <span className={`chip ${venc <= 0 ? 'border-[var(--color-overdue)] text-[var(--color-overdue)]' : ''}`}>
-            {venc < 0 ? `Verificar (atrasado ${-venc}d)` : venc === 0 ? 'Verificar hoje' : `Verificar em ${venc}d`}
-          </span>
-        )}
       </div>
     </button>
   );

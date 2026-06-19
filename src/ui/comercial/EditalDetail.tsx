@@ -5,13 +5,10 @@ import {
   type FaseEdital,
   type GrupoDoc,
   type Modalidade,
-  type Periodicidade,
   type DocItem,
   FASE_LABEL,
   GRUPO_LABEL,
   MODALIDADE_LABEL,
-  PERIODICIDADE_LABEL,
-  avancaVerificacao,
   checklistModelo,
   prazoStatus,
 } from '../../comercial/model';
@@ -38,7 +35,6 @@ export function EditalDetail({ edital, onClose }: { edital: Edital; onClose: () 
   const c = useComercial();
   const [draft, setDraft] = useState<Edital>(edital);
   const [motivo, setMotivo] = useState<{ campo: 'motivoDescarte' | 'motivoPerda'; fase: FaseEdital; texto: string } | null>(null);
-  const [verifObs, setVerifObs] = useState('');
 
   // Auto-salva a cada alteração (módulo simples, dados pequenos).
   function patch(p: Partial<Edital>) {
@@ -174,24 +170,10 @@ export function EditalDetail({ edital, onClose }: { edital: Edital; onClose: () 
         </div>
       )}
 
-      {/* Acompanhamento (enviados) */}
       {draft.fase === 'enviado' && (
-        <Acompanhamento
-          edital={draft}
-          obs={verifObs}
-          setObs={setVerifObs}
-          onPatch={patch}
-          onRegistrar={() => {
-            const hoje = todayISO();
-            const per = draft.periodicidade ?? 'semanal';
-            patch({
-              verificacoes: [...draft.verificacoes, { id: `v-${Math.random().toString(36).slice(2, 7)}`, data: hoje, obs: verifObs.trim() || 'Sem resultado ainda' }],
-              proximaVerificacao: avancaVerificacao(hoje, per),
-              periodicidade: per,
-            });
-            setVerifObs('');
-          }}
-        />
+        <p className="label rounded-[var(--radius-sm)] bg-[var(--color-serges-blue-tint)] p-2 text-[var(--color-serges-blue)]">
+          O acompanhamento desta licitação é feito na aba “Acompanhamento de Licitações”.
+        </p>
       )}
 
       {(draft.motivoDescarte || draft.motivoPerda) && (
@@ -302,59 +284,6 @@ function Checklist({ itens, onChange, editalId }: { itens: DocItem[]; onChange: 
           </div>
         </div>
       ))}
-    </div>
-  );
-}
-
-function Acompanhamento({
-  edital,
-  obs,
-  setObs,
-  onPatch,
-  onRegistrar,
-}: {
-  edital: Edital;
-  obs: string;
-  setObs: (v: string) => void;
-  onPatch: (p: Partial<Edital>) => void;
-  onRegistrar: () => void;
-}) {
-  return (
-    <div className="card p-[var(--spacing-12)]">
-      <div className="label mb-2 uppercase">Acompanhamento</div>
-      <Field label="URL de acompanhamento (portal)">
-        <div className="flex gap-2">
-          <input className="input" placeholder="https://" value={edital.urlAcompanhamento ?? ''} onChange={(e) => onPatch({ urlAcompanhamento: e.target.value })} />
-          {edital.urlAcompanhamento && <a className="btn-secondary" href={edital.urlAcompanhamento} target="_blank" rel="noreferrer">Abrir</a>}
-        </div>
-      </Field>
-      <div className="mt-3 grid grid-cols-2 gap-3">
-        <Field label="Periodicidade">
-          <select className="select" value={edital.periodicidade ?? 'semanal'} onChange={(e) => onPatch({ periodicidade: e.target.value as Periodicidade })}>
-            {(Object.keys(PERIODICIDADE_LABEL) as Periodicidade[]).map((p) => <option key={p} value={p}>{PERIODICIDADE_LABEL[p]}</option>)}
-          </select>
-        </Field>
-        <Field label="Resultado previsto">
-          <input className="input" type="date" value={edital.dataPrevistaResultado ?? ''} onChange={(e) => onPatch({ dataPrevistaResultado: e.target.value })} />
-        </Field>
-      </div>
-      <div className="mt-3">
-        <Field label="Registrar verificação (observação)">
-          <textarea className="input" rows={2} placeholder="Ex.: sem resultado ainda; habilitados publicados…" value={obs} onChange={(e) => setObs(e.target.value)} />
-        </Field>
-        <button className="btn-primary mt-2" onClick={onRegistrar}>Registrar verificação</button>
-        <p className="label mt-1">Próxima verificação: {edital.proximaVerificacao ?? '—'}</p>
-      </div>
-      {edital.verificacoes.length > 0 && (
-        <div className="mt-3 border-t border-[var(--color-line)] pt-2">
-          <div className="label mb-1">Histórico</div>
-          <div className="space-y-1 text-[length:var(--text-caption)] text-[var(--color-ink-soft)]">
-            {[...edital.verificacoes].reverse().map((v) => (
-              <div key={v.id}>{v.data} — {v.obs}</div>
-            ))}
-          </div>
-        </div>
-      )}
     </div>
   );
 }
