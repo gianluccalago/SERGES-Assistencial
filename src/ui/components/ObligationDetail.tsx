@@ -66,6 +66,12 @@ export function ObligationDetail({ ro, onClose }: { ro: ResolvedObligation; onCl
           <Row k="Regra de origem">{item.regraOrigem}</Row>
         </dl>
 
+        {item.tipo === 'fixa' && !item.isManual && (
+          <p className="label rounded-[var(--radius-sm)] bg-[var(--color-serges-blue-tint)] p-2 text-[var(--color-serges-blue)]">
+            Para mudar o dia/regra desta série (e recalcular todas as datas), ou criar/excluir séries, use a aba <strong>Séries</strong> no menu.
+          </p>
+        )}
+
         {/* Recuperação carregada do mês anterior (faturamento parcial, §4.5) */}
         {item.recuperacao && (
           <div className="card mt-[var(--spacing-16)] border-l-[3px] border-l-[var(--color-serges-blue)] p-[var(--spacing-16)]">

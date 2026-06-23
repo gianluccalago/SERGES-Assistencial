@@ -6,10 +6,12 @@ import type {
   AppConfig,
   Contato,
   ObligationEstado,
+  TarefaFixa,
 } from '../domain/types';
 import { seedProjects } from '../data/projects';
 import { seedExtraHolidays } from '../data/holidays';
 import { seedContatos } from '../data/contatos';
+import { SEED_TAREFAS_FIXAS } from '../domain/engine';
 
 /** Mapeia status antigos (modelo de 6 estados) para os 4 atuais (§4.5). */
 function migrarEstado(e: unknown): ObligationEstado | undefined {
@@ -74,6 +76,8 @@ export interface PersistedState {
   manualObligations: ManualObligation[];
   /** Contatos operacionais (§6.5), fonte única. */
   contatos: Contato[];
+  /** Séries fixas (compromissos mensais), editáveis. */
+  tarefasFixas: TarefaFixa[];
 }
 
 export function defaultState(): PersistedState {
@@ -84,6 +88,7 @@ export function defaultState(): PersistedState {
     overrides: {},
     manualObligations: [],
     contatos: structuredClone(seedContatos),
+    tarefasFixas: structuredClone(SEED_TAREFAS_FIXAS),
   };
 }
 
@@ -192,5 +197,6 @@ function migrate(state: any): PersistedState {
     overrides,
     manualObligations,
     contatos: state.contatos ?? base.contatos,
+    tarefasFixas: state.tarefasFixas ?? base.tarefasFixas,
   };
 }

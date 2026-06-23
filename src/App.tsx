@@ -6,6 +6,7 @@ import { ListView } from './ui/components/ListView';
 import { ChecklistView } from './ui/components/ChecklistView';
 import { ContatosPage } from './ui/components/ContatosPage';
 import { ProjectsAdmin } from './ui/components/ProjectsAdmin';
+import { SeriesAdmin } from './ui/components/SeriesAdmin';
 import { ObligationDetail } from './ui/components/ObligationDetail';
 import { ManualForm } from './ui/components/ManualForm';
 import { OcultadasBar } from './ui/components/OcultadasBar';
@@ -21,7 +22,7 @@ import { MESES, todayISO, formatDateShort } from './ui/format';
 import { addCalendarDays, fromISODate, toISODate } from './domain/dateUtils';
 
 type View = 'dia' | 'semana' | 'mes' | 'lista' | 'checklist';
-type Screen = View | 'contatos' | 'projetos' | 'comercial' | 'usuarios';
+type Screen = View | 'contatos' | 'projetos' | 'series' | 'comercial' | 'usuarios';
 
 const VIEW_TABS: Array<{ id: View; label: string }> = [
   { id: 'dia', label: 'Dia' },
@@ -39,6 +40,7 @@ const TITULO_PAGINA: Record<Screen, string> = {
   checklist: 'Calendário de Obrigações',
   contatos: 'Contatos',
   projetos: 'Projetos',
+  series: 'Séries',
   comercial: 'Setor Comercial Público',
   usuarios: 'Usuários',
 };
@@ -102,7 +104,7 @@ export function App() {
     return `${MESES[month - 1]} de ${year}`;
   }, [screen, cursorISO, month, year]);
 
-  function navegar(d: 'calendario' | 'contatos' | 'projetos' | 'comercial' | 'usuarios') {
+  function navegar(d: 'calendario' | 'contatos' | 'projetos' | 'series' | 'comercial' | 'usuarios') {
     setScreen(d === 'calendario' ? view : d);
   }
   function trocarView(v: View) {
@@ -112,7 +114,7 @@ export function App() {
 
   return (
     <div className="flex min-h-full">
-      <Sidebar active={isCalendar ? 'calendario' : (screen as 'contatos' | 'projetos' | 'comercial' | 'usuarios')} onNavigate={navegar} />
+      <Sidebar active={isCalendar ? 'calendario' : (screen as 'contatos' | 'projetos' | 'series' | 'comercial' | 'usuarios')} onNavigate={navegar} />
 
       <div className="min-w-0 flex-1">
         {/* Cabeçalho de página padrão */}
@@ -191,6 +193,7 @@ export function App() {
           {screen === 'checklist' && <ChecklistView year={year} month={month} filtros={filtros} onSelect={setSelected} />}
           {screen === 'contatos' && <ContatosPage />}
           {screen === 'projetos' && <AdminGuard><ProjectsAdmin /></AdminGuard>}
+          {screen === 'series' && <AdminGuard><SeriesAdmin /></AdminGuard>}
           {screen === 'comercial' && (isGestor ? <ComercialPage /> : <p className="text-[var(--color-ink-soft)]">Área exclusiva do gestor.</p>)}
           {screen === 'usuarios' && <AdminGuard><UsersAdmin /></AdminGuard>}
         </main>

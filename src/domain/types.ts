@@ -79,6 +79,18 @@ export type ObligationEstado = 'pendente' | 'aguardandoInput' | 'emAprovacao' | 
 /** Indica se o prazo é crítico (antecipa em dia não útil) ou genérico (adia). */
 export type AjusteDiaUtil = 'antecipa' | 'adia' | 'nenhum';
 
+/**
+ * Compromisso em série (tarefa fixa mensal), editável pelo usuário.
+ * Define a "regra de origem": dia-âncora + regra de dia útil.
+ */
+export interface TarefaFixa {
+  chave: string;
+  dia: number;
+  titulo: string;
+  modo: AjusteDiaUtil;
+  critico?: boolean;
+}
+
 /** Obrigação derivada por regra. Função pura do motor; imutável. */
 export interface Obligation {
   /** id estável e determinístico: `tipo:chave:competência`. */
