@@ -21,6 +21,8 @@ export interface ProjResultado {
   comentario?: string;
   /** Linha "Ajuste de Orçamento" (não é projeto real; só entra no cenário com ajuste). */
   ajuste?: boolean;
+  /** Override do status "futuro": undefined = automático (sem orçado); true/false força. */
+  futuro?: boolean;
   /** Unidade operacional: horas (plantões) ou consultas (por exame). */
   unidade?: Unidade;
   /** Furos / plantões descobertos no mês corrente (geralmente 0). */
@@ -109,9 +111,12 @@ export function entraNoPeriodo(p: ProjResultado, tipo: TipoPeriodo): boolean {
   return tipo === 'mensal' ? true : !p.perConsulta;
 }
 
-/** Projeto futuro: está na apresentação mas ainda não consta no orçamento (sem orçado). */
+/** Projeto futuro: na apresentação mas fora do orçamento. Override manual em p.futuro;
+ * por padrão (automático), é "futuro" quando não há orçado. */
 export function ehFuturo(p: ProjResultado): boolean {
-  return !p.ajuste && (p.receitaOrcado ?? 0) === 0 && (p.custoOrcado ?? 0) === 0;
+  if (p.ajuste) return false;
+  if (p.futuro !== undefined) return p.futuro;
+  return (p.receitaOrcado ?? 0) === 0 && (p.custoOrcado ?? 0) === 0;
 }
 
 export interface Totais {
@@ -243,8 +248,16 @@ export function normalizar(s: string): string {
 export function aplicarOrcamento(c: Competencia, orc: OrcamentoAno): Competencia {
   const m = c.mes - 1;
   const usados = new Set<number>();
+  // Apelidos para nomes que divergem entre apresentação e planilha.
+  const ALIAS: Record<string, string> = {
+    hrnpfuneas: 'hnrp',
+    ubsmontealegre: 'montealegredoscampos',
+    upaafonsopena: 'sjp',
+    saojosedospinhais: 'sjp',
+  };
   const acha = (nome: string): number => {
-    const n = normalizar(nome);
+    const n0 = normalizar(nome);
+    const n = ALIAS[n0] ?? n0;
     let idx = orc.projetos.findIndex((o, i) => !usados.has(i) && !o.ajuste && normalizar(o.nome) === n);
     if (idx < 0) idx = orc.projetos.findIndex((o, i) => !usados.has(i) && !o.ajuste && (normalizar(o.nome).includes(n) || n.includes(normalizar(o.nome))));
     return idx;
