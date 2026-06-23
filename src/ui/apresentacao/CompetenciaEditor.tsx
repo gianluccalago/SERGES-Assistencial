@@ -11,11 +11,16 @@ import {
   resultado,
   margem,
   entraNoPeriodo,
+  ehFuturo,
   totais,
+  cenariosOrcamento,
+  temFuturos,
+  temAjuste,
   variacao,
   novoProjeto,
   novoSlideTexto,
   rotuloPadrao,
+  type CenarioOrc,
   type TipoPeriodo,
 } from '../../apresentacao/model';
 
@@ -79,18 +84,11 @@ export function CompetenciaEditor({ competencia, onVoltar }: { competencia: Comp
         </div>
       </div>
 
-      {/* Ajuste de orçamento */}
-      <div className="flex flex-wrap items-center gap-3 rounded-[var(--radius-md)] border border-[var(--color-line)] p-3">
-        <label className="flex items-center gap-2 text-[length:var(--text-label)]">
-          <input type="checkbox" checked={!!c.usarAjuste} onChange={(e) => patch({ usarAjuste: e.target.checked })} />
-          Incluir “Ajuste de Orçamento” no orçado
-        </label>
-        <label className="flex items-center gap-2 text-[length:var(--text-label)] text-[var(--color-ink-soft)]">
-          Valor do ajuste (receita/mês)
-          <input className="input w-[140px] py-1" inputMode="decimal" defaultValue={c.ajusteReceita ?? ''} onBlur={(e) => patch({ ajusteReceita: parseNum(e.target.value) })} placeholder="0" />
-        </label>
-        {c.tipo === 'parcial' && <span className="chip">Parcial: projetos por consulta (Academias, Camboriú) ficam de fora</span>}
-      </div>
+      {c.tipo === 'parcial' && (
+        <p className="text-[length:var(--text-caption)] text-[var(--color-ink-soft)]">
+          Parcial: projetos “por consulta” (Academias, Camboriú) ficam de fora. O orçado mostrado é mensal cheio.
+        </p>
+      )}
 
       <div className="segmented w-fit">
         <button className="seg-btn" data-active={aba === 'projetos'} onClick={() => setAba('projetos')}>Projetos</button>
@@ -142,12 +140,21 @@ function ProjetosEditor({
     <div className="space-y-2">
       {c.projetos.map((p) => {
         const incl = entraNoPeriodo(p, c.tipo);
+        const futuro = !p.ajuste && ehFuturo(p);
         return (
-          <div key={p.id} className={`card p-[var(--spacing-12)] ${incl ? '' : 'opacity-60'}`}>
+          <div key={p.id} className={`card p-[var(--spacing-12)] ${incl ? '' : 'opacity-60'}`} style={p.ajuste ? { borderLeft: '3px solid var(--color-ink-faint)' } : futuro ? { borderLeft: '3px solid var(--color-serges-blue)' } : undefined}>
             <div className="flex flex-wrap items-center gap-2">
               <input className="input min-w-[180px] flex-1 font-medium" value={p.nome} onChange={(e) => patchProjeto(p.id, { nome: e.target.value })} />
+              {p.ajuste ? (
+                <span className="chip">Ajuste de Orçamento</span>
+              ) : futuro ? (
+                <span className="chip" style={{ borderColor: 'var(--color-serges-blue)', color: 'var(--color-serges-blue)' }}>Projeto futuro</span>
+              ) : null}
               <label className="flex items-center gap-1 text-[length:var(--text-caption)] text-[var(--color-ink-soft)]" title="Fatura por consulta — fica fora do parcial">
                 <input type="checkbox" checked={!!p.perConsulta} onChange={(e) => patchProjeto(p.id, { perConsulta: e.target.checked })} /> por consulta
+              </label>
+              <label className="flex items-center gap-1 text-[length:var(--text-caption)] text-[var(--color-ink-soft)]" title="Linha de Ajuste de Orçamento (não é projeto real)">
+                <input type="checkbox" checked={!!p.ajuste} onChange={(e) => patchProjeto(p.id, { ajuste: e.target.checked })} /> ajuste
               </label>
               <button className="btn-ghost" onClick={() => patchProjeto(p.id, { oculto: !p.oculto })}>{p.oculto ? 'Mostrar' : 'Ocultar'}</button>
               <button className="btn-ghost" onClick={() => mover(p.id, -1)} title="Subir">↑</button>
@@ -165,6 +172,7 @@ function ProjetosEditor({
             <div className="mt-2 flex flex-wrap items-center gap-3 text-[length:var(--text-caption)]">
               <span className="text-[var(--color-ink-soft)]">Resultado <strong style={{ color: 'var(--color-done)' }}>{fmtBRL(resultado(p.receita, p.custo))}</strong></span>
               <span className="text-[var(--color-ink-soft)]">Margem <strong>{fmtPct(margem(p.receita, p.custo))}</strong></span>
+              <span className="text-[var(--color-ink-soft)]">Margem orç. <strong>{fmtPct(margem(p.receitaOrcado ?? 0, p.custoOrcado ?? 0))}</strong></span>
               <input className="input ml-auto min-w-[200px] flex-1 py-1" placeholder="Comentário (aparece no slide)" value={p.comentario ?? ''} onChange={(e) => patchProjeto(p.id, { comentario: e.target.value })} />
             </div>
           </div>
@@ -277,8 +285,21 @@ function Comparacao({ atual, anterior, orcado, inverter }: { atual: number; ante
   const seta = (v?: number) => (v == null ? '' : v > 0 ? '▲' : v < 0 ? '▼' : '–');
   return (
     <div className="flex gap-3 text-[length:var(--text-caption)]">
-      <span style={{ color: cor(va) }}>ant. {seta(va)} {fmtPct(va == null ? undefined : Math.abs(va))}</span>
-      <span style={{ color: cor(vo) }}>orç. {seta(vo)} {fmtPct(vo == null ? undefined : Math.abs(vo))}</span>
+      {va != null && <span style={{ color: cor(va) }}>ant. {seta(va)} {fmtPct(Math.abs(va))}</span>}
+      {vo != null && <span style={{ color: cor(vo) }}>orç. {seta(vo)} {fmtPct(Math.abs(vo))}</span>}
+    </div>
+  );
+}
+
+function CenarioRow({ nome, cen, destaque }: { nome: string; cen: CenarioOrc; destaque?: boolean }) {
+  return (
+    <div className="flex items-center justify-between gap-2 border-b border-[var(--color-line)] py-1.5 last:border-0">
+      <span className={destaque ? 'font-medium text-[var(--color-ink)]' : 'text-[var(--color-ink-soft)]'}>{nome}</span>
+      <span className="flex items-center gap-3 text-[length:var(--text-caption)]">
+        <span className="text-[var(--color-ink-soft)]">{fmtBRL(cen.receita)}</span>
+        <span className="min-w-[90px] text-right font-medium">{fmtBRL(cen.resultado)}</span>
+        <span className="min-w-[48px] text-right" style={{ color: 'var(--color-serges-blue)' }}>{fmtPct(cen.margem)}</span>
+      </span>
     </div>
   );
 }
@@ -330,22 +351,27 @@ function SlideView({ slide, c, onComentarioBU }: { slide: Slide; c: Competencia;
   }
   if (slide.tipo === 'bu') {
     const t = totais(c);
+    const cen = cenariosOrcamento(c);
     return (
       <SlideShell sub="Consolidado · BU Total">
         <h2 className="text-[length:var(--text-heading)] font-semibold">BU Assistencial — Total</h2>
-        <div className="mt-3 flex-1">
-          <LinhaFin label="Receita" atual={t.receita} anterior={t.receitaAnterior} orcado={t.receitaOrcado} />
-          <LinhaFin label="Custo médico" atual={t.custo} anterior={t.custoAnterior} orcado={t.custoOrcado} inverter />
-          <LinhaFin label="Resultado" atual={t.resultado} anterior={resultado(t.receitaAnterior, t.custoAnterior)} orcado={resultado(t.receitaOrcado, t.custoOrcado)} forte />
-        </div>
-        <div className="flex items-end justify-between gap-3">
-          <input className="input min-w-[240px] flex-1 py-1" placeholder="Comentário do consolidado" value={c.comentarioBU ?? ''} onChange={(e) => onComentarioBU(e.target.value)} />
-          <div className="text-right">
-            <div className="label">Margem geral</div>
-            <div className="text-[length:var(--text-heading)] font-bold" style={{ color: 'var(--color-serges-blue)' }}>{fmtPct(t.margem)}</div>
+        <div className="mt-3 grid flex-1 grid-cols-1 gap-4 lg:grid-cols-2">
+          <div>
+            <div className="label mb-1 uppercase">Realizado</div>
+            <LinhaFin label="Receita" atual={t.receita} anterior={t.receitaAnterior} />
+            <LinhaFin label="Custo médico" atual={t.custo} anterior={t.custoAnterior} inverter />
+            <LinhaFin label="Resultado" atual={t.resultado} anterior={resultado(t.receitaAnterior, t.custoAnterior)} forte />
+            <div className="mt-1 text-right text-[length:var(--text-label)] text-[var(--color-ink-soft)]">Margem <strong style={{ color: 'var(--color-serges-blue)' }}>{fmtPct(t.margem)}</strong></div>
+          </div>
+          <div>
+            <div className="label mb-1 flex items-center justify-between uppercase"><span>Orçado — cenários</span><span className="normal-case text-[var(--color-ink-faint)]">receita · resultado · margem</span></div>
+            <CenarioRow nome="Só projetos orçados" cen={cen.projetos} />
+            {temFuturos(c) && <CenarioRow nome="+ Projetos futuros" cen={cen.comFuturos} />}
+            {temAjuste(c) && <CenarioRow nome="+ Futuros + Ajuste" cen={cen.comFuturosAjuste} destaque />}
+            <p className="label mt-1">Projetos futuros entram pela projeção do realizado. Sem ajuste = linha “+ Projetos futuros”.</p>
           </div>
         </div>
-        {c.usarAjuste && <div className="mt-1 text-[length:var(--text-caption)] text-[var(--color-ink-faint)]">Orçado inclui Ajuste de Orçamento (+{fmtBRL(c.ajusteReceita)}).</div>}
+        <input className="input mt-2 w-full py-1" placeholder="Comentário do consolidado" value={c.comentarioBU ?? ''} onChange={(e) => onComentarioBU(e.target.value)} />
       </SlideShell>
     );
   }

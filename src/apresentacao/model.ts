@@ -19,6 +19,8 @@ export interface ProjResultado {
   custoOrcado?: number;
   horas?: number;
   comentario?: string;
+  /** Linha "Ajuste de Orçamento" (não é projeto real; só entra no cenário com ajuste). */
+  ajuste?: boolean;
 }
 
 /** Slide livre de texto (os slides de projeto e BU são derivados). */
@@ -36,9 +38,6 @@ export interface Competencia {
   ano: number;
   mes: number; // 1-12
   tipo: TipoPeriodo;
-  /** Linha "Ajuste Orçamento": valor de receita somado ao orçado quando ligado. */
-  ajusteReceita?: number;
-  usarAjuste?: boolean;
   /** Liga/desliga o slide consolidado (BU Total). */
   mostrarBU?: boolean;
   projetos: ProjResultado[];
@@ -71,6 +70,11 @@ export function entraNoPeriodo(p: ProjResultado, tipo: TipoPeriodo): boolean {
   return tipo === 'mensal' ? true : !p.perConsulta;
 }
 
+/** Projeto futuro: está na apresentação mas ainda não consta no orçamento (sem orçado). */
+export function ehFuturo(p: ProjResultado): boolean {
+  return !p.ajuste && (p.receitaOrcado ?? 0) === 0 && (p.custoOrcado ?? 0) === 0;
+}
+
 export interface Totais {
   receita: number;
   custo: number;
@@ -78,16 +82,14 @@ export interface Totais {
   margem: number;
   receitaAnterior: number;
   custoAnterior: number;
-  receitaOrcado: number;
-  custoOrcado: number;
 }
 
+/** Totais do REALIZADO (exclui a linha de Ajuste; inclui futuros, que são projetos reais). */
 export function totais(c: Competencia): Totais {
-  const inc = c.projetos.filter((p) => entraNoPeriodo(p, c.tipo));
+  const inc = c.projetos.filter((p) => entraNoPeriodo(p, c.tipo) && !p.ajuste);
   const sum = (f: (p: ProjResultado) => number | undefined) => inc.reduce((acc, p) => acc + (f(p) ?? 0), 0);
   const receita = sum((p) => p.receita);
   const custo = sum((p) => p.custo);
-  const ajuste = c.usarAjuste ? c.ajusteReceita ?? 0 : 0;
   return {
     receita,
     custo,
@@ -95,9 +97,52 @@ export function totais(c: Competencia): Totais {
     margem: margem(receita, custo),
     receitaAnterior: sum((p) => p.receitaAnterior),
     custoAnterior: sum((p) => p.custoAnterior),
-    receitaOrcado: sum((p) => p.receitaOrcado) + ajuste,
-    custoOrcado: sum((p) => p.custoOrcado),
   };
+}
+
+export interface CenarioOrc {
+  receita: number;
+  custo: number;
+  resultado: number;
+  margem: number;
+}
+function cenario(receita: number, custo: number): CenarioOrc {
+  return { receita, custo, resultado: receita - custo, margem: margem(receita, custo) };
+}
+
+/**
+ * Três cenários de orçamento para o slide do Total:
+ * 1) só projetos orçados; 2) + projetos futuros (projeção pelo realizado);
+ * 3) + futuros + linha de Ajuste de Orçamento.
+ */
+export function cenariosOrcamento(c: Competencia): { projetos: CenarioOrc; comFuturos: CenarioOrc; comFuturosAjuste: CenarioOrc } {
+  const inc = c.projetos.filter((p) => entraNoPeriodo(p, c.tipo));
+  const orcados = inc.filter((p) => !p.ajuste && !ehFuturo(p));
+  const futuros = inc.filter((p) => !p.ajuste && ehFuturo(p));
+  const ajuste = c.projetos.filter((p) => p.ajuste && !p.oculto);
+
+  const rBase = orcados.reduce((a, p) => a + (p.receitaOrcado ?? 0), 0);
+  const cBase = orcados.reduce((a, p) => a + (p.custoOrcado ?? 0), 0);
+  // Futuros não têm orçado: projetamos pelo realizado.
+  const rFut = futuros.reduce((a, p) => a + p.receita, 0);
+  const cFut = futuros.reduce((a, p) => a + p.custo, 0);
+  const rAj = ajuste.reduce((a, p) => a + (p.receitaOrcado ?? 0), 0);
+  const cAj = ajuste.reduce((a, p) => a + (p.custoOrcado ?? 0), 0);
+
+  return {
+    projetos: cenario(rBase, cBase),
+    comFuturos: cenario(rBase + rFut, cBase + cFut),
+    comFuturosAjuste: cenario(rBase + rFut + rAj, cBase + cFut + cAj),
+  };
+}
+
+/** Há linha de Ajuste de Orçamento na competência? */
+export function temAjuste(c: Competencia): boolean {
+  return c.projetos.some((p) => p.ajuste && !p.oculto);
+}
+/** Há projetos futuros (na apresentação, fora do orçamento)? */
+export function temFuturos(c: Competencia): boolean {
+  return c.projetos.some((p) => entraNoPeriodo(p, c.tipo) && !p.ajuste && ehFuturo(p));
 }
 
 /** Variação percentual entre atual e base (anterior/orçado). */
@@ -136,7 +181,6 @@ export function novaCompetencia(tipo: TipoPeriodo, over: Partial<Competencia> = 
     ano: hoje.getFullYear(),
     mes: hoje.getMonth() + 1,
     tipo,
-    usarAjuste: false,
     mostrarBU: true,
     projetos: SEED_PROJETOS.map((s) => novoProjeto(s)),
     slidesTexto: [],
