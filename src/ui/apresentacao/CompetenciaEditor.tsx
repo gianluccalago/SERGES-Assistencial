@@ -483,11 +483,11 @@ function SlideView({ slide, c, onComentarioBU }: { slide: Slide; c: Competencia;
         <div className="mt-3 grid flex-1 grid-cols-1 gap-4 lg:grid-cols-2">
           <div className="min-w-0">
             <div className="label mb-1 uppercase">{unidadeLabel}: orçado × realizado (mês a mês)</div>
-            <LineChart series={series} fmt={(v) => v.toLocaleString('pt-BR')} altura={190} />
+            <LineChart series={series} fmt={(v) => v.toLocaleString('pt-BR')} altura={230} />
           </div>
           <div className="min-w-0">
             <div className="label mb-1 uppercase">Furos / {unidadeLabel === 'Horas' ? 'plantões' : 'atendimentos'} descobertos</div>
-            <BarChart valores={furos} cor={COR_FUROS} altura={190} />
+            <BarChart valores={furos} cor={COR_FUROS} altura={230} />
           </div>
         </div>
         {p.comentario && <p className="mt-2 text-[length:var(--text-caption)] text-[var(--color-ink-soft)]">{p.comentario}</p>}
