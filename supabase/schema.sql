@@ -41,6 +41,7 @@ $$;
 -- ---------------------------------------------------------------------------
 create table if not exists public.projects           (id text   primary key, data jsonb not null, updated_at timestamptz default now());
 create table if not exists public.holidays           (date text primary key, data jsonb not null, updated_at timestamptz default now());
+create table if not exists public.tarefas_fixas      (chave text primary key, data jsonb not null, updated_at timestamptz default now());
 create table if not exists public.overrides          (id text   primary key, data jsonb not null, updated_at timestamptz default now());
 create table if not exists public.manual_obligations (id text   primary key, data jsonb not null, updated_at timestamptz default now());
 create table if not exists public.contatos           (id text   primary key, data jsonb not null, updated_at timestamptz default now());
@@ -57,6 +58,7 @@ create table if not exists public.comercial_config   (id int    primary key, dat
 alter table public.profiles           enable row level security;
 alter table public.projects           enable row level security;
 alter table public.holidays           enable row level security;
+alter table public.tarefas_fixas      enable row level security;
 alter table public.overrides          enable row level security;
 alter table public.manual_obligations enable row level security;
 alter table public.contatos           enable row level security;
@@ -92,7 +94,7 @@ end $$;
 do $$
 declare t text;
 begin
-  foreach t in array array['projects','holidays'] loop
+  foreach t in array array['projects','holidays','tarefas_fixas'] loop
     execute format('drop policy if exists %I_read on public.%I', t, t);
     execute format('create policy %I_read on public.%I for select to authenticated using (true)', t, t);
     execute format('drop policy if exists %I_write on public.%I', t, t);
@@ -147,7 +149,7 @@ create trigger trg_gate_aprov_mo before update on public.manual_obligations
 do $$
 declare t text;
 begin
-  foreach t in array array['projects','holidays','overrides','manual_obligations','contatos','app_config','editais','contratos','documentos','comercial_config'] loop
+  foreach t in array array['projects','holidays','tarefas_fixas','overrides','manual_obligations','contatos','app_config','editais','contratos','documentos','comercial_config'] loop
     begin
       execute format('alter publication supabase_realtime add table public.%I', t);
     exception when duplicate_object then null; -- já está na publicação
@@ -172,7 +174,19 @@ create policy anexos_update on storage.objects for update to authenticated using
 create policy anexos_delete on storage.objects for delete to authenticated using (bucket_id = 'anexos');
 
 -- ---------------------------------------------------------------------------
--- 7. Seed de papéis (rode DEPOIS de criar os usuários em Authentication → Users)
+-- 7. Seed das séries fixas padrão (compromissos mensais). Editáveis no app.
+-- ---------------------------------------------------------------------------
+insert into public.tarefas_fixas (chave, data) values
+  ('faturarFixos',               '{"chave":"faturarFixos","dia":1,"titulo":"Faturar valor fixo (Dez Emergências, Monte Alegre) e iniciar ciclo de cobrança","modo":"adia"}'::jsonb),
+  ('documentacao',               '{"chave":"documentacao","dia":2,"titulo":"Produzir documentação dos projetos FUNEAS, HRL, HZN e HRNP","modo":"adia"}'::jsonb),
+  ('fecharAcademia',             '{"chave":"fecharAcademia","dia":3,"titulo":"Fechar a Academia e solicitar a nota fiscal do Fred","modo":"adia"}'::jsonb),
+  ('iniciarAsf0600',             '{"chave":"iniciarAsf0600","dia":16,"titulo":"Iniciar o faturamento da ASF e iniciar a 0600","modo":"adia"}'::jsonb),
+  ('finalizar0600',              '{"chave":"finalizar0600","dia":24,"titulo":"Finalizar a 0600 (prazo crítico)","modo":"antecipa","critico":true}'::jsonb),
+  ('contratoSocialContabilidade','{"chave":"contratoSocialContabilidade","dia":20,"titulo":"Alteração do contrato social — envio à contabilidade","modo":"antecipa","critico":true}'::jsonb)
+on conflict (chave) do nothing;
+
+-- ---------------------------------------------------------------------------
+-- 8. Seed de papéis (rode DEPOIS de criar os usuários em Authentication → Users)
 -- ---------------------------------------------------------------------------
 -- update public.profiles set role = 'gestor' where email in ('gian@serges...', 'giuliano@serges...');
 -- update public.profiles set role = 'equipe' where email in ('julyane@serges...');

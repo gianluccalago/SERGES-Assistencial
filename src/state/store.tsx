@@ -16,6 +16,7 @@ import type {
   AppConfig,
   ObligationEstado,
   Contato,
+  TarefaFixa,
 } from '../domain/types';
 import { proximaCompetencia, textoRecuperacao } from '../domain/workflows';
 import type { ResolucaoMes } from '../domain/types';
@@ -36,7 +37,7 @@ import { supabaseConfigured } from '../lib/supabase';
 type FullState = PersistedState & { config: AppConfig };
 
 function emptyFull(): FullState {
-  return { version: 0, projects: [], extraHolidays: [], overrides: {}, manualObligations: [], contatos: [], config: defaultConfig() };
+  return { version: 0, projects: [], extraHolidays: [], overrides: {}, manualObligations: [], contatos: [], tarefasFixas: [], config: defaultConfig() };
 }
 
 // Mapeamento estado <-> tabelas Postgres (uma linha jsonb por entidade).
@@ -66,6 +67,12 @@ const SLICES: Slice<FullState>[] = [
     table: 'contatos',
     extract: (s) => s.contatos.map((c) => ({ key: c.id, row: { id: c.id, data: c } })),
     apply: (b, rows) => ({ ...b, contatos: rows.map((r) => r.data as Contato) }),
+  },
+  {
+    table: 'tarefas_fixas',
+    pk: 'chave',
+    extract: (s) => s.tarefasFixas.map((t) => ({ key: t.chave, row: { chave: t.chave, data: t } })),
+    apply: (b, rows) => ({ ...b, tarefasFixas: rows.map((r) => r.data as TarefaFixa) }),
   },
   {
     table: 'app_config',
@@ -112,6 +119,9 @@ interface AppStore {
   upsertContato: (c: Contato) => void;
   removeContato: (id: string) => void;
   contatosDoProjeto: (projetoId?: string) => Contato[];
+  // Séries fixas (compromissos em série)
+  upsertTarefaFixa: (t: TarefaFixa) => void;
+  removeTarefaFixa: (chave: string) => void;
   // Resoluções de mês (§4.5)
   setResolucaoMes: (item: CalendarItem, resolucao: ResolucaoMes | undefined) => void;
   faturadoParcialmente: (item: CalendarItem, valorFaltante: number) => void;
@@ -128,7 +138,7 @@ const StoreContext = createContext<AppStore | null>(null);
 export function StoreProvider({ children }: { children: ReactNode }) {
   // Sem Supabase configurado, opera offline a partir do localStorage (fallback).
   const [state, setState] = useState<PersistedState>(() =>
-    supabaseConfigured ? { version: 0, projects: [], extraHolidays: [], overrides: {}, manualObligations: [], contatos: [] } : loadState(),
+    supabaseConfigured ? { version: 0, projects: [], extraHolidays: [], overrides: {}, manualObligations: [], contatos: [], tarefasFixas: [] } : loadState(),
   );
   const [config, setConfigState] = useState<AppConfig>(() => loadConfig());
   const [ready, setReady] = useState(!supabaseConfigured);
@@ -368,6 +378,18 @@ export function StoreProvider({ children }: { children: ReactNode }) {
         if (!projetoId) return [];
         return state.contatos.filter((c) => c.projetos.includes(projetoId));
       },
+      upsertTarefaFixa(t) {
+        setState((s) => {
+          const i = s.tarefasFixas.findIndex((x) => x.chave === t.chave);
+          const tarefasFixas = [...s.tarefasFixas];
+          if (i >= 0) tarefasFixas[i] = t;
+          else tarefasFixas.push(t);
+          return { ...s, tarefasFixas };
+        });
+      },
+      removeTarefaFixa(chave) {
+        setState((s) => ({ ...s, tarefasFixas: s.tarefasFixas.filter((x) => x.chave !== chave) }));
+      },
       setResolucaoMes(item, resolucao) {
         // Resoluções de mês aplicam-se a obrigações geradas (lote/faturamento).
         patchOverride(item.id, { resolucaoMes: resolucao });
@@ -394,7 +416,8 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       },
       itemsFor(year, month) {
         const holidays = buildHolidaySet([year - 1, year, year + 1], state.extraHolidays);
-        return assembleMonth(year, month, state.projects, holidays, state.overrides, state.manualObligations);
+        const tf = state.tarefasFixas.length ? state.tarefasFixas : undefined;
+        return assembleMonth(year, month, state.projects, holidays, state.overrides, state.manualObligations, tf);
       },
       dismissedFor(year, month) {
         const comp = `${year}-${String(month).padStart(2, '0')}`;
@@ -405,7 +428,8 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       dismissedItemsFor(year, month) {
         const holidays = buildHolidaySet([year - 1, year, year + 1], state.extraHolidays);
         const comp = `${year}-${String(month).padStart(2, '0')}`;
-        return deriveObligations(year, month, state.projects, holidays)
+        const tf = state.tarefasFixas.length ? state.tarefasFixas : undefined;
+        return deriveObligations(year, month, state.projects, holidays, tf)
           .filter((o) => state.overrides[o.id]?.dismissed && o.competencia === comp)
           .map((o) => ({ id: o.id, titulo: o.titulo }));
       },

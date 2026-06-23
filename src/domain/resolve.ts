@@ -4,6 +4,7 @@ import type {
   Obligation,
   Override,
   Project,
+  TarefaFixa,
 } from './types';
 import { deriveObligations } from './engine';
 import { competencia as fmtCompetencia } from './dateUtils';
@@ -78,6 +79,7 @@ export function assembleMonth(
   holidays: Set<string>,
   overrides: Record<string, Override>,
   manuals: ManualObligation[],
+  tarefasFixas?: TarefaFixa[],
 ): CalendarItem[] {
   const comp = fmtCompetencia(year, month);
   const items: CalendarItem[] = [];
@@ -95,7 +97,7 @@ export function assembleMonth(
       mm = 1;
       y += 1;
     }
-    for (const o of deriveObligations(y, mm, projects, holidays)) {
+    for (const o of deriveObligations(y, mm, projects, holidays, tarefasFixas)) {
       derivedById.set(o.id, o);
     }
   }

@@ -1,4 +1,4 @@
-import type { Obligation, Project, AjusteDiaUtil } from './types';
+import type { Obligation, Project, AjusteDiaUtil, TarefaFixa } from './types';
 import {
   utcDate,
   toISODate,
@@ -73,15 +73,8 @@ const DEP_EXIGE_RETORNO = new Set([
   'escalista',
 ]);
 
-interface FixedTask {
-  chave: string;
-  dia: number;
-  titulo: string;
-  modo: AjusteDiaUtil;
-  critico?: boolean;
-}
-
-const FIXED_TASKS: FixedTask[] = [
+/** Séries fixas padrão (seed). A partir daqui são editáveis e persistidas. */
+export const SEED_TAREFAS_FIXAS: TarefaFixa[] = [
   {
     chave: 'faturarFixos',
     dia: 1,
@@ -133,6 +126,7 @@ export function deriveObligations(
   month: number,
   projects: Project[],
   holidays: Set<string>,
+  tarefasFixas: TarefaFixa[] = SEED_TAREFAS_FIXAS,
 ): Obligation[] {
   const comp = fmtCompetencia(year, month);
   const out: Obligation[] = [];
@@ -207,7 +201,7 @@ export function deriveObligations(
   }
 
   // --- Tarefas fixas (não por projeto) ---
-  for (const t of FIXED_TASKS) {
+  for (const t of tarefasFixas) {
     const prazo = ajustarDiaUtil(utcDate(year, month, t.dia), holidays, t.modo);
     out.push({
       id: `fixa:${t.chave}:${comp}`,
