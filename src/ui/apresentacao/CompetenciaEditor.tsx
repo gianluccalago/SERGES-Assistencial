@@ -187,6 +187,20 @@ function ProjetosEditor({
               <label className="flex items-center gap-1 text-[length:var(--text-caption)] text-[var(--color-ink-soft)]" title="Linha de Ajuste de Orçamento (não é projeto real)">
                 <input type="checkbox" checked={!!p.ajuste} onChange={(e) => patchProjeto(p.id, { ajuste: e.target.checked })} /> ajuste
               </label>
+              {!p.ajuste && (
+                <label className="flex items-center gap-1 text-[length:var(--text-caption)] text-[var(--color-ink-soft)]" title="Projeto futuro (fora do orçamento). Automático = futuro quando não há orçado.">
+                  futuro
+                  <select
+                    className="select w-auto py-0.5"
+                    value={p.futuro === undefined ? 'auto' : p.futuro ? 'sim' : 'nao'}
+                    onChange={(e) => patchProjeto(p.id, { futuro: e.target.value === 'auto' ? undefined : e.target.value === 'sim' })}
+                  >
+                    <option value="auto">auto</option>
+                    <option value="sim">sim</option>
+                    <option value="nao">não</option>
+                  </select>
+                </label>
+              )}
               <button className="btn-ghost" onClick={() => patchProjeto(p.id, { oculto: !p.oculto })}>{p.oculto ? 'Mostrar' : 'Ocultar'}</button>
               <button className="btn-ghost" onClick={() => mover(p.id, -1)} title="Subir">↑</button>
               <button className="btn-ghost" onClick={() => mover(p.id, 1)} title="Descer">↓</button>
