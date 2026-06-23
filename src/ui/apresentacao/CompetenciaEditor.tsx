@@ -22,9 +22,12 @@ import {
   rotuloPadrao,
   aplicarOrcamento,
   comMesCorrente,
+  subtotalProjeto,
+  novoSubtotal,
   type CenarioOrc,
   type TipoPeriodo,
   type Unidade,
+  type Subtotal,
 } from '../../apresentacao/model';
 import { LineChart, BarChart, type Serie } from './charts';
 
@@ -230,6 +233,7 @@ type Slide =
   | { tipo: 'capa' }
   | { tipo: 'projOp'; p: ProjResultado }
   | { tipo: 'projFin'; p: ProjResultado }
+  | { tipo: 'subtotal'; p: ProjResultado }
   | { tipo: 'bu' }
   | { tipo: 'texto'; s: SlideTexto };
 
@@ -239,6 +243,10 @@ function montarDeck(c: Competencia): Slide[] {
   for (const p of c.projetos.filter((x) => entraNoPeriodo(x, c.tipo) && !x.ajuste)) {
     out.push({ tipo: 'projOp', p });
     out.push({ tipo: 'projFin', p });
+  }
+  // Subtotais nomeados (ex.: FUNEAS), somando os projetos do grupo.
+  for (const sub of c.subtotais ?? []) {
+    if (sub.projetoIds.length) out.push({ tipo: 'subtotal', p: subtotalProjeto(c, sub) });
   }
   if (c.mostrarBU !== false) out.push({ tipo: 'bu' });
   for (const s of c.slidesTexto) out.push({ tipo: 'texto', s });
@@ -264,14 +272,57 @@ function ApresentacaoTab({ c, patch, slides }: { c: Competencia; patch: (p: Part
     patch({ slidesTexto: arr });
   }
 
+  const subtotais = c.subtotais ?? [];
+  function addSubtotal() {
+    patch({ subtotais: [...subtotais, novoSubtotal()] });
+  }
+  function patchSubtotal(id: string, p: Partial<Subtotal>) {
+    patch({ subtotais: subtotais.map((x) => (x.id === id ? { ...x, ...p } : x)) });
+  }
+  function removeSubtotal(id: string) {
+    patch({ subtotais: subtotais.filter((x) => x.id !== id) });
+  }
+
   return (
     <div className="space-y-[var(--spacing-16)]">
       <div className="flex flex-wrap items-center gap-3">
         <label className="flex items-center gap-2 text-[length:var(--text-label)]">
           <input type="checkbox" checked={c.mostrarBU !== false} onChange={(e) => patch({ mostrarBU: e.target.checked })} /> Incluir slide BU Total
         </label>
+        <button className="btn-secondary" onClick={addSubtotal}>+ Subtotal (instituição)</button>
         <button className="btn-secondary ml-auto" onClick={addTexto}>+ Slide de texto</button>
       </div>
+
+      {/* Subtotais (somatórios por instituição, ex.: FUNEAS) */}
+      {subtotais.length > 0 && (
+        <div className="space-y-2">
+          {subtotais.map((sub) => (
+            <div key={sub.id} className="card p-[var(--spacing-12)]">
+              <div className="flex items-center gap-2">
+                <input className="input flex-1 font-medium" value={sub.nome} onChange={(e) => patchSubtotal(sub.id, { nome: e.target.value })} />
+                <span className="label">{sub.projetoIds.length} projeto(s)</span>
+                <button className="btn-ghost text-[var(--color-overdue)]" onClick={() => removeSubtotal(sub.id)}>×</button>
+              </div>
+              <div className="mt-2 flex flex-wrap gap-x-4 gap-y-1">
+                {c.projetos.filter((p) => !p.ajuste).map((p) => (
+                  <label key={p.id} className="flex items-center gap-1 text-[length:var(--text-caption)]">
+                    <input
+                      type="checkbox"
+                      checked={sub.projetoIds.includes(p.id)}
+                      onChange={(e) =>
+                        patchSubtotal(sub.id, {
+                          projetoIds: e.target.checked ? [...sub.projetoIds, p.id] : sub.projetoIds.filter((x) => x !== p.id),
+                        })
+                      }
+                    />
+                    {p.nome}
+                  </label>
+                ))}
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
 
       {/* Editores dos slides de texto */}
       {c.slidesTexto.length > 0 && (
@@ -367,41 +418,8 @@ function SlideView({ slide, c, onComentarioBU }: { slide: Slide; c: Competencia;
       </SlideShell>
     );
   }
-  if (slide.tipo === 'projFin') {
-    const p = slide.p;
-    const orc = p.mOrcReceita && p.mOrcReceita.some((v) => v != null) ? p.mOrcReceita : undefined;
-    const real = comMesCorrente(p.mRealReceita, c.mes - 1, p.receita);
-    const series: Serie[] = [];
-    if (orc) series.push({ nome: 'Receita orçada', cor: COR_ORC, valores: orc });
-    series.push({ nome: 'Receita realizada', cor: COR_REAL, valores: real });
-    return (
-      <SlideShell sub="Resultado financeiro">
-        <h2 className="text-[length:var(--text-heading)] font-semibold">{p.nome}</h2>
-        <div className="mt-2 grid flex-1 grid-cols-1 gap-4 lg:grid-cols-[1.1fr_1fr]">
-          <div className="min-w-0">
-            <div className="label mb-1 uppercase">Receita: orçado × realizado</div>
-            <LineChart series={series} fmt={(v) => `R$ ${Math.round(v / 1000)}k`} altura={210} />
-          </div>
-          <div className="flex flex-col">
-            <LinhaFin label="Receita" atual={p.receita} anterior={p.receitaAnterior} orcado={p.receitaOrcado} />
-            <LinhaFin label="Custo médico" atual={p.custo} anterior={p.custoAnterior} orcado={p.custoOrcado} inverter />
-            <LinhaFin label="Resultado" atual={resultado(p.receita, p.custo)} anterior={p.receitaAnterior != null ? resultado(p.receitaAnterior, p.custoAnterior ?? 0) : undefined} orcado={p.receitaOrcado != null ? resultado(p.receitaOrcado, p.custoOrcado ?? 0) : undefined} forte />
-            <div className="mt-2 flex items-end justify-between">
-              <div>
-                <div className="label">Margem realizada</div>
-                <div className="text-[length:var(--text-heading)] font-bold" style={{ color: 'var(--color-serges-blue)' }}>{fmtPct(margem(p.receita, p.custo))}</div>
-              </div>
-              <div className="text-right">
-                <div className="label">Margem orçada</div>
-                <div className="text-[length:var(--text-subheading)] font-semibold text-[var(--color-ink-soft)]">{fmtPct(margem(p.receitaOrcado ?? 0, p.custoOrcado ?? 0))}</div>
-              </div>
-            </div>
-          </div>
-        </div>
-        {p.comentario && <p className="mt-2 text-[length:var(--text-label)] text-[var(--color-ink-soft)]">{p.comentario}</p>}
-      </SlideShell>
-    );
-  }
+  if (slide.tipo === 'projFin') return <FinanceiroSlide p={slide.p} c={c} sub="Resultado financeiro" />;
+  if (slide.tipo === 'subtotal') return <FinanceiroSlide p={slide.p} c={c} sub="Subtotal — instituição" />;
   if (slide.tipo === 'projOp') {
     const p = slide.p;
     const unidadeLabel = p.unidade === 'consultas' ? 'Consultas' : 'Horas';
@@ -459,6 +477,42 @@ function SlideView({ slide, c, onComentarioBU }: { slide: Slide; c: Competencia;
     <SlideShell sub="Observações">
       <h2 className="text-[length:var(--text-heading)] font-semibold">{slide.s.titulo}</h2>
       <p className="mt-3 flex-1 whitespace-pre-wrap text-[var(--color-ink)]">{slide.s.texto}</p>
+    </SlideShell>
+  );
+}
+
+// Slide financeiro reutilizado por projetos e por subtotais (ex.: FUNEAS).
+function FinanceiroSlide({ p, c, sub }: { p: ProjResultado; c: Competencia; sub: string }) {
+  const orc = p.mOrcReceita && p.mOrcReceita.some((v) => v != null) ? p.mOrcReceita : undefined;
+  const real = comMesCorrente(p.mRealReceita, c.mes - 1, p.receita);
+  const series: Serie[] = [];
+  if (orc) series.push({ nome: 'Receita orçada', cor: COR_ORC, valores: orc });
+  series.push({ nome: 'Receita realizada', cor: COR_REAL, valores: real });
+  return (
+    <SlideShell sub={sub}>
+      <h2 className="text-[length:var(--text-heading)] font-semibold">{p.nome}</h2>
+      <div className="mt-2 grid flex-1 grid-cols-1 gap-4 lg:grid-cols-[1.1fr_1fr]">
+        <div className="min-w-0">
+          <div className="label mb-1 uppercase">Receita: orçado × realizado</div>
+          <LineChart series={series} fmt={(v) => `R$ ${Math.round(v / 1000)}k`} altura={210} />
+        </div>
+        <div className="flex flex-col">
+          <LinhaFin label="Receita" atual={p.receita} anterior={p.receitaAnterior} orcado={p.receitaOrcado} />
+          <LinhaFin label="Custo médico" atual={p.custo} anterior={p.custoAnterior} orcado={p.custoOrcado} inverter />
+          <LinhaFin label="Resultado" atual={resultado(p.receita, p.custo)} anterior={p.receitaAnterior != null ? resultado(p.receitaAnterior, p.custoAnterior ?? 0) : undefined} orcado={p.receitaOrcado != null ? resultado(p.receitaOrcado, p.custoOrcado ?? 0) : undefined} forte />
+          <div className="mt-2 flex items-end justify-between">
+            <div>
+              <div className="label">Margem realizada</div>
+              <div className="text-[length:var(--text-heading)] font-bold" style={{ color: 'var(--color-serges-blue)' }}>{fmtPct(margem(p.receita, p.custo))}</div>
+            </div>
+            <div className="text-right">
+              <div className="label">Margem orçada</div>
+              <div className="text-[length:var(--text-subheading)] font-semibold text-[var(--color-ink-soft)]">{fmtPct(margem(p.receitaOrcado ?? 0, p.custoOrcado ?? 0))}</div>
+            </div>
+          </div>
+        </div>
+      </div>
+      {p.comentario && <p className="mt-2 text-[length:var(--text-label)] text-[var(--color-ink-soft)]">{p.comentario}</p>}
     </SlideShell>
   );
 }
