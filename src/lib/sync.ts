@@ -42,10 +42,16 @@ export class Syncer<S> {
   async load(): Promise<{ state: S; hadRows: boolean }> {
     let state = this.base();
     let hadRows = false;
-    for (const s of this.slices) {
-      const pk = this.pkOf(s);
-      // Ordena pela PK para um resultado estável (evita a lista "pular de lugar").
-      const { data, error } = await supabase.from(s.table).select('*').order(pk);
+    // Consulta todas as tabelas EM PARALELO (não em série) — corta o tempo de
+    // carga de "soma das idas e voltas" para "a mais lenta".
+    const results = await Promise.all(
+      this.slices.map(async (s) => {
+        const pk = this.pkOf(s);
+        const { data, error } = await supabase.from(s.table).select('*').order(pk);
+        return { s, pk, data, error };
+      }),
+    );
+    for (const { s, pk, data, error } of results) {
       if (error) {
         // Uma tabela ausente/indisponível não pode derrubar o carregamento das
         // demais (ex.: tabela nova ainda não criada no banco). Ignora esta fatia.
