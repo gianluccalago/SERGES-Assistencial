@@ -24,12 +24,13 @@ import {
   comMesCorrente,
   subtotalProjeto,
   novoSubtotal,
+  fatorOrcado,
   type CenarioOrc,
   type TipoPeriodo,
   type Unidade,
   type Subtotal,
 } from '../../apresentacao/model';
-import { LineChart, BarChart, type Serie } from './charts';
+import { LineChart, BarChart, BarrasComparativas, type Serie } from './charts';
 import { SergesLogo, SergesMark } from '../components/Logo';
 
 const COR_ORC = '#94A3B8';
@@ -111,9 +112,13 @@ export function CompetenciaEditor({ competencia, onVoltar }: { competencia: Comp
       </div>
 
       {c.tipo === 'parcial' && (
-        <p className="text-[length:var(--text-caption)] text-[var(--color-ink-soft)]">
-          Parcial: projetos “por consulta” (Academias, Camboriú) ficam de fora. O orçado mostrado é mensal cheio.
-        </p>
+        <div className="flex flex-wrap items-center gap-3 text-[length:var(--text-caption)] text-[var(--color-ink-soft)]">
+          <span>Parcial: projetos “por consulta” (Academias, Camboriú) ficam de fora.</span>
+          <label className="flex items-center gap-2">
+            <input type="checkbox" checked={!!c.proporcionalizarParcial} onChange={(e) => patch({ proporcionalizarParcial: e.target.checked })} />
+            Proporcionalizar orçado (½ mês) para comparação justa
+          </label>
+        </div>
       )}
 
       <div className="segmented w-fit">
@@ -488,38 +493,71 @@ function SlideView({ slide, c, onComentarioBU }: { slide: Slide; c: Competencia;
 }
 
 // Slide financeiro reutilizado por projetos e por subtotais (ex.: FUNEAS).
+// Barras agrupadas Orçado × Realizado à esquerda; números grandes + margem à direita.
 function FinanceiroSlide({ p, c, sub }: { p: ProjResultado; c: Competencia; sub: string }) {
-  const orc = p.mOrcReceita && p.mOrcReceita.some((v) => v != null) ? p.mOrcReceita : undefined;
-  const real = comMesCorrente(p.mRealReceita, c.mes - 1, p.receita);
-  const series: Serie[] = [];
-  if (orc) series.push({ nome: 'Receita orçada', cor: COR_ORC, valores: orc });
-  series.push({ nome: 'Receita realizada', cor: COR_REAL, valores: real });
+  const fator = fatorOrcado(c);
+  const recOrc = (p.receitaOrcado ?? 0) * fator;
+  const cusOrc = (p.custoOrcado ?? 0) * fator;
+  const resReal = resultado(p.receita, p.custo);
+  const resOrc = resultado(recOrc, cusOrc);
+  const margemReal = margem(p.receita, p.custo);
+  const margemOrc = margem(p.receitaOrcado ?? 0, p.custoOrcado ?? 0);
+  const temOrcado = (p.receitaOrcado ?? 0) > 0 || (p.custoOrcado ?? 0) > 0;
+  const milhar = (v: number) => `R$ ${Math.round(v / 1000).toLocaleString('pt-BR')} mil`;
+  const parcialCheio = c.tipo === 'parcial' && !c.proporcionalizarParcial;
+
   return (
     <SlideShell sub={sub}>
       <h2 className="text-[length:var(--text-heading)] font-semibold">{p.nome}</h2>
-      <div className="mt-2 grid flex-1 grid-cols-1 gap-4 lg:grid-cols-[1.1fr_1fr]">
+      <div className="mt-3 grid flex-1 grid-cols-1 items-center gap-6 lg:grid-cols-[1.2fr_1fr]">
+        {/* Esquerda: barras agrupadas */}
         <div className="min-w-0">
-          <div className="label mb-1 uppercase">Receita: orçado × realizado</div>
-          <LineChart series={series} fmt={(v) => `R$ ${Math.round(v / 1000)}k`} altura={210} />
+          <BarrasComparativas
+            grupos={[
+              { label: 'Receita', orcado: recOrc, realizado: p.receita },
+              { label: 'Custo médico', orcado: cusOrc, realizado: p.custo },
+              { label: 'Resultado', orcado: resOrc, realizado: resReal, corReal: resReal < 0 ? 'var(--color-overdue)' : 'var(--color-done)' },
+            ]}
+            fmt={milhar}
+            corOrcado={COR_ORC}
+            corRealizado={COR_REAL}
+          />
         </div>
-        <div className="flex flex-col">
-          <LinhaFin label="Receita" atual={p.receita} anterior={p.receitaAnterior} orcado={p.receitaOrcado} />
-          <LinhaFin label="Custo médico" atual={p.custo} anterior={p.custoAnterior} orcado={p.custoOrcado} inverter />
-          <LinhaFin label="Resultado" atual={resultado(p.receita, p.custo)} anterior={p.receitaAnterior != null ? resultado(p.receitaAnterior, p.custoAnterior ?? 0) : undefined} orcado={p.receitaOrcado != null ? resultado(p.receitaOrcado, p.custoOrcado ?? 0) : undefined} forte />
-          <div className="mt-2 flex items-end justify-between">
+        {/* Direita: três números grandes + margem */}
+        <div className="flex flex-col gap-3">
+          <NumeroGrande titulo="Receita" valor={p.receita} orcado={temOrcado ? recOrc : undefined} />
+          <NumeroGrande titulo="Custo médico" valor={p.custo} orcado={temOrcado ? cusOrc : undefined} />
+          <NumeroGrande titulo="Resultado" valor={resReal} orcado={temOrcado ? resOrc : undefined} cor={resReal < 0 ? 'var(--color-overdue)' : 'var(--color-done)'} />
+          <div className="mt-1 flex items-end justify-between rounded-[var(--radius-md)] bg-[var(--color-serges-blue-tint)] px-4 py-2">
             <div>
               <div className="label">Margem realizada</div>
-              <div className="text-[length:var(--text-heading)] font-bold" style={{ color: 'var(--color-serges-blue)' }}>{fmtPct(margem(p.receita, p.custo))}</div>
+              <div className="text-3xl font-bold" style={{ color: 'var(--color-serges-blue)' }}>{fmtPct(margemReal)}</div>
             </div>
-            <div className="text-right">
-              <div className="label">Margem orçada</div>
-              <div className="text-[length:var(--text-subheading)] font-semibold text-[var(--color-ink-soft)]">{fmtPct(margem(p.receitaOrcado ?? 0, p.custoOrcado ?? 0))}</div>
-            </div>
+            {temOrcado && (
+              <div className="text-right">
+                <div className="label">Margem orçada</div>
+                <div className="text-[length:var(--text-subheading)] font-semibold text-[var(--color-ink-soft)]">{fmtPct(margemOrc)}</div>
+              </div>
+            )}
           </div>
         </div>
       </div>
-      {p.comentario && <p className="mt-2 text-[length:var(--text-label)] text-[var(--color-ink-soft)]">{p.comentario}</p>}
+      <div className="mt-2 flex items-center justify-between gap-3">
+        <p className="text-[length:var(--text-caption)] text-[var(--color-ink-soft)]">{p.comentario}</p>
+        {parcialCheio && temOrcado && <span className="shrink-0 text-[length:var(--text-caption)] text-[var(--color-ink-faint)]">Realizado parcial (1–15) · orçado mensal cheio</span>}
+        {c.tipo === 'parcial' && c.proporcionalizarParcial && <span className="shrink-0 text-[length:var(--text-caption)] text-[var(--color-ink-faint)]">Orçado proporcional (½ mês)</span>}
+      </div>
     </SlideShell>
+  );
+}
+
+function NumeroGrande({ titulo, valor, orcado, cor }: { titulo: string; valor: number; orcado?: number; cor?: string }) {
+  return (
+    <div>
+      <div className="label">{titulo}</div>
+      <div className="text-2xl font-bold tabular-nums" style={{ color: cor ?? 'var(--color-ink)' }}>{fmtBRL(valor)}</div>
+      {orcado != null && <div className="text-[length:var(--text-caption)] text-[var(--color-ink-faint)]">Orçado {fmtBRL(orcado)}</div>}
+    </div>
   );
 }
 

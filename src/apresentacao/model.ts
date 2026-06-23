@@ -71,6 +71,8 @@ export interface Competencia {
   tipo: TipoPeriodo;
   /** Liga/desliga o slide consolidado (BU Total). */
   mostrarBU?: boolean;
+  /** No parcial, proporcionaliza o orçado (×15/30) para comparar de forma justa. */
+  proporcionalizarParcial?: boolean;
   projetos: ProjResultado[];
   subtotais?: Subtotal[];
   slidesTexto: SlideTexto[];
@@ -87,6 +89,11 @@ export function fmtBRL(v?: number): string {
 }
 export function fmtPct(v?: number): string {
   return v == null || !isFinite(v) ? '—' : `${(v * 100).toLocaleString('pt-BR', { maximumFractionDigits: 1 })}%`;
+}
+
+/** Fator aplicado ao orçado mensal cheio para comparação no parcial (×15/30). */
+export function fatorOrcado(c: Competencia): number {
+  return c.tipo === 'parcial' && c.proporcionalizarParcial ? 15 / 30 : 1;
 }
 
 export function resultado(receita: number, custo: number): number {
