@@ -30,6 +30,7 @@ import {
   type Subtotal,
 } from '../../apresentacao/model';
 import { LineChart, BarChart, type Serie } from './charts';
+import { SergesLogo, SergesMark } from '../components/Logo';
 
 const COR_ORC = '#94A3B8';
 const COR_REAL = 'var(--color-serges-blue)';
@@ -356,8 +357,12 @@ function ApresentacaoTab({ c, patch, slides }: { c: Competencia; patch: (p: Part
 // ---------- Renderização dos slides ----------
 function SlideShell({ children, sub }: { children: React.ReactNode; sub?: string }) {
   return (
-    <div className="apr-slide flex aspect-[16/9] flex-col rounded-[var(--radius-md)] border border-[var(--color-line)] bg-[var(--color-surface)] p-[var(--spacing-24)] shadow-[var(--shadow-rest)]">
-      {sub && <div className="mb-2 text-[length:var(--text-caption)] font-semibold uppercase tracking-wide" style={{ color: 'var(--color-serges-blue)' }}>{sub}</div>}
+    <div className="apr-slide relative flex aspect-[16/9] flex-col rounded-[var(--radius-md)] border border-[var(--color-line)] bg-[var(--color-surface)] p-[var(--spacing-24)] shadow-[var(--shadow-rest)]">
+      {/* Marca SERGES no canto de cada slide */}
+      <div className="absolute right-[var(--spacing-16)] top-[var(--spacing-16)] opacity-90">
+        <SergesMark size={22} />
+      </div>
+      {sub && <div className="mb-2 pr-8 text-[length:var(--text-caption)] font-semibold uppercase tracking-wide" style={{ color: 'var(--color-serges-blue)' }}>{sub}</div>}
       {children}
     </div>
   );
@@ -410,7 +415,8 @@ function SlideView({ slide, c, onComentarioBU }: { slide: Slide; c: Competencia;
     return (
       <SlideShell>
         <div className="flex flex-1 flex-col justify-center">
-          <div className="text-[length:var(--text-caption)] font-semibold uppercase tracking-widest" style={{ color: 'var(--color-serges-blue)' }}>SERGES · B.U. Assistencial</div>
+          <div className="mb-4"><SergesLogo /></div>
+          <div className="text-[length:var(--text-caption)] font-semibold uppercase tracking-widest" style={{ color: 'var(--color-serges-blue)' }}>B.U. Assistencial</div>
           <h1 className="mt-2 text-[length:var(--text-display,2rem)] text-3xl font-bold text-[var(--color-ink)]">{c.titulo || 'Apresentação de Resultados'}</h1>
           <div className="mt-2 text-[var(--color-ink-soft)]">{TIPO_LABEL[c.tipo]} · {MESES[c.mes - 1]} de {c.ano}</div>
           {c.tipo === 'parcial' && <div className="mt-1 text-[length:var(--text-caption)] text-[var(--color-ink-faint)]">Realizado parcial (dias 1–15). Orçamento exibido é mensal cheio.</div>}
