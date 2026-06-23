@@ -20,9 +20,17 @@ import {
   novoProjeto,
   novoSlideTexto,
   rotuloPadrao,
+  aplicarOrcamento,
+  comMesCorrente,
   type CenarioOrc,
   type TipoPeriodo,
+  type Unidade,
 } from '../../apresentacao/model';
+import { LineChart, BarChart, type Serie } from './charts';
+
+const COR_ORC = '#94A3B8';
+const COR_REAL = 'var(--color-serges-blue)';
+const COR_FUROS = 'var(--color-overdue)';
 
 function parseNum(v: string): number {
   const s = v.trim();
@@ -79,6 +87,20 @@ export function CompetenciaEditor({ competencia, onVoltar }: { competencia: Comp
         </select>
         <input className="input w-[90px]" type="number" value={c.ano} onChange={(e) => patch({ ano: Number(e.target.value) || c.ano })} />
         <div className="ml-auto flex gap-2">
+          <button
+            className="btn-secondary"
+            title="Preenche o orçado de cada projeto a partir do orçamento anual importado"
+            onClick={() => {
+              const orc = ap.orcamentoDoAno(c.ano);
+              if (!orc) {
+                alert(`Orçamento de ${c.ano} ainda não importado. Rode o supabase/import_orcamento.sql.`);
+                return;
+              }
+              ap.upsert(aplicarOrcamento(c, orc));
+            }}
+          >
+            Puxar orçamento {c.ano}
+          </button>
           <button className="btn-secondary" onClick={() => setApresentando(true)}>▶ Apresentar</button>
           <button className="btn-secondary" onClick={() => setImprimindo(true)}>Imprimir / PDF</button>
         </div>
@@ -169,6 +191,17 @@ function ProjetosEditor({
               <Campo label="Receita orç." v={p.receitaOrcado} onChange={(n) => patchProjeto(p.id, { receitaOrcado: n })} parseNum={parseNum} />
               <Campo label="Custo orç." v={p.custoOrcado} onChange={(n) => patchProjeto(p.id, { custoOrcado: n })} parseNum={parseNum} />
             </div>
+            <div className="mt-2 grid grid-cols-2 gap-x-3 gap-y-2 sm:grid-cols-4">
+              <label className="block">
+                <span className="label mb-0.5 block">Unidade operacional</span>
+                <select className="select py-1" value={p.unidade ?? 'horas'} onChange={(e) => patchProjeto(p.id, { unidade: e.target.value as Unidade })}>
+                  <option value="horas">Horas (plantões)</option>
+                  <option value="consultas">Consultas (por exame)</option>
+                </select>
+              </label>
+              <Campo label={p.unidade === 'consultas' ? 'Consultas realiz.' : 'Horas realiz.'} v={p.horas} onChange={(n) => patchProjeto(p.id, { horas: n })} parseNum={parseNum} />
+              <Campo label="Furos no mês" v={p.furos} onChange={(n) => patchProjeto(p.id, { furos: n })} parseNum={parseNum} />
+            </div>
             <div className="mt-2 flex flex-wrap items-center gap-3 text-[length:var(--text-caption)]">
               <span className="text-[var(--color-ink-soft)]">Resultado <strong style={{ color: 'var(--color-done)' }}>{fmtBRL(resultado(p.receita, p.custo))}</strong></span>
               <span className="text-[var(--color-ink-soft)]">Margem <strong>{fmtPct(margem(p.receita, p.custo))}</strong></span>
@@ -195,13 +228,18 @@ function Campo({ label, v, onChange, parseNum }: { label: string; v?: number; on
 // ---------- Aba apresentação: deck + slides de texto ----------
 type Slide =
   | { tipo: 'capa' }
-  | { tipo: 'projeto'; p: ProjResultado }
+  | { tipo: 'projOp'; p: ProjResultado }
+  | { tipo: 'projFin'; p: ProjResultado }
   | { tipo: 'bu' }
   | { tipo: 'texto'; s: SlideTexto };
 
 function montarDeck(c: Competencia): Slide[] {
   const out: Slide[] = [{ tipo: 'capa' }];
-  for (const p of c.projetos.filter((x) => entraNoPeriodo(x, c.tipo))) out.push({ tipo: 'projeto', p });
+  // Por projeto: um slide operacional (horas/consultas + furos) e um financeiro.
+  for (const p of c.projetos.filter((x) => entraNoPeriodo(x, c.tipo) && !x.ajuste)) {
+    out.push({ tipo: 'projOp', p });
+    out.push({ tipo: 'projFin', p });
+  }
   if (c.mostrarBU !== false) out.push({ tipo: 'bu' });
   for (const s of c.slidesTexto) out.push({ tipo: 'texto', s });
   return out;
@@ -329,23 +367,64 @@ function SlideView({ slide, c, onComentarioBU }: { slide: Slide; c: Competencia;
       </SlideShell>
     );
   }
-  if (slide.tipo === 'projeto') {
+  if (slide.tipo === 'projFin') {
     const p = slide.p;
+    const orc = p.mOrcReceita && p.mOrcReceita.some((v) => v != null) ? p.mOrcReceita : undefined;
+    const real = comMesCorrente(p.mRealReceita, c.mes - 1, p.receita);
+    const series: Serie[] = [];
+    if (orc) series.push({ nome: 'Receita orçada', cor: COR_ORC, valores: orc });
+    series.push({ nome: 'Receita realizada', cor: COR_REAL, valores: real });
     return (
-      <SlideShell sub="Resultado por projeto">
+      <SlideShell sub="Resultado financeiro">
         <h2 className="text-[length:var(--text-heading)] font-semibold">{p.nome}</h2>
-        <div className="mt-3 flex-1">
-          <LinhaFin label="Receita" atual={p.receita} anterior={p.receitaAnterior} orcado={p.receitaOrcado} />
-          <LinhaFin label="Custo médico" atual={p.custo} anterior={p.custoAnterior} orcado={p.custoOrcado} inverter />
-          <LinhaFin label="Resultado" atual={resultado(p.receita, p.custo)} anterior={p.receitaAnterior != null ? resultado(p.receitaAnterior, p.custoAnterior ?? 0) : undefined} orcado={p.receitaOrcado != null ? resultado(p.receitaOrcado, p.custoOrcado ?? 0) : undefined} forte />
-        </div>
-        <div className="flex items-end justify-between gap-3">
-          <p className="text-[length:var(--text-label)] text-[var(--color-ink-soft)]">{p.comentario}</p>
-          <div className="text-right">
-            <div className="label">Margem</div>
-            <div className="text-[length:var(--text-heading)] font-bold" style={{ color: 'var(--color-serges-blue)' }}>{fmtPct(margem(p.receita, p.custo))}</div>
+        <div className="mt-2 grid flex-1 grid-cols-1 gap-4 lg:grid-cols-[1.1fr_1fr]">
+          <div className="min-w-0">
+            <div className="label mb-1 uppercase">Receita: orçado × realizado</div>
+            <LineChart series={series} fmt={(v) => `R$ ${Math.round(v / 1000)}k`} altura={210} />
+          </div>
+          <div className="flex flex-col">
+            <LinhaFin label="Receita" atual={p.receita} anterior={p.receitaAnterior} orcado={p.receitaOrcado} />
+            <LinhaFin label="Custo médico" atual={p.custo} anterior={p.custoAnterior} orcado={p.custoOrcado} inverter />
+            <LinhaFin label="Resultado" atual={resultado(p.receita, p.custo)} anterior={p.receitaAnterior != null ? resultado(p.receitaAnterior, p.custoAnterior ?? 0) : undefined} orcado={p.receitaOrcado != null ? resultado(p.receitaOrcado, p.custoOrcado ?? 0) : undefined} forte />
+            <div className="mt-2 flex items-end justify-between">
+              <div>
+                <div className="label">Margem realizada</div>
+                <div className="text-[length:var(--text-heading)] font-bold" style={{ color: 'var(--color-serges-blue)' }}>{fmtPct(margem(p.receita, p.custo))}</div>
+              </div>
+              <div className="text-right">
+                <div className="label">Margem orçada</div>
+                <div className="text-[length:var(--text-subheading)] font-semibold text-[var(--color-ink-soft)]">{fmtPct(margem(p.receitaOrcado ?? 0, p.custoOrcado ?? 0))}</div>
+              </div>
+            </div>
           </div>
         </div>
+        {p.comentario && <p className="mt-2 text-[length:var(--text-label)] text-[var(--color-ink-soft)]">{p.comentario}</p>}
+      </SlideShell>
+    );
+  }
+  if (slide.tipo === 'projOp') {
+    const p = slide.p;
+    const unidadeLabel = p.unidade === 'consultas' ? 'Consultas' : 'Horas';
+    const orcQtd = p.mOrcQtd && p.mOrcQtd.some((v) => v != null) ? p.mOrcQtd : undefined;
+    const realQtd = comMesCorrente(p.mRealQtd, c.mes - 1, p.horas);
+    const furos = comMesCorrente(p.mFuros, c.mes - 1, p.furos ?? 0);
+    const series: Serie[] = [];
+    if (orcQtd) series.push({ nome: `${unidadeLabel} orçadas`, cor: COR_ORC, valores: orcQtd });
+    series.push({ nome: `${unidadeLabel} realizadas`, cor: COR_REAL, valores: realQtd });
+    return (
+      <SlideShell sub="Operacional">
+        <h2 className="text-[length:var(--text-heading)] font-semibold">{p.nome}</h2>
+        <div className="mt-2 grid flex-1 grid-cols-1 gap-4 lg:grid-cols-2">
+          <div className="min-w-0">
+            <div className="label mb-1 uppercase">{unidadeLabel}: orçado × realizado</div>
+            <LineChart series={series} fmt={(v) => v.toLocaleString('pt-BR')} altura={200} />
+          </div>
+          <div className="min-w-0">
+            <div className="label mb-1 uppercase">Furos / {unidadeLabel === 'Horas' ? 'plantões' : 'atendimentos'} descobertos</div>
+            <BarChart valores={furos} cor={COR_FUROS} altura={200} />
+          </div>
+        </div>
+        {p.comentario && <p className="mt-2 text-[length:var(--text-label)] text-[var(--color-ink-soft)]">{p.comentario}</p>}
       </SlideShell>
     );
   }
