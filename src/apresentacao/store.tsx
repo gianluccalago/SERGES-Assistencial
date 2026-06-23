@@ -1,5 +1,5 @@
 import { createContext, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
-import type { Competencia } from './model';
+import type { Competencia, OrcamentoAno } from './model';
 import { Syncer, type Slice, type SaveStatus } from '../lib/sync';
 import { supabaseConfigured } from '../lib/supabase';
 
@@ -10,10 +10,11 @@ const LEGACY_KEY = 'serges.apresentacao.v1';
 
 interface AprState {
   competencias: Competencia[];
+  orcamentos: OrcamentoAno[];
 }
 
 function defaultState(): AprState {
-  return { competencias: [] };
+  return { competencias: [], orcamentos: [] };
 }
 
 function loadLegacy(): AprState | null {
@@ -32,6 +33,11 @@ const SLICES: Slice<AprState>[] = [
     extract: (s) => s.competencias.map((c) => ({ key: c.id, row: { id: c.id, data: c } })),
     apply: (b, rows) => ({ ...b, competencias: rows.map((r) => r.data as Competencia) }),
   },
+  {
+    table: 'apr_orcamento',
+    extract: (s) => s.orcamentos.map((o) => ({ key: String(o.ano), row: { id: String(o.ano), data: o } })),
+    apply: (b, rows) => ({ ...b, orcamentos: rows.map((r) => r.data as OrcamentoAno) }),
+  },
 ];
 
 interface AprApi {
@@ -39,6 +45,7 @@ interface AprApi {
   saveStatus: SaveStatus;
   upsert: (c: Competencia) => void;
   remove: (id: string) => void;
+  orcamentoDoAno: (ano: number) => OrcamentoAno | undefined;
 }
 
 const Ctx = createContext<AprApi | null>(null);
@@ -115,6 +122,9 @@ export function ApresentacaoProvider({ children }: { children: ReactNode }) {
       },
       remove(id) {
         setState((s) => ({ ...s, competencias: s.competencias.filter((x) => x.id !== id) }));
+      },
+      orcamentoDoAno(ano) {
+        return state.orcamentos.find((o) => o.ano === ano);
       },
     }),
     [state, saveStatus],
