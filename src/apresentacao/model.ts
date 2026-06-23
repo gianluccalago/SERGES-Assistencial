@@ -56,6 +56,13 @@ export interface SlideTexto {
   /** posição: antes de qual? guardamos ordem simples por índice. */
 }
 
+/** Subtotal nomeado: soma financeira de um conjunto de projetos (ex.: FUNEAS). */
+export interface Subtotal {
+  id: string;
+  nome: string;
+  projetoIds: string[];
+}
+
 export interface Competencia {
   id: string;
   titulo: string;
@@ -65,6 +72,7 @@ export interface Competencia {
   /** Liga/desliga o slide consolidado (BU Total). */
   mostrarBU?: boolean;
   projetos: ProjResultado[];
+  subtotais?: Subtotal[];
   slidesTexto: SlideTexto[];
   comentarioBU?: string;
   criadoEm: string;
@@ -157,6 +165,43 @@ export function cenariosOrcamento(c: Competencia): { projetos: CenarioOrc; comFu
     projetos: cenario(rBase, cBase),
     comFuturos: cenario(rBase + rFut, cBase + cFut),
     comFuturosAjuste: cenario(rBase + rFut + rAj, cBase + cFut + cAj),
+  };
+}
+
+function somaSeries(arr: Array<Serie12 | undefined>): Serie12 {
+  const out = serie12();
+  for (let i = 0; i < 12; i++) {
+    let any = false;
+    let s = 0;
+    for (const a of arr) {
+      const v = a?.[i];
+      if (v != null) {
+        any = true;
+        s += v;
+      }
+    }
+    out[i] = any ? s : null;
+  }
+  return out;
+}
+
+/** Projeto sintético que representa a soma de um subtotal (ex.: FUNEAS). */
+export function subtotalProjeto(c: Competencia, sub: Subtotal): ProjResultado {
+  const ms = sub.projetoIds
+    .map((id) => c.projetos.find((p) => p.id === id))
+    .filter((p): p is ProjResultado => !!p && !p.oculto);
+  const sum = (f: (p: ProjResultado) => number | undefined) => ms.reduce((a, p) => a + (f(p) ?? 0), 0);
+  return {
+    id: sub.id,
+    nome: sub.nome,
+    receita: sum((p) => p.receita),
+    custo: sum((p) => p.custo),
+    receitaAnterior: sum((p) => p.receitaAnterior),
+    custoAnterior: sum((p) => p.custoAnterior),
+    receitaOrcado: sum((p) => p.receitaOrcado),
+    custoOrcado: sum((p) => p.custoOrcado),
+    mOrcReceita: somaSeries(ms.map((p) => p.mOrcReceita)),
+    mRealReceita: somaSeries(ms.map((p) => comMesCorrente(p.mRealReceita, c.mes - 1, p.receita))),
   };
 }
 
@@ -265,6 +310,10 @@ function novoProjeto(over: Partial<ProjResultado> = {}): ProjResultado {
 
 export function novaCompetencia(tipo: TipoPeriodo, over: Partial<Competencia> = {}): Competencia {
   const hoje = new Date();
+  const projetos = SEED_PROJETOS.map((s) => novoProjeto(s));
+  // Subtotal FUNEAS = HRL + HZN + HRNP (mesma instituição).
+  const funeasIds = projetos.filter((p) => /HRL|HZN|HRNP/.test(p.nome)).map((p) => p.id);
+  const subtotais: Subtotal[] = funeasIds.length ? [{ id: `sub-${crypto.randomUUID().slice(0, 8)}`, nome: 'FUNEAS (HRL + HZN + HRNP)', projetoIds: funeasIds }] : [];
   return {
     id: `ap-${crypto.randomUUID().slice(0, 8)}`,
     titulo: '',
@@ -272,11 +321,16 @@ export function novaCompetencia(tipo: TipoPeriodo, over: Partial<Competencia> = 
     mes: hoje.getMonth() + 1,
     tipo,
     mostrarBU: true,
-    projetos: SEED_PROJETOS.map((s) => novoProjeto(s)),
+    projetos,
+    subtotais,
     slidesTexto: [],
     criadoEm: new Date().toISOString(),
     ...over,
   };
+}
+
+export function novoSubtotal(): Subtotal {
+  return { id: `sub-${crypto.randomUUID().slice(0, 8)}`, nome: 'Novo subtotal', projetoIds: [] };
 }
 
 /** Duplica uma competência (zera nada — serve de base para o próximo ciclo). */
