@@ -451,23 +451,46 @@ function SlideView({ slide, c, onComentarioBU }: { slide: Slide; c: Competencia;
     const orcQtd = p.mOrcQtd && p.mOrcQtd.some((v) => v != null) ? p.mOrcQtd : undefined;
     const realQtd = comMesCorrente(p.mRealQtd, c.mes - 1, p.horas);
     const furos = comMesCorrente(p.mFuros, c.mes - 1, p.furos ?? 0);
+    const fator = fatorOrcado(c);
+    const realizadoMes = p.horas ?? 0;
+    const orcadoMes = p.mOrcQtd?.[c.mes - 1] != null ? (p.mOrcQtd[c.mes - 1] as number) * fator : undefined;
+    const fmtNum = (v: number) => Math.round(v).toLocaleString('pt-BR');
     const series: Serie[] = [];
     if (orcQtd) series.push({ nome: `${unidadeLabel} orçadas`, cor: COR_ORC, valores: orcQtd });
     series.push({ nome: `${unidadeLabel} realizadas`, cor: COR_REAL, valores: realQtd });
     return (
       <SlideShell sub="Operacional">
         <h2 className="text-[length:var(--text-heading)] font-semibold">{p.nome}</h2>
-        <div className="mt-2 grid flex-1 grid-cols-1 gap-4 lg:grid-cols-2">
+        {/* Comparação direta do mês: realizado × orçado */}
+        <div className="mt-2 flex flex-wrap items-end gap-6">
+          <div>
+            <div className="label">{unidadeLabel} realizadas (mês)</div>
+            <div className="text-2xl font-bold tabular-nums" style={{ color: 'var(--color-serges-blue)' }}>{fmtNum(realizadoMes)}</div>
+          </div>
+          {orcadoMes != null && (
+            <div>
+              <div className="label">{unidadeLabel} orçadas</div>
+              <div className="text-[length:var(--text-subheading)] font-semibold tabular-nums text-[var(--color-ink-soft)]">{fmtNum(orcadoMes)}</div>
+            </div>
+          )}
+          {orcadoMes != null && orcadoMes > 0 && (
+            <div className="ml-auto text-right">
+              <div className="label">Atingido do orçado</div>
+              <div className="text-[length:var(--text-subheading)] font-semibold" style={{ color: realizadoMes >= orcadoMes ? 'var(--color-done)' : 'var(--color-ink)' }}>{fmtPct(realizadoMes / orcadoMes)}</div>
+            </div>
+          )}
+        </div>
+        <div className="mt-3 grid flex-1 grid-cols-1 gap-4 lg:grid-cols-2">
           <div className="min-w-0">
-            <div className="label mb-1 uppercase">{unidadeLabel}: orçado × realizado</div>
-            <LineChart series={series} fmt={(v) => v.toLocaleString('pt-BR')} altura={200} />
+            <div className="label mb-1 uppercase">{unidadeLabel}: orçado × realizado (mês a mês)</div>
+            <LineChart series={series} fmt={(v) => v.toLocaleString('pt-BR')} altura={190} />
           </div>
           <div className="min-w-0">
             <div className="label mb-1 uppercase">Furos / {unidadeLabel === 'Horas' ? 'plantões' : 'atendimentos'} descobertos</div>
-            <BarChart valores={furos} cor={COR_FUROS} altura={200} />
+            <BarChart valores={furos} cor={COR_FUROS} altura={190} />
           </div>
         </div>
-        {p.comentario && <p className="mt-2 text-[length:var(--text-label)] text-[var(--color-ink-soft)]">{p.comentario}</p>}
+        {p.comentario && <p className="mt-2 text-[length:var(--text-caption)] text-[var(--color-ink-soft)]">{p.comentario}</p>}
       </SlideShell>
     );
   }
