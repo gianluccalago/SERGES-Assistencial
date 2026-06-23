@@ -12,6 +12,7 @@ import { ManualForm } from './ui/components/ManualForm';
 import { OcultadasBar } from './ui/components/OcultadasBar';
 import { Sidebar } from './ui/components/Sidebar';
 import { ComercialPage } from './ui/comercial/ComercialPage';
+import { ApresentacaoPage } from './ui/apresentacao/ApresentacaoPage';
 import { UsersAdmin } from './ui/components/UsersAdmin';
 import { AdminGuard } from './ui/components/AdminGuard';
 import { useStore } from './state/store';
@@ -22,7 +23,7 @@ import { MESES, todayISO, formatDateShort } from './ui/format';
 import { addCalendarDays, fromISODate, toISODate } from './domain/dateUtils';
 
 type View = 'dia' | 'semana' | 'mes' | 'lista' | 'checklist';
-type Screen = View | 'contatos' | 'projetos' | 'series' | 'comercial' | 'usuarios';
+type Screen = View | 'contatos' | 'projetos' | 'series' | 'comercial' | 'apresentacao' | 'usuarios';
 
 const VIEW_TABS: Array<{ id: View; label: string }> = [
   { id: 'dia', label: 'Dia' },
@@ -42,6 +43,7 @@ const TITULO_PAGINA: Record<Screen, string> = {
   projetos: 'Projetos',
   series: 'Séries',
   comercial: 'Setor Comercial Público',
+  apresentacao: 'Apresentação de Resultados',
   usuarios: 'Usuários',
 };
 
@@ -104,7 +106,7 @@ export function App() {
     return `${MESES[month - 1]} de ${year}`;
   }, [screen, cursorISO, month, year]);
 
-  function navegar(d: 'calendario' | 'contatos' | 'projetos' | 'series' | 'comercial' | 'usuarios') {
+  function navegar(d: 'calendario' | 'contatos' | 'projetos' | 'series' | 'comercial' | 'apresentacao' | 'usuarios') {
     setScreen(d === 'calendario' ? view : d);
   }
   function trocarView(v: View) {
@@ -114,7 +116,7 @@ export function App() {
 
   return (
     <div className="flex min-h-full">
-      <Sidebar active={isCalendar ? 'calendario' : (screen as 'contatos' | 'projetos' | 'series' | 'comercial' | 'usuarios')} onNavigate={navegar} />
+      <Sidebar active={isCalendar ? 'calendario' : (screen as 'contatos' | 'projetos' | 'series' | 'comercial' | 'apresentacao' | 'usuarios')} onNavigate={navegar} />
 
       <div className="min-w-0 flex-1">
         {/* Cabeçalho de página padrão */}
@@ -141,8 +143,8 @@ export function App() {
                 </div>
               )}
 
-              {screen !== 'comercial' && (
-                <button className={`btn-primary ${isCalendar ? '' : 'ml-auto'}`} onClick={() => setFormOpen(true)}>
+              {isCalendar && (
+                <button className="btn-primary" onClick={() => setFormOpen(true)}>
                   + Nova obrigação
                 </button>
               )}
@@ -195,6 +197,7 @@ export function App() {
           {screen === 'projetos' && <AdminGuard><ProjectsAdmin /></AdminGuard>}
           {screen === 'series' && <AdminGuard><SeriesAdmin /></AdminGuard>}
           {screen === 'comercial' && (isGestor ? <ComercialPage /> : <p className="text-[var(--color-ink-soft)]">Área exclusiva do gestor.</p>)}
+          {screen === 'apresentacao' && (isGestor ? <ApresentacaoPage /> : <p className="text-[var(--color-ink-soft)]">Área exclusiva do gestor.</p>)}
           {screen === 'usuarios' && <AdminGuard><UsersAdmin /></AdminGuard>}
         </main>
       </div>
