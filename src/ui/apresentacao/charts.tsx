@@ -9,52 +9,93 @@ export interface Serie {
   valores: Array<number | null>;
 }
 
-function maxDe(series: Serie[]): number {
-  let m = 0;
-  for (const s of series) for (const v of s.valores) if (v != null && v > m) m = v;
-  return m || 1;
-}
-
-/** Gráfico de linhas multi-série, 12 meses. */
+/** Gráfico de linhas multi-série, 12 meses. Escala ajustada à faixa dos dados;
+ * plota só pontos com dado; rotula o último ponto de cada série. */
 export function LineChart({ series, fmt, altura = 200 }: { series: Serie[]; fmt?: (v: number) => string; altura?: number }) {
   const W = 720;
   const H = altura;
   const padL = 56;
-  const padR = 12;
-  const padT = 12;
+  const padR = 44;
+  const padT = 14;
   const padB = 26;
-  const max = maxDe(series);
-  const x = (i: number) => padL + (i * (W - padL - padR)) / 11;
-  const y = (v: number) => padT + (H - padT - padB) * (1 - v / max);
   const fy = fmt ?? ((v: number) => v.toLocaleString('pt-BR'));
-  const grid = [0, 0.25, 0.5, 0.75, 1];
+  const vals = series.flatMap((s) => s.valores.filter((v): v is number => v != null));
+  const dmax = vals.length ? Math.max(...vals) : 1;
+  const dmin = vals.length ? Math.min(...vals) : 0;
+  const span = dmax - dmin || dmax || 1;
+  const hi = dmax + span * 0.12;
+  const lo = Math.max(0, dmin - span * 0.18);
+  const x = (i: number) => padL + (i * (W - padL - padR)) / 11;
+  const y = (v: number) => padT + (H - padT - padB) * (1 - (v - lo) / (hi - lo || 1));
+  const grid = [lo, (lo + hi) / 2, hi];
 
   return (
     <div>
       <svg viewBox={`0 0 ${W} ${H}`} className="w-full" style={{ maxHeight: H }} role="img">
-        {grid.map((g) => {
-          const gy = padT + (H - padT - padB) * (1 - g);
-          return (
-            <g key={g}>
-              <line x1={padL} y1={gy} x2={W - padR} y2={gy} stroke="var(--color-line)" strokeWidth={1} />
-              <text x={padL - 6} y={gy + 3} textAnchor="end" fontSize="10" fill="var(--color-ink-faint)">{fy(max * g)}</text>
-            </g>
-          );
-        })}
+        {grid.map((g, gi) => (
+          <g key={gi}>
+            <line x1={padL} y1={y(g)} x2={W - padR} y2={y(g)} stroke="var(--color-line)" strokeWidth={gi === 0 ? 1.25 : 0.75} />
+            <text x={padL - 6} y={y(g) + 3} textAnchor="end" fontSize="11" fill="var(--color-ink-faint)">{fy(g)}</text>
+          </g>
+        ))}
         {MESES_CURTOS.map((m, i) => (
-          <text key={i} x={x(i)} y={H - 8} textAnchor="middle" fontSize="10" fill="var(--color-ink-faint)">{m}</text>
+          <text key={i} x={x(i)} y={H - 8} textAnchor="middle" fontSize="11" fill="var(--color-ink-faint)">{m}</text>
         ))}
         {series.map((s) => {
           const pts = s.valores.map((v, i) => (v == null ? null : `${x(i)},${y(v)}`)).filter(Boolean) as string[];
+          let last = -1;
+          for (let i = 0; i < s.valores.length; i++) if (s.valores[i] != null) last = i;
           return (
             <g key={s.nome}>
               <polyline points={pts.join(' ')} fill="none" stroke={s.cor} strokeWidth={2.5} strokeLinejoin="round" strokeLinecap="round" />
               {s.valores.map((v, i) => (v == null ? null : <circle key={i} cx={x(i)} cy={y(v)} r={3} fill={s.cor} />))}
+              {last >= 0 && (
+                <text x={Math.min(W - 2, x(last) + 6)} y={y(s.valores[last] as number) - 6} fontSize="11" fontWeight={600} fill={s.cor}>
+                  {fy(s.valores[last] as number)}
+                </text>
+              )}
             </g>
           );
         })}
       </svg>
       <Legenda series={series} />
+    </div>
+  );
+}
+
+/** Barras horizontais agrupadas Orçado × Realizado (um grupo por métrica). */
+export function BarrasComparativas({
+  grupos,
+  fmt,
+  corOrcado,
+  corRealizado,
+}: {
+  grupos: Array<{ label: string; orcado: number; realizado: number; corReal?: string }>;
+  fmt: (v: number) => string;
+  corOrcado: string;
+  corRealizado: string;
+}) {
+  const max = Math.max(1, ...grupos.flatMap((g) => [Math.abs(g.orcado), Math.abs(g.realizado)]));
+  const Barra = ({ valor, cor, leg }: { valor: number; cor: string; leg: string }) => (
+    <div className="flex items-center gap-2">
+      <span className="w-[64px] shrink-0 text-[length:var(--text-caption)] text-[var(--color-ink-faint)]">{leg}</span>
+      <div className="relative h-6 flex-1 overflow-hidden rounded-[var(--radius-sm)] bg-[var(--color-canvas)]">
+        <div className="h-full rounded-[var(--radius-sm)]" style={{ width: `${Math.min(100, (Math.abs(valor) / max) * 100)}%`, backgroundColor: valor < 0 ? 'var(--color-overdue)' : cor }} />
+      </div>
+      <span className="w-[104px] shrink-0 text-right text-[length:var(--text-caption)] font-semibold tabular-nums">{fmt(valor)}</span>
+    </div>
+  );
+  return (
+    <div className="space-y-4">
+      {grupos.map((g) => (
+        <div key={g.label}>
+          <div className="label mb-1">{g.label}</div>
+          <div className="space-y-1">
+            <Barra valor={g.orcado} cor={corOrcado} leg="Orçado" />
+            <Barra valor={g.realizado} cor={g.corReal ?? corRealizado} leg="Realizado" />
+          </div>
+        </div>
+      ))}
     </div>
   );
 }
