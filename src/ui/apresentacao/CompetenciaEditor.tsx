@@ -29,7 +29,15 @@ import {
   type TipoPeriodo,
   type Unidade,
   type Subtotal,
+  type GraficoCustom,
 } from '../../apresentacao/model';
+
+const MESES_CURTOS = ['J', 'F', 'M', 'A', 'M', 'J', 'J', 'A', 'S', 'O', 'N', 'D'];
+
+function fmtGraf(formato: 'numero' | 'moeda'): (v: number) => string {
+  if (formato === 'moeda') return (v) => (Math.abs(v) >= 1000 ? `R$ ${Math.round(v / 1000).toLocaleString('pt-BR')} mil` : `R$ ${Math.round(v).toLocaleString('pt-BR')}`);
+  return (v) => Math.round(v).toLocaleString('pt-BR');
+}
 import { LineChart, BarChart, BarrasComparativas, type Serie } from './charts';
 import { SergesLogo, SergesMark } from '../components/Logo';
 
@@ -231,6 +239,7 @@ function ProjetosEditor({
               <span className="text-[var(--color-ink-soft)]">Margem orç. <strong>{fmtPct(margem(p.receitaOrcado ?? 0, p.custoOrcado ?? 0))}</strong></span>
               <input className="input ml-auto min-w-[200px] flex-1 py-1" placeholder="Comentário (aparece no slide)" value={p.comentario ?? ''} onChange={(e) => patchProjeto(p.id, { comentario: e.target.value })} />
             </div>
+            {!p.ajuste && <GraficoCustomEditor p={p} patchProjeto={patchProjeto} parseNum={parseNum} />}
           </div>
         );
       })}
@@ -245,6 +254,55 @@ function Campo({ label, v, onChange, parseNum }: { label: string; v?: number; on
       <span className="label mb-0.5 block">{label}</span>
       <input className="input py-1" inputMode="decimal" defaultValue={v ?? ''} onBlur={(e) => onChange(parseNum(e.target.value))} placeholder="0" />
     </label>
+  );
+}
+
+function GraficoCustomEditor({ p, patchProjeto, parseNum }: { p: ProjResultado; patchProjeto: (id: string, x: Partial<ProjResultado>) => void; parseNum: (v: string) => number }) {
+  const g = p.graficoCustom;
+  const set = (patch: Partial<GraficoCustom>) => g && patchProjeto(p.id, { graficoCustom: { ...g, ...patch } });
+  return (
+    <div className="mt-2 border-t border-[var(--color-line)] pt-2">
+      <label className="flex items-center gap-2 text-[length:var(--text-caption)] text-[var(--color-ink-soft)]">
+        <input
+          type="checkbox"
+          checked={!!g}
+          onChange={(e) => patchProjeto(p.id, { graficoCustom: e.target.checked ? { titulo: 'Custo médico médio/mês', tipo: 'linha', formato: 'moeda', valores: Array(12).fill(null) } : undefined })}
+        />
+        Gráfico extra (abaixo dos furos)
+      </label>
+      {g && (
+        <div className="mt-2 space-y-2">
+          <div className="flex flex-wrap gap-2">
+            <input className="input min-w-[200px] flex-1 py-1" placeholder="Título do gráfico" value={g.titulo} onChange={(e) => set({ titulo: e.target.value })} />
+            <select className="select w-auto py-1" value={g.tipo} onChange={(e) => set({ tipo: e.target.value as GraficoCustom['tipo'] })}>
+              <option value="linha">Linha</option>
+              <option value="barras">Barras</option>
+            </select>
+            <select className="select w-auto py-1" value={g.formato} onChange={(e) => set({ formato: e.target.value as GraficoCustom['formato'] })}>
+              <option value="numero">Número</option>
+              <option value="moeda">R$</option>
+            </select>
+          </div>
+          <div className="grid grid-cols-6 gap-1 sm:grid-cols-12">
+            {MESES_CURTOS.map((m, i) => (
+              <label key={i} className="block text-center">
+                <span className="label block">{m}</span>
+                <input
+                  className="input px-1 py-1 text-center"
+                  inputMode="decimal"
+                  defaultValue={g.valores[i] ?? ''}
+                  onBlur={(e) => {
+                    const v = [...g.valores];
+                    v[i] = e.target.value.trim() === '' ? null : parseNum(e.target.value);
+                    set({ valores: v });
+                  }}
+                />
+              </label>
+            ))}
+          </div>
+        </div>
+      )}
+    </div>
   );
 }
 
@@ -488,6 +546,16 @@ function SlideView({ slide, c, onComentarioBU }: { slide: Slide; c: Competencia;
           <div className="min-w-0">
             <div className="label mb-1 uppercase">Furos / descobertos</div>
             <BarChart valores={furos} cor={COR_FUROS} altura={200} />
+            {p.graficoCustom && (
+              <div className="mt-3">
+                <div className="label mb-1 uppercase">{p.graficoCustom.titulo}</div>
+                {p.graficoCustom.tipo === 'linha' ? (
+                  <LineChart series={[{ nome: p.graficoCustom.titulo, cor: COR_REAL, valores: p.graficoCustom.valores }]} fmt={fmtGraf(p.graficoCustom.formato)} altura={200} />
+                ) : (
+                  <BarChart valores={p.graficoCustom.valores} cor={COR_REAL} altura={200} />
+                )}
+              </div>
+            )}
           </div>
         </div>
         {p.comentario && <p className="mt-3 text-[length:var(--text-subheading)] leading-snug text-[var(--color-ink)]">{p.comentario}</p>}
