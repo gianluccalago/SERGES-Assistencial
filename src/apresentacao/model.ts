@@ -132,6 +132,19 @@ export function ehFuturo(p: ProjResultado): boolean {
   return (p.receitaOrcado ?? 0) === 0 && (p.custoOrcado ?? 0) === 0;
 }
 
+/** Tem realizado lançado? (mês corrente ou série mensal). */
+export function temRealizado(p: ProjResultado): boolean {
+  return (p.receita ?? 0) !== 0 || (p.custo ?? 0) !== 0 || !!p.mRealReceita?.some((v) => v != null) || !!p.mRealCusto?.some((v) => v != null);
+}
+
+/** Projeto de "background": NÃO vira slide próprio, opera só no consolidado.
+ * São as linhas de Ajuste de Orçamento, os futuros marcados manualmente e os
+ * futuros só orçados (sem realizado, ex.: "Projetos futuros"). Um projeto futuro
+ * que já roda (tem realizado) continua com slide; force "futuro: não" p/ exibir. */
+export function ehBackground(p: ProjResultado): boolean {
+  return !!p.ajuste || p.futuro === true || (ehFuturo(p) && !temRealizado(p));
+}
+
 export interface Totais {
   receita: number;
   custo: number;
@@ -227,8 +240,10 @@ export function seriesBU(c: Competencia): SeriesBU {
   const realCusto = somaSeries(inc.map((p) => comMesCorrente(p.mRealCusto, m, p.custo)));
   const orcReceita = somaSeries(orcados.map((p) => p.mOrcReceita));
   const orcCusto = somaSeries(orcados.map((p) => p.mOrcCusto));
-  const futReceita = somaSeries(futuros.map((p) => comMesCorrente(p.mRealReceita, m, p.receita)));
-  const futCusto = somaSeries(futuros.map((p) => comMesCorrente(p.mRealCusto, m, p.custo)));
+  // Futuros que já rodam (têm realizado) entram pelo realizado; linhas de futuros
+  // só orçadas (ex.: "Projetos futuros", sem realizado) entram pelo próprio orçado.
+  const futReceita = somaSeries(futuros.map((p) => (temRealizado(p) ? comMesCorrente(p.mRealReceita, m, p.receita) : p.mOrcReceita)));
+  const futCusto = somaSeries(futuros.map((p) => (temRealizado(p) ? comMesCorrente(p.mRealCusto, m, p.custo) : p.mOrcCusto)));
   const ajReceita = somaSeries(ajuste.map((p) => p.mOrcReceita));
   const ajCusto = somaSeries(ajuste.map((p) => p.mOrcCusto));
   const comFutReceita = somaSeries([orcReceita, futReceita]);
@@ -366,8 +381,13 @@ export function aplicarOrcamento(c: Competencia, orc: OrcamentoAno): Competencia
     if (!indices.length) return p; // sem orçamento → vira "futuro" automaticamente
     indices.forEach((i) => usados.add(i));
     const soma = somarOrc(indices.map((i) => orc.projetos[i]));
+    // Linha de "Projetos futuros" do orçamento: é futuro (background, sem slide),
+    // alimentando o consolidado. Garante isso mesmo em competências já existentes.
+    const ehFutLinha = indices.some((i) => normalizar(orc.projetos[i].nome).includes('futuro'));
     return {
       ...p,
+      futuro: ehFutLinha ? true : p.futuro,
+      oculto: ehFutLinha ? false : p.oculto,
       receitaOrcado: Math.round(soma.receita[m] ?? 0),
       custoOrcado: Math.round(soma.custo[m] ?? 0),
       mOrcReceita: soma.receita.map((v) => Math.round(v)),
@@ -376,16 +396,22 @@ export function aplicarOrcamento(c: Competencia, orc: OrcamentoAno): Competencia
     };
   });
 
-  // Projetos do orçamento que não casaram com nenhum da apresentação → ocultos.
+  // Projetos do orçamento que não casaram com nenhum da apresentação.
+  // - Linha de ajuste: visível, entra no cenário "Orçado + ajuste".
+  // - Linha de "Projetos futuros": vira projeto FUTURO visível (sem slide próprio),
+  //   alimentando o cenário "Orçado + futuros" do consolidado pelo seu orçado.
+  // - Demais: ocultos (só aparecem quando ganharem dados/realizado).
   orc.projetos.forEach((o, i) => {
     if (usados.has(i)) return;
+    const ehFut = !o.ajuste && normalizar(o.nome).includes('futuro');
     projetos.push({
       id: `pr-${crypto.randomUUID().slice(0, 8)}`,
       nome: o.nome,
       receita: 0,
       custo: 0,
-      oculto: !o.ajuste,
+      oculto: o.ajuste ? false : ehFut ? false : true,
       ajuste: o.ajuste,
+      futuro: ehFut ? true : undefined,
       receitaOrcado: Math.round(o.receita[m] ?? 0),
       custoOrcado: Math.round(o.custo[m] ?? 0),
       mOrcReceita: o.receita.map((v) => Math.round(v)),

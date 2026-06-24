@@ -13,6 +13,7 @@ import {
   margem,
   entraNoPeriodo,
   ehFuturo,
+  ehBackground,
   seriesBU,
   temFuturos,
   temAjuste,
@@ -226,6 +227,7 @@ function ProjetosEditor({
       {c.projetos.map((p) => {
         const incl = entraNoPeriodo(p, c.tipo);
         const futuro = !p.ajuste && ehFuturo(p);
+        const background = ehBackground(p);
         return (
           <div key={p.id} className={`card p-[var(--spacing-12)] ${incl ? '' : 'opacity-60'}`} style={p.ajuste ? { borderLeft: '3px solid var(--color-ink-faint)' } : futuro ? { borderLeft: '3px solid var(--color-serges-blue)' } : undefined}>
             <div className="flex flex-wrap items-center gap-2">
@@ -235,6 +237,9 @@ function ProjetosEditor({
               ) : futuro ? (
                 <span className="chip" style={{ borderColor: 'var(--color-serges-blue)', color: 'var(--color-serges-blue)' }}>Projeto futuro</span>
               ) : null}
+              {background && (
+                <span className="chip" title="Não gera slide próprio — entra só no slide consolidado (BU Total)">só no consolidado</span>
+              )}
               <label className="flex items-center gap-1 text-[length:var(--text-caption)] text-[var(--color-ink-soft)]" title="Fatura por consulta — fica fora do parcial">
                 <input type="checkbox" checked={!!p.perConsulta} onChange={(e) => patchProjeto(p.id, { perConsulta: e.target.checked })} /> por consulta
               </label>
@@ -396,7 +401,9 @@ type Slide =
 
 function montarDeck(c: Competencia): Slide[] {
   const out: Slide[] = [{ tipo: 'capa' }];
-  const visiveis = c.projetos.filter((x) => entraNoPeriodo(x, c.tipo) && !x.ajuste);
+  // Projetos futuros (só orçados) e linhas de ajuste NÃO viram slides: operam só no
+  // background, alimentando o slide consolidado (BU Total). Aqui ficam os projetos reais.
+  const visiveis = c.projetos.filter((x) => entraNoPeriodo(x, c.tipo) && !ehBackground(x));
 
   // Mapeia: índice do último projeto de cada subtotal → subtotais a inserir ali.
   const subtotalApos = new Map<number, Subtotal[]>();
