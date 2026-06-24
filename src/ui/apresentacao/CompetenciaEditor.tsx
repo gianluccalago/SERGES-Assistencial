@@ -52,6 +52,10 @@ const COR_FUROS = 'var(--color-overdue)';
 /** Eixo monetário compacto p/ os gráficos do consolidado (R$ X mil). */
 const fmtMilhar = (v: number) => `R$ ${Math.round(v / 1000).toLocaleString('pt-BR')} mil`;
 
+/** Texto padrão do campo de comentário (aparece no slide quando vazio). */
+const SEM_COMENT = 'Sem comentários.';
+const comentarioSlide = (s?: string) => (s && s.trim() ? s : SEM_COMENT);
+
 function parseNum(v: string): number {
   const s = v.trim();
   if (!s) return 0;
@@ -288,7 +292,7 @@ function ProjetosEditor({
               <span className="text-[var(--color-ink-soft)]">Resultado <strong style={{ color: 'var(--color-serges-blue)' }}>{fmtBRL(resultado(p.receita, p.custo))}</strong></span>
               <span className="text-[var(--color-ink-soft)]">Margem <strong>{fmtPct(margem(p.receita, p.custo))}</strong></span>
               <span className="text-[var(--color-ink-soft)]">Margem orç. <strong>{fmtPct(margem(p.receitaOrcado ?? 0, p.custoOrcado ?? 0))}</strong></span>
-              <CampoTexto className="ml-auto min-w-[200px] flex-1" placeholder="Comentário (aparece no slide)" value={p.comentario ?? ''} onChange={(v) => patchProjeto(p.id, { comentario: v })} />
+              <CampoTexto className="ml-auto min-w-[200px] flex-1" placeholder={SEM_COMENT} value={p.comentario ?? ''} onChange={(v) => patchProjeto(p.id, { comentario: v })} />
             </div>
             {!p.ajuste && (
               <>
@@ -548,7 +552,7 @@ function SlideShell({ children, sub }: { children: React.ReactNode; sub?: string
   );
 }
 
-function SlideView({ slide, c, onComentarioBU }: { slide: Slide; c: Competencia; onComentarioBU: (t: string) => void }) {
+function SlideView({ slide, c, onComentarioBU, editavel = true }: { slide: Slide; c: Competencia; onComentarioBU: (t: string) => void; editavel?: boolean }) {
   if (slide.tipo === 'capa') {
     return (
       <SlideShell>
@@ -621,7 +625,7 @@ function SlideView({ slide, c, onComentarioBU }: { slide: Slide; c: Competencia;
             )}
           </div>
         </div>
-        {p.comentario && <p className="mt-3 whitespace-pre-wrap text-[length:var(--text-subheading)] leading-snug text-[var(--color-ink)]">{p.comentario}</p>}
+        <p className="mt-3 whitespace-pre-wrap text-[length:var(--text-subheading)] leading-snug text-[var(--color-ink)]">{comentarioSlide(p.comentario)}</p>
       </SlideShell>
     );
   }
@@ -658,7 +662,11 @@ function SlideView({ slide, c, onComentarioBU }: { slide: Slide; c: Competencia;
             <LineChart series={serieResultado} fmt={fmtMilhar} altura={300} rotuloIdx={c.mes - 1} />
           </div>
         </div>
-        <CampoTexto className="mt-2 w-full" placeholder="Comentário do consolidado" value={c.comentarioBU ?? ''} onChange={onComentarioBU} />
+        {editavel ? (
+          <CampoTexto className="mt-2 w-full" placeholder={SEM_COMENT} value={c.comentarioBU ?? ''} onChange={onComentarioBU} />
+        ) : (
+          <p className="mt-2 whitespace-pre-wrap text-[length:var(--text-label)] leading-snug text-[var(--color-ink)]">{comentarioSlide(c.comentarioBU)}</p>
+        )}
       </SlideShell>
     );
   }
@@ -722,7 +730,7 @@ function FinanceiroSlide({ p, c, sub }: { p: ProjResultado; c: Competencia; sub:
         </div>
       </div>
       <div className="mt-3 flex items-start justify-between gap-3">
-        <p className="whitespace-pre-wrap text-[length:var(--text-label)] leading-snug text-[var(--color-ink)]">{p.comentario}</p>
+        <p className="whitespace-pre-wrap text-[length:var(--text-label)] leading-snug text-[var(--color-ink)]">{comentarioSlide(p.comentario)}</p>
         {parcialCheio && temOrcado && <span className="shrink-0 text-[length:var(--text-caption)] text-[var(--color-ink-faint)]">Realizado parcial (1–15) · orçado mensal cheio</span>}
         {c.tipo === 'parcial' && c.proporcionalizarParcial && <span className="shrink-0 text-[length:var(--text-caption)] text-[var(--color-ink-faint)]">Orçado proporcional (½ mês)</span>}
       </div>
@@ -772,7 +780,7 @@ function Apresentador({ slides, c, onClose }: { slides: Slide[]; c: Competencia;
 
 // Versão estática (sem edição) para apresentar/imprimir.
 function SlideViewStatic({ slide, c }: { slide: Slide; c: Competencia }) {
-  return <SlideView slide={slide} c={c} onComentarioBU={() => {}} />;
+  return <SlideView slide={slide} c={c} onComentarioBU={() => {}} editavel={false} />;
 }
 
 // ---------- Resumo da importação de plantões ----------
