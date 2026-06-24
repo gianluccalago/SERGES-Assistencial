@@ -480,17 +480,17 @@ function SlideView({ slide, c, onComentarioBU }: { slide: Slide; c: Competencia;
             </div>
           )}
         </div>
-        <div className="mt-3 grid flex-1 grid-cols-1 gap-4 lg:grid-cols-2">
+        <div className="mt-3 grid grid-cols-1 gap-5 lg:grid-cols-[2fr_1fr]">
           <div className="min-w-0">
             <div className="label mb-1 uppercase">{unidadeLabel}: orçado × realizado (mês a mês)</div>
-            <LineChart series={series} fmt={(v) => v.toLocaleString('pt-BR')} altura={190} />
+            <LineChart series={series} fmt={(v) => Math.round(v).toLocaleString('pt-BR')} altura={300} />
           </div>
           <div className="min-w-0">
-            <div className="label mb-1 uppercase">Furos / {unidadeLabel === 'Horas' ? 'plantões' : 'atendimentos'} descobertos</div>
-            <BarChart valores={furos} cor={COR_FUROS} altura={190} />
+            <div className="label mb-1 uppercase">Furos / descobertos</div>
+            <BarChart valores={furos} cor={COR_FUROS} altura={200} />
           </div>
         </div>
-        {p.comentario && <p className="mt-2 text-[length:var(--text-caption)] text-[var(--color-ink-soft)]">{p.comentario}</p>}
+        {p.comentario && <p className="mt-3 text-[length:var(--text-subheading)] leading-snug text-[var(--color-ink)]">{p.comentario}</p>}
       </SlideShell>
     );
   }
@@ -579,8 +579,8 @@ function FinanceiroSlide({ p, c, sub }: { p: ProjResultado; c: Competencia; sub:
           </div>
         </div>
       </div>
-      <div className="mt-2 flex items-center justify-between gap-3">
-        <p className="text-[length:var(--text-caption)] text-[var(--color-ink-soft)]">{p.comentario}</p>
+      <div className="mt-3 flex items-start justify-between gap-3">
+        <p className="text-[length:var(--text-label)] leading-snug text-[var(--color-ink)]">{p.comentario}</p>
         {parcialCheio && temOrcado && <span className="shrink-0 text-[length:var(--text-caption)] text-[var(--color-ink-faint)]">Realizado parcial (1–15) · orçado mensal cheio</span>}
         {c.tipo === 'parcial' && c.proporcionalizarParcial && <span className="shrink-0 text-[length:var(--text-caption)] text-[var(--color-ink-faint)]">Orçado proporcional (½ mês)</span>}
       </div>

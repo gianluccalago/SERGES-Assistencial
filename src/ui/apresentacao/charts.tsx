@@ -14,10 +14,10 @@ export interface Serie {
 export function LineChart({ series, fmt, altura = 200 }: { series: Serie[]; fmt?: (v: number) => string; altura?: number }) {
   const W = 720;
   const H = altura;
-  const padL = 56;
-  const padR = 44;
-  const padT = 14;
-  const padB = 26;
+  const padL = 92;
+  const padR = 70;
+  const padT = 18;
+  const padB = 46;
   const fy = fmt ?? ((v: number) => v.toLocaleString('pt-BR'));
   const vals = series.flatMap((s) => s.valores.filter((v): v is number => v != null));
   const dmax = vals.length ? Math.max(...vals) : 1;
@@ -34,12 +34,12 @@ export function LineChart({ series, fmt, altura = 200 }: { series: Serie[]; fmt?
       <svg viewBox={`0 0 ${W} ${H}`} className="w-full" style={{ maxHeight: H }} role="img">
         {grid.map((g, gi) => (
           <g key={gi}>
-            <line x1={padL} y1={y(g)} x2={W - padR} y2={y(g)} stroke="var(--color-line)" strokeWidth={gi === 0 ? 1.25 : 0.75} />
-            <text x={padL - 6} y={y(g) + 3} textAnchor="end" fontSize="11" fill="var(--color-ink-faint)">{fy(g)}</text>
+            <line x1={padL} y1={y(g)} x2={W - padR} y2={y(g)} stroke="var(--color-line)" strokeWidth={gi === 0 ? 2 : 1} />
+            <text x={padL - 8} y={y(g) + 7} textAnchor="end" fontSize="20" fill="var(--color-ink-faint)">{fy(g)}</text>
           </g>
         ))}
         {MESES_CURTOS.map((m, i) => (
-          <text key={i} x={x(i)} y={H - 8} textAnchor="middle" fontSize="11" fill="var(--color-ink-faint)">{m}</text>
+          <text key={i} x={x(i)} y={H - 12} textAnchor="middle" fontSize="20" fill="var(--color-ink-faint)">{m}</text>
         ))}
         {series.map((s) => {
           const pts = s.valores.map((v, i) => (v == null ? null : `${x(i)},${y(v)}`)).filter(Boolean) as string[];
@@ -47,10 +47,10 @@ export function LineChart({ series, fmt, altura = 200 }: { series: Serie[]; fmt?
           for (let i = 0; i < s.valores.length; i++) if (s.valores[i] != null) last = i;
           return (
             <g key={s.nome}>
-              <polyline points={pts.join(' ')} fill="none" stroke={s.cor} strokeWidth={2.5} strokeLinejoin="round" strokeLinecap="round" />
-              {s.valores.map((v, i) => (v == null ? null : <circle key={i} cx={x(i)} cy={y(v)} r={3} fill={s.cor} />))}
+              <polyline points={pts.join(' ')} fill="none" stroke={s.cor} strokeWidth={4} strokeLinejoin="round" strokeLinecap="round" />
+              {s.valores.map((v, i) => (v == null ? null : <circle key={i} cx={x(i)} cy={y(v)} r={5} fill={s.cor} />))}
               {last >= 0 && (
-                <text x={Math.min(W - 2, x(last) + 6)} y={y(s.valores[last] as number) - 6} fontSize="11" fontWeight={600} fill={s.cor}>
+                <text x={Math.min(W - 4, x(last) + 8)} y={y(s.valores[last] as number) - 10} fontSize="22" fontWeight={700} fill={s.cor}>
                   {fy(s.valores[last] as number)}
                 </text>
               )}
@@ -104,10 +104,10 @@ export function BarrasComparativas({
 export function BarChart({ valores, cor, fmt, altura = 160 }: { valores: Array<number | null>; cor: string; fmt?: (v: number) => string; altura?: number }) {
   const W = 720;
   const H = altura;
-  const padL = 40;
-  const padR = 12;
-  const padT = 12;
-  const padB = 26;
+  const padL = 56;
+  const padR = 16;
+  const padT = 22;
+  const padB = 46;
   const max = Math.max(1, ...valores.map((v) => v ?? 0));
   const x = (i: number) => padL + (i * (W - padL - padR)) / 12;
   const bw = ((W - padL - padR) / 12) * 0.6;
@@ -115,16 +115,16 @@ export function BarChart({ valores, cor, fmt, altura = 160 }: { valores: Array<n
   const fy = fmt ?? ((v: number) => String(Math.round(v)));
   return (
     <svg viewBox={`0 0 ${W} ${H}`} className="w-full" style={{ maxHeight: H }} role="img">
-      <line x1={padL} y1={H - padB} x2={W - padR} y2={H - padB} stroke="var(--color-line)" strokeWidth={1} />
-      <text x={padL - 6} y={padT + 4} textAnchor="end" fontSize="10" fill="var(--color-ink-faint)">{fy(max)}</text>
+      <line x1={padL} y1={H - padB} x2={W - padR} y2={H - padB} stroke="var(--color-line)" strokeWidth={2} />
+      <text x={padL - 8} y={padT + 6} textAnchor="end" fontSize="20" fill="var(--color-ink-faint)">{fy(max)}</text>
       {valores.map((v, i) => {
         const val = v ?? 0;
         const h = (H - padT - padB) * (val / max);
         return (
           <g key={i}>
             <rect x={x(i) + ((W - padL - padR) / 12 - bw) / 2} y={y(val)} width={bw} height={Math.max(0, h)} rx={2} fill={val > 0 ? cor : 'var(--color-line)'} />
-            {val > 0 && <text x={x(i) + (W - padL - padR) / 24} y={y(val) - 4} textAnchor="middle" fontSize="9" fill={cor}>{val}</text>}
-            <text x={x(i) + (W - padL - padR) / 24} y={H - 8} textAnchor="middle" fontSize="10" fill="var(--color-ink-faint)">{MESES_CURTOS[i]}</text>
+            {val > 0 && <text x={x(i) + (W - padL - padR) / 24} y={y(val) - 8} textAnchor="middle" fontSize="20" fontWeight={700} fill={cor}>{val}</text>}
+            <text x={x(i) + (W - padL - padR) / 24} y={H - 14} textAnchor="middle" fontSize="20" fill="var(--color-ink-faint)">{MESES_CURTOS[i]}</text>
           </g>
         );
       })}
@@ -134,10 +134,10 @@ export function BarChart({ valores, cor, fmt, altura = 160 }: { valores: Array<n
 
 function Legenda({ series }: { series: Serie[] }) {
   return (
-    <div className="mt-1 flex flex-wrap justify-center gap-4">
+    <div className="mt-1 flex flex-wrap justify-center gap-5">
       {series.map((s) => (
-        <span key={s.nome} className="flex items-center gap-1.5 text-[length:var(--text-caption)] text-[var(--color-ink-soft)]">
-          <span className="inline-block h-2.5 w-2.5 rounded-full" style={{ backgroundColor: s.cor }} />
+        <span key={s.nome} className="flex items-center gap-2 text-[length:var(--text-label)] text-[var(--color-ink-soft)]">
+          <span className="inline-block h-3 w-3 rounded-full" style={{ backgroundColor: s.cor }} />
           {s.nome}
         </span>
       ))}
