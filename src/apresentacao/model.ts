@@ -54,11 +54,13 @@ export interface GraficoCustom {
 export function serie12(): Serie12 {
   return Array(12).fill(null);
 }
-/** Coloca o valor do mês corrente na série se aquela posição estiver vazia. */
+/** Define o realizado do mês corrente na série a partir do valor escalar (editável),
+ * que é a fonte da verdade para o mês atual. Quando o escalar é indefinido, mantém o
+ * que já houver na série (ex.: histórico). Não sobrescreve os demais meses. */
 export function comMesCorrente(arr: Serie12 | undefined, mesIdx: number, v: number | undefined): Serie12 {
   const a = arr ? [...arr] : serie12();
   if (a.length < 12) while (a.length < 12) a.push(null);
-  if (a[mesIdx] == null && v != null) a[mesIdx] = v;
+  if (v != null) a[mesIdx] = v;
   return a;
 }
 
@@ -342,9 +344,10 @@ export function mesclarHistorico(todas: Competencia[], alvo: Competencia): Compe
       const idx = k.mes - 1;
       const q = projetoEquivalente(k.projetos, nA);
       if (!q) continue;
-      rr[idx] = q.mRealReceita?.[idx] ?? (q.receita || null);
-      rc[idx] = q.mRealCusto?.[idx] ?? (q.custo || null);
-      rq[idx] = q.mRealQtd?.[idx] ?? (q.horas || null);
+      // idx é o mês corrente da FONTE: o escalar editável é a fonte da verdade ali.
+      rr[idx] = q.receita || q.mRealReceita?.[idx] || null;
+      rc[idx] = q.custo || q.mRealCusto?.[idx] || null;
+      rq[idx] = q.horas || q.mRealQtd?.[idx] || null;
     }
     return { ...p, mRealReceita: rr, mRealCusto: rc, mRealQtd: rq };
   });
