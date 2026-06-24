@@ -298,10 +298,23 @@ function ProjetosEditor({
 }
 
 function Campo({ label, v, onChange, parseNum }: { label: string; v?: number; onChange: (n: number) => void; parseNum: (v: string) => number }) {
+  // Controlado, mas resincroniza quando o valor externo muda (ex.: importação),
+  // sem perder o que está sendo digitado. onBlur confirma o parse no estado.
+  const [txt, setTxt] = useState(v == null ? '' : String(v));
+  useEffect(() => {
+    setTxt(v == null ? '' : String(v));
+  }, [v]);
   return (
     <label className="block">
       <span className="label mb-0.5 block">{label}</span>
-      <input className="input py-1" inputMode="decimal" defaultValue={v ?? ''} onBlur={(e) => onChange(parseNum(e.target.value))} placeholder="0" />
+      <input
+        className="input py-1"
+        inputMode="decimal"
+        value={txt}
+        onChange={(e) => setTxt(e.target.value)}
+        onBlur={(e) => onChange(parseNum(e.target.value))}
+        placeholder="0"
+      />
     </label>
   );
 }
