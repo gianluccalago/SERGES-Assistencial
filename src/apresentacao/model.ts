@@ -314,6 +314,7 @@ export function aplicarOrcamento(c: Competencia, orc: OrcamentoAno): Competencia
     ubsmontealegre: 'montealegredoscampos',
     upaafonsopena: 'sjp',
     saojosedospinhais: 'sjp',
+    asfsulnorteoeste: 'asfclinico',
   };
   const acha = (nome: string): number => {
     const n0 = normalizar(nome);
