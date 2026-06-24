@@ -1,15 +1,7 @@
-import { useState, type CSSProperties } from 'react';
+import { useState } from 'react';
 import { useApresentacao } from '../../apresentacao/store';
 import { novaCompetencia, duplicar, rotuloPadrao, totais, fmtBRL, fmtPct, TIPO_LABEL, type Competencia, type TipoPeriodo } from '../../apresentacao/model';
 import { CompetenciaEditor } from './CompetenciaEditor';
-
-// Identidade visual SERGES (azul), reforçada nos tokens de marca do módulo.
-const TEMA: CSSProperties = {
-  ['--color-serges-blue' as string]: '#2042E1',
-  ['--color-serges-blue-strong' as string]: '#1A36BC',
-  ['--color-serges-blue-tint' as string]: '#EAEDFC',
-  ['--color-serges-blue-tint-soft' as string]: '#F4F6FE',
-} as CSSProperties;
 
 export function ApresentacaoPage() {
   const ap = useApresentacao();
@@ -24,7 +16,7 @@ export function ApresentacaoPage() {
   }
 
   return (
-    <div style={TEMA} className="space-y-[var(--spacing-20)]">
+    <div className="space-y-[var(--spacing-20)]">
       {aberta ? (
         <CompetenciaEditor competencia={aberta} onVoltar={() => setAbertaId(null)} />
       ) : (

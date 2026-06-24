@@ -1,28 +1,35 @@
 @import 'tailwindcss';
 
-@theme {
-  /* Marca */
-  --color-serges-blue: #2042e1;
-  --color-serges-blue-strong: #1a36bc;
-  --color-serges-blue-tint: #eaedfc;
-  --color-serges-blue-tint-soft: #f4f6fe;
+/* ============================================================================
+ * Identidade visual SERGES Hub (tema escuro): fundo navy com brilho azul,
+ * superfícies em "glass" translúcido, texto claro e azul de marca vibrante.
+ * Quase tudo é dirigido por estes tokens — telas e componentes só os consomem.
+ * Os slides da Apresentação ficam CLAROS (impressão/projeção): ver .apr-slide.
+ * ========================================================================== */
 
-  /* Superfícies — canvas levemente fora do branco, cards em branco puro */
-  --color-canvas: #fafbfc;
-  --color-surface: #ffffff;
-  --color-surface-muted: #f4f6f8;
-  --color-line: #e8eaee;
+@theme {
+  /* Marca (azul vibrante que se lê bem sobre o navy) */
+  --color-serges-blue: #3d6df2;
+  --color-serges-blue-strong: #5a83ff;
+  --color-serges-blue-tint: rgba(61, 109, 242, 0.22);
+  --color-serges-blue-tint-soft: rgba(61, 109, 242, 0.12);
+
+  /* Superfícies — canvas é o navy de fundo; surface são painéis/cards elevados */
+  --color-canvas: #0a1430;
+  --color-surface: #16234a;
+  --color-surface-muted: #0f1a3a;
+  --color-line: rgba(150, 165, 210, 0.16);
 
   /* Texto */
-  --color-ink: #14161d;
-  --color-ink-soft: #5b6172;
-  --color-ink-faint: #8a90a0;
+  --color-ink: #eaf0ff;
+  --color-ink-soft: #aab6d8;
+  --color-ink-faint: #7682a8;
 
-  /* Semânticos discretos */
-  --color-overdue: #d92d20;
-  --color-overdue-tint: #fdecea;
-  --color-done: #1f9d55;
-  --color-done-tint: #e9f6ef;
+  /* Semânticos (mais luminosos para contrastar no escuro) */
+  --color-overdue: #ff6f63;
+  --color-overdue-tint: rgba(255, 111, 99, 0.16);
+  --color-done: #3ad29a;
+  --color-done-tint: rgba(58, 210, 154, 0.16);
 
   --font-ui: 'Inter', ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
   --font-brand: 'Fredoka', 'Baloo 2', 'Nunito', ui-rounded, system-ui, sans-serif;
@@ -50,11 +57,11 @@
   --spacing-40: 40px;
 
   --radius-sm: 8px;
-  --radius-md: 12px;
+  --radius-md: 14px;
   --radius-full: 9999px;
 
-  --shadow-rest: 0 1px 2px rgba(20, 22, 29, 0.04), 0 1px 3px rgba(20, 22, 29, 0.06);
-  --shadow-pop: 0 8px 24px rgba(20, 22, 29, 0.12);
+  --shadow-rest: 0 1px 2px rgba(0, 0, 0, 0.35), 0 4px 14px rgba(0, 0, 0, 0.28);
+  --shadow-pop: 0 16px 40px rgba(0, 0, 0, 0.5);
 
   --ease: cubic-bezier(0.2, 0, 0, 1);
 }
@@ -67,7 +74,14 @@
   }
   body {
     margin: 0;
+    /* Fundo navy com brilho azul no topo, igual à home do Serges Hub. */
     background-color: var(--color-canvas);
+    background-image:
+      radial-gradient(1100px 520px at 50% -8%, rgba(61, 109, 242, 0.30), transparent 62%),
+      radial-gradient(900px 600px at 88% 2%, rgba(96, 76, 220, 0.18), transparent 60%),
+      linear-gradient(180deg, #0b1638 0%, #070d22 100%);
+    background-attachment: fixed;
+    background-repeat: no-repeat;
     color: var(--color-ink);
     font-family: var(--font-ui);
     font-size: var(--text-body);
@@ -85,6 +99,14 @@
   }
   * {
     box-sizing: border-box;
+  }
+  /* Logo SERGES (azul de marca) sai branco sobre o navy do app… */
+  img[alt='SERGES'] {
+    filter: brightness(0) invert(1);
+  }
+  /* …mas permanece azul dentro dos slides claros. */
+  .apr-slide img[alt='SERGES'] {
+    filter: none;
   }
   /* Foco de teclado sempre visível; mouse não mostra anel. */
   :focus-visible {
@@ -106,6 +128,7 @@
 @layer components {
   .btn-primary {
     background-color: var(--color-serges-blue);
+    background-image: linear-gradient(180deg, color-mix(in srgb, var(--color-serges-blue) 86%, white), var(--color-serges-blue));
     color: #fff;
     font-size: var(--text-label);
     font-weight: var(--font-weight-semibold);
@@ -113,25 +136,30 @@
     border-radius: var(--radius-sm);
     padding: 9px 16px;
     box-shadow: var(--shadow-rest);
-    transition: background-color 160ms var(--ease), transform 120ms var(--ease);
+    transition: filter 160ms var(--ease), transform 120ms var(--ease);
     white-space: nowrap;
   }
-  .btn-primary:hover { background-color: var(--color-serges-blue-strong); }
+  .btn-primary:hover { filter: brightness(1.12); }
   .btn-primary:active { transform: translateY(0.5px); }
   .btn-primary:disabled { opacity: 0.45; cursor: not-allowed; box-shadow: none; }
 
   .btn-secondary {
-    background-color: var(--color-surface);
+    background-color: color-mix(in srgb, var(--color-surface) 55%, transparent);
     color: var(--color-ink);
     border: 1px solid var(--color-line);
     border-radius: var(--radius-sm);
     padding: 8px 14px;
     font-size: var(--text-label);
     font-weight: var(--font-weight-medium);
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
     transition: border-color 160ms var(--ease), color 160ms var(--ease), background-color 160ms var(--ease);
     white-space: nowrap;
   }
-  .btn-secondary:hover { border-color: var(--color-ink-faint); background-color: var(--color-surface-muted); }
+  .btn-secondary:hover {
+    border-color: color-mix(in srgb, var(--color-ink-faint) 60%, transparent);
+    background-color: color-mix(in srgb, var(--color-surface) 80%, transparent);
+  }
 
   .btn-ghost {
     background: transparent;
@@ -142,7 +170,7 @@
     font-size: var(--text-label);
     transition: color 160ms var(--ease), background-color 160ms var(--ease);
   }
-  .btn-ghost:hover { color: var(--color-serges-blue); background-color: var(--color-serges-blue-tint-soft); }
+  .btn-ghost:hover { color: var(--color-serges-blue-strong); background-color: var(--color-serges-blue-tint-soft); }
 
   /* Controle segmentado coeso (seletor de visão). */
   .segmented {
@@ -166,8 +194,8 @@
   }
   .seg-btn:hover { color: var(--color-ink); }
   .seg-btn[data-active='true'] {
-    background-color: var(--color-surface);
-    color: var(--color-serges-blue);
+    background-color: color-mix(in srgb, var(--color-serges-blue) 28%, var(--color-surface));
+    color: #fff;
     box-shadow: var(--shadow-rest);
   }
 
@@ -187,17 +215,17 @@
     text-align: left;
     transition: all 140ms var(--ease);
   }
-  .nav-item:hover { background-color: var(--color-surface-muted); color: var(--color-ink); }
+  .nav-item:hover { background-color: rgba(255, 255, 255, 0.06); color: var(--color-ink); }
   .nav-item[data-active='true'] {
     background-color: var(--color-serges-blue-tint);
-    color: var(--color-serges-blue-strong);
+    color: #cdd9ff;
   }
 
   .chip {
     display: inline-flex;
     align-items: center;
     gap: 6px;
-    background-color: var(--color-surface);
+    background-color: color-mix(in srgb, var(--color-surface) 65%, transparent);
     border: 1px solid var(--color-line);
     border-radius: var(--radius-full);
     color: var(--color-ink);
@@ -215,7 +243,7 @@
     gap: 6px;
     padding: 5px 12px;
     border-radius: var(--radius-full);
-    background-color: var(--color-surface);
+    background-color: color-mix(in srgb, var(--color-surface) 65%, transparent);
     border: 1px solid var(--color-line);
     font-size: var(--text-caption);
     color: var(--color-ink-soft);
@@ -224,15 +252,17 @@
   .counter strong { font-size: var(--text-label); font-weight: var(--font-weight-semibold); color: var(--color-ink); }
 
   .card {
-    background-color: var(--color-surface);
+    background-color: color-mix(in srgb, var(--color-surface) 82%, transparent);
     border: 1px solid var(--color-line);
     border-radius: var(--radius-md);
     box-shadow: var(--shadow-rest);
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
   }
 
   .input,
   .select {
-    background-color: var(--color-surface);
+    background-color: color-mix(in srgb, var(--color-ink) 6%, var(--color-surface));
     border: 1px solid var(--color-line);
     border-radius: var(--radius-sm);
     color: var(--color-ink);
@@ -242,12 +272,15 @@
     width: 100%;
     transition: border-color 160ms var(--ease), box-shadow 160ms var(--ease);
   }
+  .input::placeholder { color: var(--color-ink-faint); }
   .input:focus,
   .select:focus {
     outline: none;
     border-color: var(--color-serges-blue);
     box-shadow: 0 0 0 3px var(--color-serges-blue-tint);
   }
+  /* Opções do <select> nativo: legíveis no menu do SO (fundo claro). */
+  .select option { color: #14161d; background-color: #ffffff; }
   .label {
     color: var(--color-ink-soft);
     font-size: var(--text-caption);
@@ -255,3 +288,30 @@
     letter-spacing: 0.02em;
   }
 }
+
+/* ============================================================================
+ * Slides da Apresentação de Resultados: paleta CLARA escopada.
+ * Tudo dentro de .apr-slide volta às cores originais (branco/azul), para
+ * impressão em PDF e projeção. Vale também para os gráficos (consomem tokens).
+ * ========================================================================== */
+.apr-slide {
+  --color-canvas: #fafbfc;
+  --color-surface: #ffffff;
+  --color-surface-muted: #f4f6f8;
+  --color-line: #e8eaee;
+  --color-ink: #14161d;
+  --color-ink-soft: #5b6172;
+  --color-ink-faint: #8a90a0;
+  --color-serges-blue: #2042e1;
+  --color-serges-blue-strong: #1a36bc;
+  --color-serges-blue-tint: #eaedfc;
+  --color-serges-blue-tint-soft: #f4f6fe;
+  --color-overdue: #d92d20;
+  --color-overdue-tint: #fdecea;
+  --color-done: #1f9d55;
+  --color-done-tint: #e9f6ef;
+  color: var(--color-ink);
+  box-shadow: var(--shadow-pop);
+  backdrop-filter: none;
+}
+.apr-slide .select option { color: #14161d; background-color: #ffffff; }

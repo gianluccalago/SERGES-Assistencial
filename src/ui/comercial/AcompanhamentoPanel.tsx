@@ -76,7 +76,7 @@ function CardAcompanhamento({
   const atrasado = dias != null && dias < 0;
   const hojeMarcado = dias === 0;
   const urgente = atrasado || hojeMarcado;
-  const cor = urgente ? 'var(--color-overdue)' : '#0D9488';
+  const cor = urgente ? 'var(--color-overdue)' : '#2DD4BF';
 
   // Sugere verificação diária quando o resultado previsto está próximo (≤7 dias).
   const prevDias = e.dataPrevistaResultado ? diasAte(e.dataPrevistaResultado, hoje) : undefined;

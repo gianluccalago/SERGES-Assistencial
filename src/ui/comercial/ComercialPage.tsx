@@ -164,18 +164,19 @@ function Lista({ children, vazio }: { children: React.ReactNode; vazio: string }
 // Colunas do Kanban: as fases do funil + as terminais.
 const COLUNAS_KANBAN: FaseEdital[] = [...FASES_FUNIL, 'ativo', 'perdido', 'descartado'];
 
-// Uma cor por fase (estilo Pipefy).
+// Uma cor por fase (estilo Pipefy). Tons luminosos ("badge" do Serges Hub),
+// legíveis como texto/realce sobre o fundo navy escuro.
 const FASE_COR: Record<FaseEdital, string> = {
-  triagem: '#64748B', // slate
-  decisao: '#D97706', // âmbar
-  reunir: '#2563EB', // azul
-  conferencia: '#7C3AED', // roxo
-  correcao: '#EA580C', // laranja
-  envio: '#0891B2', // ciano
-  enviado: '#0D9488', // teal
-  ativo: '#1F9D55', // verde
-  perdido: '#D92D20', // vermelho
-  descartado: '#94A3B8', // cinza
+  triagem: '#94A3B8', // slate
+  decisao: '#FBBF24', // âmbar
+  reunir: '#5B86FF', // azul
+  conferencia: '#A78BFA', // roxo
+  correcao: '#FB923C', // laranja
+  envio: '#22D3EE', // ciano
+  enviado: '#2DD4BF', // teal
+  ativo: '#34D399', // verde
+  perdido: '#FB7185', // vermelho
+  descartado: '#AEB9D0', // cinza
 };
 
 function Funil({ editais, onOpen, hoje }: { editais: Edital[]; onOpen: (e: Edital) => void; hoje: string }) {
@@ -247,9 +248,9 @@ function EditalCard({ e, hoje, onOpen, cor }: { e: Edital; hoje: string; onOpen:
 
 // Colunas do Kanban de contratos.
 const COLS_CONTRATO: { id: 'ativos' | 'inativos' | 'finalizados'; label: string; cor: string }[] = [
-  { id: 'ativos', label: 'Ativos', cor: '#1F9D55' },
-  { id: 'inativos', label: 'Inativos', cor: '#D97706' },
-  { id: 'finalizados', label: 'Finalizados', cor: '#94A3B8' },
+  { id: 'ativos', label: 'Ativos', cor: '#34D399' },
+  { id: 'inativos', label: 'Inativos', cor: '#FBBF24' },
+  { id: 'finalizados', label: 'Finalizados', cor: '#AEB9D0' },
 ];
 
 function colunaContrato(s: Contrato['status']): 'ativos' | 'inativos' | 'finalizados' {
