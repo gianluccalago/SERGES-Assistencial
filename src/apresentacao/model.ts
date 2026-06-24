@@ -335,20 +335,44 @@ export function aplicarOrcamento(c: Competencia, orc: OrcamentoAno): Competencia
     if (idx < 0) idx = orc.projetos.findIndex((o, i) => !usados.has(i) && !o.ajuste && (normalizar(o.nome).includes(n) || n.includes(normalizar(o.nome))));
     return idx;
   };
+  // Soma mês a mês de várias linhas do orçamento (projetos agregados, ex.: New Life).
+  const somarOrc = (linhas: OrcProjeto[]) => {
+    const receita = Array(12).fill(0);
+    const custo = Array(12).fill(0);
+    const qtd = Array(12).fill(0);
+    for (const o of linhas)
+      for (let i = 0; i < 12; i++) {
+        receita[i] += o.receita[i] ?? 0;
+        custo[i] += o.custo[i] ?? 0;
+        qtd[i] += o.qtd[i] ?? 0;
+      }
+    return { receita, custo, qtd };
+  };
 
   const projetos = c.projetos.map((p) => {
     if (p.ajuste) return p;
-    const i = acha(p.nome);
-    if (i < 0) return p; // sem orçamento → vira "futuro" automaticamente
-    usados.add(i);
-    const o = orc.projetos[i];
+    // New Life é UM projeto na apresentação (espelho de jan/fev): soma todas as
+    // linhas "New Life" do orçamento (Maceió + Manaus) num card só.
+    const nNorm = normalizar(p.nome);
+    let indices: number[];
+    if (nNorm.includes('newlife')) {
+      indices = orc.projetos
+        .map((o, i) => (!usados.has(i) && !o.ajuste && normalizar(o.nome).includes('newlife') ? i : -1))
+        .filter((i) => i >= 0);
+    } else {
+      const i = acha(p.nome);
+      indices = i >= 0 ? [i] : [];
+    }
+    if (!indices.length) return p; // sem orçamento → vira "futuro" automaticamente
+    indices.forEach((i) => usados.add(i));
+    const soma = somarOrc(indices.map((i) => orc.projetos[i]));
     return {
       ...p,
-      receitaOrcado: Math.round(o.receita[m] ?? 0),
-      custoOrcado: Math.round(o.custo[m] ?? 0),
-      mOrcReceita: o.receita.map((v) => Math.round(v)),
-      mOrcCusto: o.custo.map((v) => Math.round(v)),
-      mOrcQtd: o.qtd.map((v) => Math.round(v)),
+      receitaOrcado: Math.round(soma.receita[m] ?? 0),
+      custoOrcado: Math.round(soma.custo[m] ?? 0),
+      mOrcReceita: soma.receita.map((v) => Math.round(v)),
+      mOrcCusto: soma.custo.map((v) => Math.round(v)),
+      mOrcQtd: soma.qtd.map((v) => Math.round(v)),
     };
   });
 
@@ -413,7 +437,8 @@ interface RegraImport {
 const REGRAS_IMPORT: RegraImport[] = [
   { nomeTest: (n) => n.includes('asf') && n.includes('pediatria'), pred: (c, g) => g.includes('pediatria') && c.includes('asf') },
   { nomeTest: (n) => n.includes('asf') && !n.includes('pediatria'), pred: (_c, g) => g.startsWith('asf') && !g.includes('pediatria') },
-  { nomeTest: (n) => n.includes('newlife') || n.includes('maceio'), pred: (c) => c.includes('newlife') || c.includes('maceio') },
+  { nomeTest: (n) => n.includes('newlife') || n.includes('maceio') || n.includes('manaus'), pred: (c) => c.includes('newlife') || c.includes('maceio') || c.includes('manaus') },
+  { nomeTest: (n) => n.includes('sjp') || n.includes('saojosedospinhais') || n.includes('afonsopena'), pred: (c, g) => c.includes('saojosedospinhais') || c.includes('afonsopena') || c.includes('sjp') || g.includes('saojosedospinhais') },
   { nomeTest: (n) => n.includes('dezemergencias') || n.includes('10emergencias'), pred: (c, g) => c.includes('dezemergencias') || g.includes('dezemergencias') },
   { nomeTest: (n) => n === 'hrl' || n.includes('regionaldolitoral'), pred: (c, g) => c.includes('regionaldolitoral') || g === 'hrl' },
   { nomeTest: (n) => n.includes('hrnp'), pred: (c, g) => c === 'hrnp' || g.includes('hrnp') },
@@ -425,6 +450,17 @@ const REGRAS_IMPORT: RegraImport[] = [
   { nomeTest: (n) => n.includes('palmas'), pred: (c, g) => c.includes('palmas') || g.includes('palmas') },
   { nomeTest: (n) => n.includes('mandirituba'), pred: (c, g) => c.includes('mandirituba') || g.includes('mandirituba') },
 ];
+
+/** Entidades tratadas como UM projeto só na apresentação (espelho de jan/fev):
+ * as unidades New Life entram juntas e "Prefeitura de São José dos Pinhais" = SJP.
+ * Aplicado ao auto-criar cards de contratos não casados (normaliza o nome). */
+const CANON_PROJETO: Array<{ nome: string; test: (n: string) => boolean }> = [
+  { nome: 'New Life (Maceió + Manaus)', test: (n) => n.includes('newlife') || n.includes('maceio') || n.includes('manaus') },
+  { nome: 'SJP', test: (n) => n.includes('sjp') || n.includes('saojosedospinhais') || n.includes('afonsopena') },
+];
+function canonProjeto(nomeNorm: string): string | undefined {
+  return CANON_PROJETO.find((g) => g.test(nomeNorm))?.nome;
+}
 
 interface AggImport {
   n: number;
@@ -527,16 +563,19 @@ export function importarPlantoes(c: Competencia, linhas: PlantaoRow[]): Resultad
   const autoIds = new Set<string>();
   for (const [nomeContrato, u] of semCasar) {
     totalCasados += u.n;
-    const nN = normalizar(nomeContrato);
+    // Nome canônico (ex.: "Prefeitura de São José dos Pinhais" → "SJP"), p/ unificar
+    // com o card/orçamento existente em vez de criar duplicata.
+    const nome = canonProjeto(normalizar(nomeContrato)) ?? nomeContrato;
+    const nN = normalizar(nome);
     const existing = projetosBase.find((p) => normalizar(p.nome) === nN);
     let id: string;
     if (existing) {
       id = existing.id;
     } else {
-      const novoP: ProjResultado = { id: `pr-${crypto.randomUUID().slice(0, 8)}`, nome: nomeContrato, receita: 0, custo: 0, oculto: true };
+      const novoP: ProjResultado = { id: `pr-${crypto.randomUUID().slice(0, 8)}`, nome, receita: 0, custo: 0, oculto: true };
       projetosBase.push(novoP);
       id = novoP.id;
-      criados.push({ nome: nomeContrato, n: u.n, receita: u.receita });
+      criados.push({ nome, n: u.n, receita: u.receita });
     }
     autoIds.add(id);
     const a = agg.get(id) ?? { n: 0, receita: 0, custo: 0, horas: 0, consultas: 0 };
@@ -578,7 +617,7 @@ export function importarPlantoes(c: Competencia, linhas: PlantaoRow[]): Resultad
 const SEED_PROJETOS: Array<Pick<ProjResultado, 'nome' | 'perConsulta'>> = [
   { nome: 'ASF (Sul+Norte+Oeste)' },
   { nome: 'ASF Pediatria' },
-  { nome: 'New Life Maceió' },
+  { nome: 'New Life (Maceió + Manaus)' },
   { nome: 'Dez Emergências Médicas' },
   { nome: 'HRL' },
   { nome: 'HRNP — FUNEAS' },
