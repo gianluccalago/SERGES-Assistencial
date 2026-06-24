@@ -47,7 +47,7 @@ import { SergesLogo, SergesMark } from '../components/Logo';
 const COR_ORC = '#94A3B8';
 const COR_REAL = 'var(--color-serges-blue)';
 const COR_FUT = '#0D9488';
-const COR_AJ = '#6366F1';
+const COR_AJ = '#D97706';
 const COR_FUROS = 'var(--color-overdue)';
 
 /** Eixo monetário compacto p/ os gráficos do consolidado (R$ X mil). */

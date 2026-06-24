@@ -31,7 +31,8 @@ export function LineChart({ series, fmt, altura = 200, rotuloIdx }: { series: Se
 
   // Rótulos: um por série (mês corrente quando há dado; senão o último ponto).
   // Resolve colisão vertical entre rótulos na mesma posição X — nunca sobrepõe.
-  const GAP = 24;
+  const LBL = 19;
+  const GAP = LBL + 9;
   const rotulos = series
     .map((s) => {
       let last = -1;
@@ -90,7 +91,7 @@ export function LineChart({ series, fmt, altura = 200, rotuloIdx }: { series: Se
         })}
         {/* Rótulos por cima das linhas, já sem sobreposição vertical. */}
         {rotulos.map((r, i) => (
-          <text key={i} x={r.tx} y={r.y} textAnchor={r.anchor} fontSize="22" fontWeight={700} fill={r.cor}>
+          <text key={i} x={r.tx} y={r.y} textAnchor={r.anchor} fontSize={LBL} fontWeight={700} fill={r.cor}>
             {fy(r.val)}
           </text>
         ))}
