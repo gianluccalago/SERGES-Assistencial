@@ -318,6 +318,169 @@ export function variacao(atual: number, base?: number): number | undefined {
   return (atual - base) / Math.abs(base);
 }
 
+// ---------- Importação da planilha de plantões (Relatório Bruto) ----------
+// Um plantão por linha; agregamos por projeto e preenchemos o realizado do mês.
+
+/** Linha bruta do relatório (apenas os campos que usamos). */
+export interface PlantaoRow {
+  contrato?: unknown;
+  grupo?: unknown;
+  status?: unknown;
+  totalPlanejado?: unknown;
+  totalApurado?: unknown;
+  totalFaturamento?: unknown;
+  totalPagamento?: unknown;
+  qtdAtendimentos?: unknown;
+}
+
+function numImport(v: unknown): number {
+  if (typeof v === 'number') return isFinite(v) ? v : 0;
+  if (typeof v === 'string') {
+    const n = parseFloat(v.replace(/\./g, '').replace(',', '.'));
+    return isFinite(n) ? n : 0;
+  }
+  return 0;
+}
+
+/** Regra de classificação de um plantão para um projeto da apresentação.
+ * `nomeTest` casa pelo nome do projeto (robusto a renome); `pred` filtra a linha
+ * por contrato/grupo normalizados. ORDEM IMPORTA (Pediatria antes de ASF geral). */
+interface RegraImport {
+  nomeTest: (nomeNorm: string) => boolean;
+  pred: (contratoNorm: string, grupoNorm: string) => boolean;
+}
+const REGRAS_IMPORT: RegraImport[] = [
+  { nomeTest: (n) => n.includes('asf') && n.includes('pediatria'), pred: (_c, g) => g.includes('pediatria') },
+  { nomeTest: (n) => n.includes('asf') && !n.includes('pediatria'), pred: (_c, g) => g.startsWith('asf') && !g.includes('pediatria') },
+  { nomeTest: (n) => n.includes('newlife') || n.includes('maceio'), pred: (c) => c.includes('newlife') || c.includes('maceio') },
+  { nomeTest: (n) => n.includes('dezemergencias') || n.includes('10emergencias'), pred: (c, g) => c.includes('dezemergencias') || g.includes('dezemergencias') },
+  { nomeTest: (n) => n === 'hrl' || n.includes('regionaldolitoral'), pred: (c, g) => c.includes('regionaldolitoral') || g === 'hrl' },
+  { nomeTest: (n) => n.includes('hrnp'), pred: (c, g) => c === 'hrnp' || g.includes('hrnp') },
+  { nomeTest: (n) => n.includes('hzn'), pred: (c, g) => c === 'hzn' || g.includes('hzn') },
+  { nomeTest: (n) => n.includes('ipiranga'), pred: (c, g) => c.includes('ipiranga') || g.includes('ipiranga') },
+  { nomeTest: (n) => n.includes('arnaldo'), pred: (c) => c.includes('arnaldo') },
+  { nomeTest: (n) => n.includes('montealegre'), pred: (c, g) => c.includes('montealegre') || g.includes('montealegre') },
+  { nomeTest: (n) => n.includes('herval'), pred: (c, g) => c.includes('herval') || g.includes('herval') },
+  { nomeTest: (n) => n.includes('palmas'), pred: (c, g) => c.includes('palmas') || g.includes('palmas') },
+  { nomeTest: (n) => n.includes('mandirituba'), pred: (c, g) => c.includes('mandirituba') || g.includes('mandirituba') },
+];
+
+interface AggImport {
+  n: number;
+  receita: number;
+  custo: number;
+  horas: number;
+  consultas: number;
+}
+
+export interface LinhaResumoImport {
+  nome: string;
+  n: number;
+  receita: number;
+  custo: number;
+  horas: number;
+  consultas: number;
+  perConsulta: boolean;
+}
+export interface ResultadoImport {
+  competencia: Competencia;
+  resumo: LinhaResumoImport[];
+  naoCasaram: Array<{ chave: string; n: number; receita: number }>;
+  totalPlantoes: number;
+  totalCasados: number;
+}
+
+/** Grava v na posição i da série (sobrescreve), garantindo 12 posições. */
+function setSerie(arr: Serie12 | undefined, i: number, v: number): Serie12 {
+  const a = arr ? [...arr] : serie12();
+  while (a.length < 12) a.push(null);
+  a[i] = v;
+  return a;
+}
+
+/** Agrega os plantões e preenche o realizado (receita, custo, horas/consultas) do
+ * mês da competência em cada projeto que casou com ≥1 linha. Projetos sem linha
+ * ficam intactos (não zera dados manuais). Horas = apurado, com fallback p/ planejado
+ * quando apurado=0. Todos os status entram. Furos permanecem manuais. */
+export function importarPlantoes(c: Competencia, linhas: PlantaoRow[]): ResultadoImport {
+  const m = c.mes - 1;
+  // Agrega cada linha no primeiro projeto cujo nome casa com uma regra que aceita a linha.
+  const agg = new Map<string, AggImport>(); // chave = id do projeto
+  const naoCasaram = new Map<string, { n: number; receita: number }>();
+  let totalCasados = 0;
+
+  // Pré-resolve a regra de cada projeto (pela ordem de REGRAS_IMPORT).
+  const regraDoProjeto = new Map<string, RegraImport>();
+  for (const p of c.projetos) {
+    if (p.ajuste) continue;
+    const nn = normalizar(p.nome);
+    const regra = REGRAS_IMPORT.find((r) => r.nomeTest(nn));
+    if (regra) regraDoProjeto.set(p.id, regra);
+  }
+
+  for (const linha of linhas) {
+    const cN = normalizar(String(linha.contrato ?? ''));
+    const gN = normalizar(String(linha.grupo ?? ''));
+    const apur = numImport(linha.totalApurado);
+    const plan = numImport(linha.totalPlanejado);
+    const horas = apur > 0 ? apur : plan;
+    const receita = numImport(linha.totalFaturamento);
+    const custo = numImport(linha.totalPagamento);
+    const consultas = numImport(linha.qtdAtendimentos);
+
+    let casou: string | null = null;
+    for (const p of c.projetos) {
+      const regra = regraDoProjeto.get(p.id);
+      if (regra && regra.pred(cN, gN)) {
+        casou = p.id;
+        break;
+      }
+    }
+    if (!casou) {
+      const chave = `${String(linha.contrato ?? '—')} / ${String(linha.grupo ?? '—')}`;
+      const u = naoCasaram.get(chave) ?? { n: 0, receita: 0 };
+      u.n += 1;
+      u.receita += receita;
+      naoCasaram.set(chave, u);
+      continue;
+    }
+    totalCasados += 1;
+    const a = agg.get(casou) ?? { n: 0, receita: 0, custo: 0, horas: 0, consultas: 0 };
+    a.n += 1;
+    a.receita += receita;
+    a.custo += custo;
+    a.horas += horas;
+    a.consultas += consultas;
+    agg.set(casou, a);
+  }
+
+  const resumo: LinhaResumoImport[] = [];
+  const projetos = c.projetos.map((p) => {
+    const a = agg.get(p.id);
+    if (!a) return p;
+    const valorOp = p.perConsulta ? Math.round(a.consultas) : Math.round(a.horas);
+    resumo.push({ nome: p.nome, n: a.n, receita: a.receita, custo: a.custo, horas: a.horas, consultas: a.consultas, perConsulta: !!p.perConsulta });
+    return {
+      ...p,
+      receita: Math.round(a.receita),
+      custo: Math.round(a.custo),
+      horas: valorOp,
+      unidade: (p.perConsulta ? 'consultas' : 'horas') as Unidade,
+      mRealReceita: setSerie(p.mRealReceita, m, Math.round(a.receita)),
+      mRealQtd: setSerie(p.mRealQtd, m, valorOp),
+    };
+  });
+
+  return {
+    competencia: { ...c, projetos },
+    resumo,
+    naoCasaram: Array.from(naoCasaram.entries()).map(([chave, v]) => ({ chave, n: v.n, receita: v.receita })),
+    totalPlantoes: linhas.length,
+    totalCasados,
+  };
+}
+
+
 const SEED_PROJETOS: Array<Pick<ProjResultado, 'nome' | 'perConsulta'>> = [
   { nome: 'ASF (Sul+Norte+Oeste)' },
   { nome: 'ASF Pediatria' },

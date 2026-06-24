@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { useApresentacao } from '../../apresentacao/store';
 import {
@@ -26,6 +26,9 @@ import {
   subtotalProjeto,
   novoSubtotal,
   fatorOrcado,
+  importarPlantoes,
+  type PlantaoRow,
+  type ResultadoImport,
   type CenarioOrc,
   type TipoPeriodo,
   type Unidade,
@@ -61,6 +64,9 @@ export function CompetenciaEditor({ competencia, onVoltar }: { competencia: Comp
   const [aba, setAba] = useState<'projetos' | 'apresentacao'>('projetos');
   const [apresentando, setApresentando] = useState(false);
   const [imprimindo, setImprimindo] = useState(false);
+  const [importando, setImportando] = useState(false);
+  const [importResumo, setImportResumo] = useState<ResultadoImport | null>(null);
+  const fileRef = useRef<HTMLInputElement>(null);
 
   const c = competencia;
   const patch = (p: Partial<Competencia>) => ap.upsert({ ...c, ...p });
@@ -77,6 +83,33 @@ export function CompetenciaEditor({ competencia, onVoltar }: { competencia: Comp
       window.removeEventListener('afterprint', done);
     };
   }, [imprimindo]);
+
+  async function onArquivoPlantoes(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    e.target.value = ''; // permite reimportar o mesmo arquivo
+    if (!file) return;
+    setImportando(true);
+    try {
+      const XLSX = await import('xlsx');
+      const buf = await file.arrayBuffer();
+      const wb = XLSX.read(buf, { type: 'array' });
+      const nomeAba = wb.SheetNames.find((n) => n.toLowerCase().includes('bruto')) ?? wb.SheetNames[0];
+      const ws = wb.Sheets[nomeAba];
+      const linhas = XLSX.utils.sheet_to_json<PlantaoRow>(ws, { defval: null });
+      if (!linhas.length) {
+        alert('A planilha não tem linhas de plantão na aba "Relatório Bruto".');
+        return;
+      }
+      const res = importarPlantoes(c, linhas);
+      ap.upsert(res.competencia);
+      setImportResumo(res);
+    } catch (err) {
+      console.error('[apresentacao] falha ao importar plantões', err);
+      alert('Não consegui ler a planilha. Confira se é o arquivo .xlsx do relatório de plantões.');
+    } finally {
+      setImportando(false);
+    }
+  }
 
   const slides = montarDeck(c);
 
@@ -115,6 +148,15 @@ export function CompetenciaEditor({ competencia, onVoltar }: { competencia: Comp
           >
             Puxar orçamento {c.ano}
           </button>
+          <input ref={fileRef} type="file" accept=".xlsx,.xls" className="hidden" onChange={onArquivoPlantoes} />
+          <button
+            className="btn-secondary"
+            title="Importa o relatório de plantões (.xlsx) e preenche receita, custo médico e horas/consultas realizadas de cada projeto"
+            disabled={importando}
+            onClick={() => fileRef.current?.click()}
+          >
+            {importando ? 'Importando…' : 'Importar plantões (xlsx)'}
+          </button>
           <button className="btn-secondary" onClick={() => setApresentando(true)}>▶ Apresentar</button>
           <button className="btn-secondary" onClick={() => setImprimindo(true)}>Imprimir / PDF</button>
         </div>
@@ -145,6 +187,7 @@ export function CompetenciaEditor({ competencia, onVoltar }: { competencia: Comp
 
       {apresentando && <Apresentador slides={slides} c={c} onClose={() => setApresentando(false)} />}
       {imprimindo && <PrintDeck slides={slides} c={c} />}
+      {importResumo && <ImportResumoModal res={importResumo} onClose={() => setImportResumo(null)} />}
     </div>
   );
 }
@@ -707,6 +750,67 @@ function Apresentador({ slides, c, onClose }: { slides: Slide[]; c: Competencia;
 // Versão estática (sem edição) para apresentar/imprimir.
 function SlideViewStatic({ slide, c }: { slide: Slide; c: Competencia }) {
   return <SlideView slide={slide} c={c} onComentarioBU={() => {}} />;
+}
+
+// ---------- Resumo da importação de plantões ----------
+function ImportResumoModal({ res, onClose }: { res: ResultadoImport; onClose: () => void }) {
+  const totReceita = res.resumo.reduce((s, r) => s + r.receita, 0);
+  const totCusto = res.resumo.reduce((s, r) => s + r.custo, 0);
+  return (
+    <div className="fixed inset-0 z-[80] flex items-center justify-center bg-black/40 p-4" onClick={onClose}>
+      <div className="card max-h-[85vh] w-full max-w-2xl overflow-auto p-[var(--spacing-20)]" onClick={(e) => e.stopPropagation()}>
+        <div className="flex items-center gap-2">
+          <h3 className="text-[length:var(--text-subheading)] font-semibold">Importação concluída</h3>
+          <button className="btn-ghost ml-auto" onClick={onClose}>Fechar</button>
+        </div>
+        <p className="mt-1 text-[length:var(--text-caption)] text-[var(--color-ink-soft)]">
+          {res.totalCasados} de {res.totalPlantoes} plantões classificados. Receita e custo médico abaixo; margem é recalculada.
+        </p>
+        <div className="mt-3 overflow-hidden rounded-[var(--radius-sm)] border border-[var(--color-line)]">
+          <table className="w-full text-[length:var(--text-caption)]">
+            <thead className="bg-[var(--color-canvas)] text-[var(--color-ink-soft)]">
+              <tr>
+                <th className="px-2 py-1 text-left">Projeto</th>
+                <th className="px-2 py-1 text-right">Plant.</th>
+                <th className="px-2 py-1 text-right">Receita</th>
+                <th className="px-2 py-1 text-right">Custo méd.</th>
+                <th className="px-2 py-1 text-right">Horas/Cons.</th>
+              </tr>
+            </thead>
+            <tbody>
+              {res.resumo.map((r) => (
+                <tr key={r.nome} className="border-t border-[var(--color-line)]">
+                  <td className="px-2 py-1">{r.nome}</td>
+                  <td className="px-2 py-1 text-right tabular-nums">{r.n}</td>
+                  <td className="px-2 py-1 text-right tabular-nums">{fmtBRL(r.receita)}</td>
+                  <td className="px-2 py-1 text-right tabular-nums">{fmtBRL(r.custo)}</td>
+                  <td className="px-2 py-1 text-right tabular-nums">{Math.round(r.perConsulta ? r.consultas : r.horas).toLocaleString('pt-BR')}{r.perConsulta ? ' cons.' : ' h'}</td>
+                </tr>
+              ))}
+              <tr className="border-t-2 border-[var(--color-line)] font-semibold">
+                <td className="px-2 py-1">Total</td>
+                <td className="px-2 py-1 text-right tabular-nums">{res.totalCasados}</td>
+                <td className="px-2 py-1 text-right tabular-nums">{fmtBRL(totReceita)}</td>
+                <td className="px-2 py-1 text-right tabular-nums">{fmtBRL(totCusto)}</td>
+                <td className="px-2 py-1" />
+              </tr>
+            </tbody>
+          </table>
+        </div>
+        {res.naoCasaram.length > 0 && (
+          <div className="mt-3">
+            <div className="label mb-1 text-[var(--color-overdue)]">Plantões que NÃO casaram com nenhum projeto ({res.naoCasaram.reduce((s, x) => s + x.n, 0)})</div>
+            <ul className="space-y-0.5 text-[length:var(--text-caption)] text-[var(--color-ink-soft)]">
+              {res.naoCasaram.map((x) => (
+                <li key={x.chave}>• <strong>{x.chave}</strong> — {x.n} plantão(ões), {fmtBRL(x.receita)}</li>
+              ))}
+            </ul>
+            <p className="mt-1 text-[length:var(--text-caption)] text-[var(--color-ink-faint)]">Esses não entraram em nenhum projeto. Se algum deveria entrar, me avise o nome do contrato/grupo.</p>
+          </div>
+        )}
+      </div>
+    </div>
+  );
 }
 
 // ---------- Impressão (PDF) ----------
