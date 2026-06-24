@@ -32,6 +32,7 @@ export interface ProjResultado {
   mOrcCusto?: Serie12;
   mOrcQtd?: Serie12;
   mRealReceita?: Serie12;
+  mRealCusto?: Serie12;
   mRealQtd?: Serie12;
   mFuros?: Serie12;
   /** Gráfico extra opcional (abaixo dos furos no slide operacional). */
@@ -189,6 +190,53 @@ export function cenariosOrcamento(c: Competencia): { projetos: CenarioOrc; comFu
     projetos: cenario(rBase, cBase),
     comFuturos: cenario(rBase + rFut, cBase + cFut),
     comFuturosAjuste: cenario(rBase + rFut + rAj, cBase + cFut + cAj),
+  };
+}
+
+/** Trio de séries mensais (12) de um indicador no slide consolidado. */
+export interface TrioSerie {
+  realizado: Serie12;
+  orcado: Serie12;
+  comFuturos: Serie12;
+}
+export interface SeriesBU {
+  receita: TrioSerie;
+  resultado: TrioSerie;
+}
+
+/** Diferença mês a mês (receita − custo); null só quando ambos faltam. */
+function difSerie(rec: Serie12, cus: Serie12): Serie12 {
+  return rec.map((v, i) => (v == null && cus[i] == null ? null : (v ?? 0) - (cus[i] ?? 0)));
+}
+
+/**
+ * Séries mensais (12) para os gráficos de linha do slide consolidado:
+ * Receita e Resultado, cada um em Realizado / Orçado / Orçado + futuros.
+ * Realizado usa as séries importadas (mês corrente como fallback). Futuros não
+ * têm orçado: entram projetados pelo realizado, igual aos cenários escalares.
+ */
+export function seriesBU(c: Competencia): SeriesBU {
+  const m = c.mes - 1;
+  const inc = c.projetos.filter((p) => entraNoPeriodo(p, c.tipo) && !p.ajuste);
+  const orcados = inc.filter((p) => !ehFuturo(p));
+  const futuros = inc.filter((p) => ehFuturo(p));
+
+  const realReceita = somaSeries(inc.map((p) => comMesCorrente(p.mRealReceita, m, p.receita)));
+  const realCusto = somaSeries(inc.map((p) => comMesCorrente(p.mRealCusto, m, p.custo)));
+  const orcReceita = somaSeries(orcados.map((p) => p.mOrcReceita));
+  const orcCusto = somaSeries(orcados.map((p) => p.mOrcCusto));
+  const futReceita = somaSeries(futuros.map((p) => comMesCorrente(p.mRealReceita, m, p.receita)));
+  const futCusto = somaSeries(futuros.map((p) => comMesCorrente(p.mRealCusto, m, p.custo)));
+  const comFutReceita = somaSeries([orcReceita, futReceita]);
+  const comFutCusto = somaSeries([orcCusto, futCusto]);
+
+  return {
+    receita: { realizado: realReceita, orcado: orcReceita, comFuturos: comFutReceita },
+    resultado: {
+      realizado: difSerie(realReceita, realCusto),
+      orcado: difSerie(orcReceita, orcCusto),
+      comFuturos: difSerie(comFutReceita, comFutCusto),
+    },
   };
 }
 
@@ -467,6 +515,7 @@ export function importarPlantoes(c: Competencia, linhas: PlantaoRow[]): Resultad
       horas: valorOp,
       unidade: (p.perConsulta ? 'consultas' : 'horas') as Unidade,
       mRealReceita: setSerie(p.mRealReceita, m, Math.round(a.receita)),
+      mRealCusto: setSerie(p.mRealCusto, m, Math.round(a.custo)),
       mRealQtd: setSerie(p.mRealQtd, m, valorOp),
     };
   });
