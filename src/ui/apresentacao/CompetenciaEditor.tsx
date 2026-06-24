@@ -13,11 +13,8 @@ import {
   margem,
   entraNoPeriodo,
   ehFuturo,
-  totais,
-  cenariosOrcamento,
+  seriesBU,
   temFuturos,
-  temAjuste,
-  variacao,
   novoProjeto,
   novoSlideTexto,
   rotuloPadrao,
@@ -29,7 +26,6 @@ import {
   importarPlantoes,
   type PlantaoRow,
   type ResultadoImport,
-  type CenarioOrc,
   type TipoPeriodo,
   type Unidade,
   type Subtotal,
@@ -47,7 +43,11 @@ import { SergesLogo, SergesMark } from '../components/Logo';
 
 const COR_ORC = '#94A3B8';
 const COR_REAL = 'var(--color-serges-blue)';
+const COR_FUT = '#0D9488';
 const COR_FUROS = 'var(--color-overdue)';
+
+/** Eixo monetário compacto p/ os gráficos do consolidado (R$ X mil). */
+const fmtMilhar = (v: number) => `R$ ${Math.round(v / 1000).toLocaleString('pt-BR')} mil`;
 
 function parseNum(v: string): number {
   const s = v.trim();
@@ -507,48 +507,6 @@ function SlideShell({ children, sub }: { children: React.ReactNode; sub?: string
   );
 }
 
-function Comparacao({ atual, anterior, orcado, inverter }: { atual: number; anterior?: number; orcado?: number; inverter?: boolean }) {
-  const va = variacao(atual, anterior);
-  const vo = variacao(atual, orcado);
-  const cor = (v?: number) => {
-    if (v == null) return 'var(--color-ink-faint)';
-    const bom = inverter ? v < 0 : v > 0;
-    return bom ? 'var(--color-serges-blue)' : 'var(--color-overdue)';
-  };
-  const seta = (v?: number) => (v == null ? '' : v > 0 ? '▲' : v < 0 ? '▼' : '–');
-  return (
-    <div className="flex gap-3 text-[length:var(--text-caption)]">
-      {va != null && <span style={{ color: cor(va) }}>ant. {seta(va)} {fmtPct(Math.abs(va))}</span>}
-      {vo != null && <span style={{ color: cor(vo) }}>orç. {seta(vo)} {fmtPct(Math.abs(vo))}</span>}
-    </div>
-  );
-}
-
-function CenarioRow({ nome, cen, destaque }: { nome: string; cen: CenarioOrc; destaque?: boolean }) {
-  return (
-    <div className="flex items-center justify-between gap-2 border-b border-[var(--color-line)] py-1.5 last:border-0">
-      <span className={destaque ? 'font-medium text-[var(--color-ink)]' : 'text-[var(--color-ink-soft)]'}>{nome}</span>
-      <span className="flex items-center gap-3 text-[length:var(--text-caption)]">
-        <span className="text-[var(--color-ink-soft)]">{fmtBRL(cen.receita)}</span>
-        <span className="min-w-[90px] text-right font-medium">{fmtBRL(cen.resultado)}</span>
-        <span className="min-w-[48px] text-right" style={{ color: 'var(--color-serges-blue)' }}>{fmtPct(cen.margem)}</span>
-      </span>
-    </div>
-  );
-}
-
-function LinhaFin({ label, atual, anterior, orcado, inverter, forte }: { label: string; atual: number; anterior?: number; orcado?: number; inverter?: boolean; forte?: boolean }) {
-  return (
-    <div className="flex items-center justify-between gap-3 border-b border-[var(--color-line)] py-2 last:border-0">
-      <span className={`text-[var(--color-ink)] ${forte ? 'font-semibold' : ''}`}>{label}</span>
-      <div className="flex items-center gap-4">
-        <Comparacao atual={atual} anterior={anterior} orcado={orcado} inverter={inverter} />
-        <span className={`min-w-[120px] text-right ${forte ? 'text-[length:var(--text-subheading)] font-semibold' : 'font-medium'}`}>{fmtBRL(atual)}</span>
-      </div>
-    </div>
-  );
-}
-
 function SlideView({ slide, c, onComentarioBU }: { slide: Slide; c: Competencia; onComentarioBU: (t: string) => void }) {
   if (slide.tipo === 'capa') {
     return (
@@ -627,25 +585,31 @@ function SlideView({ slide, c, onComentarioBU }: { slide: Slide; c: Competencia;
     );
   }
   if (slide.tipo === 'bu') {
-    const t = totais(c);
-    const cen = cenariosOrcamento(c);
+    const s = seriesBU(c);
+    const comFut = temFuturos(c);
+    const serieReceita: Serie[] = [
+      { nome: 'Realizado', cor: COR_REAL, valores: s.receita.realizado },
+      { nome: 'Orçado', cor: COR_ORC, valores: s.receita.orcado },
+    ];
+    const serieResultado: Serie[] = [
+      { nome: 'Realizado', cor: COR_REAL, valores: s.resultado.realizado },
+      { nome: 'Orçado', cor: COR_ORC, valores: s.resultado.orcado },
+    ];
+    if (comFut) {
+      serieReceita.push({ nome: 'Orçado + projetos futuros', cor: COR_FUT, valores: s.receita.comFuturos });
+      serieResultado.push({ nome: 'Orçado + projetos futuros', cor: COR_FUT, valores: s.resultado.comFuturos });
+    }
     return (
       <SlideShell sub="Consolidado · BU Total">
         <h2 className="text-[length:var(--text-heading)] font-semibold">BU Assistencial — Total</h2>
-        <div className="mt-3 grid flex-1 grid-cols-1 gap-4 lg:grid-cols-2">
-          <div>
-            <div className="label mb-1 uppercase">Realizado</div>
-            <LinhaFin label="Receita" atual={t.receita} anterior={t.receitaAnterior} />
-            <LinhaFin label="Custo médico" atual={t.custo} anterior={t.custoAnterior} inverter />
-            <LinhaFin label="Resultado" atual={t.resultado} anterior={resultado(t.receitaAnterior, t.custoAnterior)} forte />
-            <div className="mt-1 text-right text-[length:var(--text-label)] text-[var(--color-ink-soft)]">Margem <strong style={{ color: 'var(--color-serges-blue)' }}>{fmtPct(t.margem)}</strong></div>
+        <div className="mt-2 grid flex-1 grid-cols-1 gap-4 lg:grid-cols-2">
+          <div className="flex min-w-0 flex-col">
+            <div className="label mb-1 uppercase">Receita — mês a mês</div>
+            <LineChart series={serieReceita} fmt={fmtMilhar} altura={300} rotuloIdx={c.mes - 1} />
           </div>
-          <div>
-            <div className="label mb-1 flex items-center justify-between uppercase"><span>Orçado — cenários</span><span className="normal-case text-[var(--color-ink-faint)]">receita · resultado · margem</span></div>
-            <CenarioRow nome="Só projetos orçados" cen={cen.projetos} />
-            {temFuturos(c) && <CenarioRow nome="+ Projetos futuros" cen={cen.comFuturos} />}
-            {temAjuste(c) && <CenarioRow nome="+ Futuros + Ajuste" cen={cen.comFuturosAjuste} destaque />}
-            <p className="label mt-1">Projetos futuros entram pela projeção do realizado. Sem ajuste = linha “+ Projetos futuros”.</p>
+          <div className="flex min-w-0 flex-col">
+            <div className="label mb-1 uppercase">Resultado — mês a mês</div>
+            <LineChart series={serieResultado} fmt={fmtMilhar} altura={300} rotuloIdx={c.mes - 1} />
           </div>
         </div>
         <input className="input mt-2 w-full py-1" placeholder="Comentário do consolidado" value={c.comentarioBU ?? ''} onChange={(e) => onComentarioBU(e.target.value)} />
