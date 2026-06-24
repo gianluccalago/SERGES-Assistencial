@@ -394,15 +394,32 @@ type Slide =
 
 function montarDeck(c: Competencia): Slide[] {
   const out: Slide[] = [{ tipo: 'capa' }];
-  // Por projeto: um slide operacional (horas/consultas + furos) e um financeiro.
-  for (const p of c.projetos.filter((x) => entraNoPeriodo(x, c.tipo) && !x.ajuste)) {
+  const visiveis = c.projetos.filter((x) => entraNoPeriodo(x, c.tipo) && !x.ajuste);
+
+  // Mapeia: índice do último projeto de cada subtotal → subtotais a inserir ali.
+  const subtotalApos = new Map<number, Subtotal[]>();
+  for (const sub of c.subtotais ?? []) {
+    if (!sub.projetoIds.length) continue;
+    let lastIdx = -1;
+    for (let i = 0; i < visiveis.length; i++) {
+      if (sub.projetoIds.includes(visiveis[i].id)) lastIdx = i;
+    }
+    if (lastIdx >= 0) {
+      const arr = subtotalApos.get(lastIdx) ?? [];
+      arr.push(sub);
+      subtotalApos.set(lastIdx, arr);
+    }
+  }
+
+  for (let i = 0; i < visiveis.length; i++) {
+    const p = visiveis[i];
     out.push({ tipo: 'projOp', p });
     out.push({ tipo: 'projFin', p });
+    for (const sub of subtotalApos.get(i) ?? []) {
+      out.push({ tipo: 'subtotal', p: subtotalProjeto(c, sub) });
+    }
   }
-  // Subtotais nomeados (ex.: FUNEAS), somando os projetos do grupo.
-  for (const sub of c.subtotais ?? []) {
-    if (sub.projetoIds.length) out.push({ tipo: 'subtotal', p: subtotalProjeto(c, sub) });
-  }
+
   if (c.mostrarBU !== false) out.push({ tipo: 'bu' });
   for (const s of c.slidesTexto) out.push({ tipo: 'texto', s });
   return out;
