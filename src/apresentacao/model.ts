@@ -313,6 +313,44 @@ export function temFuturos(c: Competencia): boolean {
   return c.projetos.some((p) => entraNoPeriodo(p, c.tipo) && !p.ajuste && ehFuturo(p));
 }
 
+/** Acha o projeto equivalente por nome (igualdade normalizada; senão, contém). */
+function projetoEquivalente(projetos: ProjResultado[], nomeNorm: string): ProjResultado | undefined {
+  let p = projetos.find((x) => normalizar(x.nome) === nomeNorm);
+  if (!p) p = projetos.find((x) => { const n = normalizar(x.nome); return n.length > 2 && (n.includes(nomeNorm) || nomeNorm.includes(n)); });
+  return p;
+}
+
+/**
+ * Preenche as séries de REALIZADO (mês a mês) da competência-alvo com os valores
+ * das apresentações MENSAIS já curadas do mesmo ano (meses anteriores), para que os
+ * gráficos em linha mostrem a evolução real (jan → mês atual). Derivação só para
+ * exibição: NÃO persiste e não altera as apresentações de origem. O mês corrente é
+ * preservado (vem do próprio realizado/importação da competência-alvo). */
+export function mesclarHistorico(todas: Competencia[], alvo: Competencia): Competencia {
+  const m = alvo.mes - 1;
+  const fontes = todas.filter((k) => k.tipo === 'mensal' && k.ano === alvo.ano && k.id !== alvo.id && k.mes - 1 < m);
+  if (!fontes.length) return alvo;
+  const projetos = alvo.projetos.map((p) => {
+    const nA = normalizar(p.nome);
+    const rr = (p.mRealReceita ? [...p.mRealReceita] : serie12());
+    const rc = (p.mRealCusto ? [...p.mRealCusto] : serie12());
+    const rq = (p.mRealQtd ? [...p.mRealQtd] : serie12());
+    while (rr.length < 12) rr.push(null);
+    while (rc.length < 12) rc.push(null);
+    while (rq.length < 12) rq.push(null);
+    for (const k of fontes) {
+      const idx = k.mes - 1;
+      const q = projetoEquivalente(k.projetos, nA);
+      if (!q) continue;
+      rr[idx] = q.mRealReceita?.[idx] ?? (q.receita || null);
+      rc[idx] = q.mRealCusto?.[idx] ?? (q.custo || null);
+      rq[idx] = q.mRealQtd?.[idx] ?? (q.horas || null);
+    }
+    return { ...p, mRealReceita: rr, mRealCusto: rc, mRealQtd: rq };
+  });
+  return { ...alvo, projetos };
+}
+
 // ---------- Orçamento anual (importado da planilha) ----------
 export interface OrcProjeto {
   nome: string;

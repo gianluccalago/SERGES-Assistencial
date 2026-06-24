@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { useApresentacao } from '../../apresentacao/store';
 import {
@@ -14,6 +14,7 @@ import {
   entraNoPeriodo,
   ehFuturo,
   ehBackground,
+  mesclarHistorico,
   seriesBU,
   temFuturos,
   temAjuste,
@@ -80,6 +81,10 @@ export function CompetenciaEditor({ competencia, onVoltar }: { competencia: Comp
   const patchProjeto = (id: string, p: Partial<ProjResultado>) =>
     patch({ projetos: c.projetos.map((x) => (x.id === id ? { ...x, ...p } : x)) });
 
+  // Visão dos slides: realizado mês a mês puxado das mensais já curadas do ano
+  // (histórico p/ os gráficos em linha). Não persiste — edição segue em `c`.
+  const cView = useMemo(() => mesclarHistorico(ap.state.competencias, competencia), [ap.state.competencias, competencia]);
+
   useEffect(() => {
     if (!imprimindo) return;
     const t = setTimeout(() => window.print(), 150);
@@ -118,7 +123,7 @@ export function CompetenciaEditor({ competencia, onVoltar }: { competencia: Comp
     }
   }
 
-  const slides = montarDeck(c);
+  const slides = montarDeck(cView);
 
   return (
     <div className="space-y-[var(--spacing-16)]">
@@ -189,11 +194,11 @@ export function CompetenciaEditor({ competencia, onVoltar }: { competencia: Comp
       )}
 
       {aba === 'apresentacao' && (
-        <ApresentacaoTab c={c} patch={patch} slides={slides} />
+        <ApresentacaoTab c={cView} patch={patch} slides={slides} />
       )}
 
-      {apresentando && <Apresentador slides={slides} c={c} onClose={() => setApresentando(false)} />}
-      {imprimindo && <PrintDeck slides={slides} c={c} />}
+      {apresentando && <Apresentador slides={slides} c={cView} onClose={() => setApresentando(false)} />}
+      {imprimindo && <PrintDeck slides={slides} c={cView} />}
       {importResumo && <ImportResumoModal res={importResumo} onClose={() => setImportResumo(null)} />}
     </div>
   );
