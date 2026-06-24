@@ -281,7 +281,7 @@ function ProjetosEditor({
               <span className="text-[var(--color-ink-soft)]">Resultado <strong style={{ color: 'var(--color-serges-blue)' }}>{fmtBRL(resultado(p.receita, p.custo))}</strong></span>
               <span className="text-[var(--color-ink-soft)]">Margem <strong>{fmtPct(margem(p.receita, p.custo))}</strong></span>
               <span className="text-[var(--color-ink-soft)]">Margem orç. <strong>{fmtPct(margem(p.receitaOrcado ?? 0, p.custoOrcado ?? 0))}</strong></span>
-              <input className="input ml-auto min-w-[200px] flex-1 py-1" placeholder="Comentário (aparece no slide)" value={p.comentario ?? ''} onChange={(e) => patchProjeto(p.id, { comentario: e.target.value })} />
+              <CampoTexto className="ml-auto min-w-[200px] flex-1" placeholder="Comentário (aparece no slide)" value={p.comentario ?? ''} onChange={(v) => patchProjeto(p.id, { comentario: v })} />
             </div>
             {!p.ajuste && (
               <>
@@ -316,6 +316,21 @@ function Campo({ label, v, onChange, parseNum }: { label: string; v?: number; on
         placeholder="0"
       />
     </label>
+  );
+}
+
+function CampoTexto({ value, onChange, placeholder, className }: { value: string; onChange: (v: string) => void; placeholder?: string; className?: string }) {
+  const [txt, setTxt] = useState(value);
+  useEffect(() => { setTxt(value); }, [value]);
+  return (
+    <textarea
+      className={`input resize-none py-1 ${className ?? ''}`}
+      rows={2}
+      value={txt}
+      placeholder={placeholder}
+      onChange={(e) => setTxt(e.target.value)}
+      onBlur={(e) => onChange(e.target.value)}
+    />
   );
 }
 
@@ -580,7 +595,7 @@ function SlideView({ slide, c, onComentarioBU }: { slide: Slide; c: Competencia;
             )}
           </div>
         </div>
-        {p.comentario && <p className="mt-3 text-[length:var(--text-subheading)] leading-snug text-[var(--color-ink)]">{p.comentario}</p>}
+        {p.comentario && <p className="mt-3 whitespace-pre-wrap text-[length:var(--text-subheading)] leading-snug text-[var(--color-ink)]">{p.comentario}</p>}
       </SlideShell>
     );
   }
@@ -612,7 +627,7 @@ function SlideView({ slide, c, onComentarioBU }: { slide: Slide; c: Competencia;
             <LineChart series={serieResultado} fmt={fmtMilhar} altura={300} rotuloIdx={c.mes - 1} />
           </div>
         </div>
-        <input className="input mt-2 w-full py-1" placeholder="Comentário do consolidado" value={c.comentarioBU ?? ''} onChange={(e) => onComentarioBU(e.target.value)} />
+        <CampoTexto className="mt-2 w-full" placeholder="Comentário do consolidado" value={c.comentarioBU ?? ''} onChange={onComentarioBU} />
       </SlideShell>
     );
   }
@@ -676,7 +691,7 @@ function FinanceiroSlide({ p, c, sub }: { p: ProjResultado; c: Competencia; sub:
         </div>
       </div>
       <div className="mt-3 flex items-start justify-between gap-3">
-        <p className="text-[length:var(--text-label)] leading-snug text-[var(--color-ink)]">{p.comentario}</p>
+        <p className="whitespace-pre-wrap text-[length:var(--text-label)] leading-snug text-[var(--color-ink)]">{p.comentario}</p>
         {parcialCheio && temOrcado && <span className="shrink-0 text-[length:var(--text-caption)] text-[var(--color-ink-faint)]">Realizado parcial (1–15) · orçado mensal cheio</span>}
         {c.tipo === 'parcial' && c.proporcionalizarParcial && <span className="shrink-0 text-[length:var(--text-caption)] text-[var(--color-ink-faint)]">Orçado proporcional (½ mês)</span>}
       </div>
