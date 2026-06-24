@@ -71,7 +71,7 @@ export function CompetenciaEditor({ competencia, onVoltar }: { competencia: Comp
   const ap = useApresentacao();
   const [aba, setAba] = useState<'projetos' | 'apresentacao'>('projetos');
   const [apresentando, setApresentando] = useState(false);
-  const [imprimindo, setImprimindo] = useState(false);
+  const [exportando, setExportando] = useState<null | 'pdf' | 'pptx'>(null);
   const [importando, setImportando] = useState(false);
   const [importResumo, setImportResumo] = useState<ResultadoImport | null>(null);
   const fileRef = useRef<HTMLInputElement>(null);
@@ -84,17 +84,6 @@ export function CompetenciaEditor({ competencia, onVoltar }: { competencia: Comp
   // Visão dos slides: realizado mês a mês puxado das mensais já curadas do ano
   // (histórico p/ os gráficos em linha). Não persiste — edição segue em `c`.
   const cView = useMemo(() => mesclarHistorico(ap.state.competencias, competencia), [ap.state.competencias, competencia]);
-
-  useEffect(() => {
-    if (!imprimindo) return;
-    const t = setTimeout(() => window.print(), 150);
-    const done = () => setImprimindo(false);
-    window.addEventListener('afterprint', done);
-    return () => {
-      clearTimeout(t);
-      window.removeEventListener('afterprint', done);
-    };
-  }, [imprimindo]);
 
   async function onArquivoPlantoes(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
@@ -170,7 +159,8 @@ export function CompetenciaEditor({ competencia, onVoltar }: { competencia: Comp
             {importando ? 'Importando…' : 'Importar plantões (xlsx)'}
           </button>
           <button className="btn-secondary" onClick={() => setApresentando(true)}>▶ Apresentar</button>
-          <button className="btn-secondary" onClick={() => setImprimindo(true)}>Imprimir / PDF</button>
+          <button className="btn-secondary" disabled={!!exportando} onClick={() => setExportando('pdf')}>{exportando === 'pdf' ? 'Exportando…' : 'Exportar PDF'}</button>
+          <button className="btn-secondary" disabled={!!exportando} onClick={() => setExportando('pptx')}>{exportando === 'pptx' ? 'Exportando…' : 'Exportar PPTX'}</button>
         </div>
       </div>
 
@@ -198,7 +188,7 @@ export function CompetenciaEditor({ competencia, onVoltar }: { competencia: Comp
       )}
 
       {apresentando && <Apresentador slides={slides} c={cView} onClose={() => setApresentando(false)} />}
-      {imprimindo && <PrintDeck slides={slides} c={cView} />}
+      {exportando && <ExportDeck slides={slides} c={cView} formato={exportando} onDone={() => setExportando(null)} />}
       {importResumo && <ImportResumoModal res={importResumo} onClose={() => setImportResumo(null)} />}
     </div>
   );
@@ -874,27 +864,47 @@ function ImportResumoModal({ res, onClose }: { res: ResultadoImport; onClose: ()
   );
 }
 
-// ---------- Impressão (PDF) ----------
-// Renderiza fora do #root (portal no body) e oculta todo o resto na impressão,
-// para sair somente a apresentação — sem a aba de configuração e sem desconfigurar.
-function PrintDeck({ slides, c }: { slides: Slide[]; c: Competencia }) {
+// ---------- Exportação (PDF / PPTX) ----------
+// Renderiza os slides num palco fixo de 1280×720 fora da tela, rasteriza cada um
+// em PNG e monta o arquivo (1 slide = 1 página/slide, 16:9). O layout sai idêntico
+// ao da apresentação — sem desconfigurar como acontecia na impressão do navegador.
+function ExportDeck({ slides, c, formato, onDone }: { slides: Slide[]; c: Competencia; formato: 'pdf' | 'pptx'; onDone: () => void }) {
+  const ref = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    let cancel = false;
+    const run = async () => {
+      try {
+        // Deixa o layout estabilizar antes de capturar.
+        await new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(r)));
+        const nodes = Array.from(ref.current?.querySelectorAll('[data-slide]') ?? []) as HTMLElement[];
+        if (!nodes.length) throw new Error('sem slides');
+        const { rasterizarSlides, exportarPDF, exportarPPTX, nomeArquivo } = await import('./exportar');
+        const imgs = await rasterizarSlides(nodes);
+        if (cancel) return;
+        const nome = nomeArquivo(c.titulo || rotuloPadrao(c));
+        if (formato === 'pdf') await exportarPDF(imgs, nome);
+        else await exportarPPTX(imgs, nome);
+      } catch (e) {
+        console.error('[apresentacao] falha ao exportar', e);
+        alert('Não consegui gerar o arquivo. Tente novamente.');
+      } finally {
+        if (!cancel) onDone();
+      }
+    };
+    void run();
+    return () => {
+      cancel = true;
+    };
+  }, []);
+
   return createPortal(
-    <div className="apr-print fixed inset-0 z-[90] overflow-auto bg-white">
-      <style>{`
-        @media print {
-          @page { size: A4 landscape; margin: 10mm; }
-          html, body { background: #fff !important; }
-          #root { display: none !important; }
-          .apr-print { position: static !important; overflow: visible !important; }
-          .apr-print .apr-slide { break-after: page; box-shadow: none; }
-          .apr-print .apr-slide:last-child { break-after: auto; }
-        }
-      `}</style>
-      <div className="apr-print-deck space-y-4 p-6">
-        {slides.map((s, i) => (
-          <SlideViewStatic key={i} slide={s} c={c} />
-        ))}
-      </div>
+    <div ref={ref} className="export-stage" style={{ position: 'fixed', left: -100000, top: 0, width: 1280, background: '#fff', pointerEvents: 'none' }} aria-hidden>
+      <style>{`.export-stage .apr-slide{box-shadow:none;border-radius:0;border:none;}`}</style>
+      {slides.map((s, i) => (
+        <div key={i} data-slide style={{ width: 1280 }}>
+          <SlideViewStatic slide={s} c={c} />
+        </div>
+      ))}
     </div>,
     document.body,
   );
