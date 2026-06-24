@@ -239,7 +239,12 @@ function ProjetosEditor({
               <span className="text-[var(--color-ink-soft)]">Margem orç. <strong>{fmtPct(margem(p.receitaOrcado ?? 0, p.custoOrcado ?? 0))}</strong></span>
               <input className="input ml-auto min-w-[200px] flex-1 py-1" placeholder="Comentário (aparece no slide)" value={p.comentario ?? ''} onChange={(e) => patchProjeto(p.id, { comentario: e.target.value })} />
             </div>
-            {!p.ajuste && <GraficoCustomEditor p={p} patchProjeto={patchProjeto} parseNum={parseNum} />}
+            {!p.ajuste && (
+              <>
+                <GraficoCustomEditor p={p} campo="graficoCustom" rotulo="Gráfico extra (abaixo dos furos)" patchProjeto={patchProjeto} parseNum={parseNum} />
+                {p.graficoCustom && <GraficoCustomEditor p={p} campo="graficoCustom2" rotulo="2º gráfico extra (logo abaixo)" patchProjeto={patchProjeto} parseNum={parseNum} />}
+              </>
+            )}
           </div>
         );
       })}
@@ -257,18 +262,18 @@ function Campo({ label, v, onChange, parseNum }: { label: string; v?: number; on
   );
 }
 
-function GraficoCustomEditor({ p, patchProjeto, parseNum }: { p: ProjResultado; patchProjeto: (id: string, x: Partial<ProjResultado>) => void; parseNum: (v: string) => number }) {
-  const g = p.graficoCustom;
-  const set = (patch: Partial<GraficoCustom>) => g && patchProjeto(p.id, { graficoCustom: { ...g, ...patch } });
+function GraficoCustomEditor({ p, campo, rotulo, patchProjeto, parseNum }: { p: ProjResultado; campo: 'graficoCustom' | 'graficoCustom2'; rotulo: string; patchProjeto: (id: string, x: Partial<ProjResultado>) => void; parseNum: (v: string) => number }) {
+  const g = p[campo];
+  const set = (patch: Partial<GraficoCustom>) => g && patchProjeto(p.id, { [campo]: { ...g, ...patch } });
   return (
     <div className="mt-2 border-t border-[var(--color-line)] pt-2">
       <label className="flex items-center gap-2 text-[length:var(--text-caption)] text-[var(--color-ink-soft)]">
         <input
           type="checkbox"
           checked={!!g}
-          onChange={(e) => patchProjeto(p.id, { graficoCustom: e.target.checked ? { titulo: 'Custo médico médio/mês', tipo: 'linha', formato: 'moeda', valores: Array(12).fill(null) } : undefined })}
+          onChange={(e) => patchProjeto(p.id, { [campo]: e.target.checked ? { titulo: 'Custo médico médio/mês', tipo: 'linha', formato: 'moeda', valores: Array(12).fill(null) } : undefined })}
         />
-        Gráfico extra (abaixo dos furos)
+        {rotulo}
       </label>
       {g && (
         <div className="mt-2 space-y-2">
@@ -546,15 +551,17 @@ function SlideView({ slide, c, onComentarioBU }: { slide: Slide; c: Competencia;
           <div className="min-w-0">
             <div className="label mb-1 uppercase">Furos / descobertos</div>
             <BarChart valores={furos} cor={COR_FUROS} altura={200} />
-            {p.graficoCustom && (
-              <div className="mt-3">
-                <div className="label mb-1 uppercase">{p.graficoCustom.titulo}</div>
-                {p.graficoCustom.tipo === 'linha' ? (
-                  <LineChart series={[{ nome: p.graficoCustom.titulo, cor: COR_REAL, valores: p.graficoCustom.valores }]} fmt={fmtGraf(p.graficoCustom.formato)} altura={200} />
-                ) : (
-                  <BarChart valores={p.graficoCustom.valores} cor={COR_REAL} altura={200} />
-                )}
-              </div>
+            {[p.graficoCustom, p.graficoCustom2].map((gc, i) =>
+              gc ? (
+                <div key={i} className="mt-3">
+                  <div className="label mb-1 uppercase">{gc.titulo}</div>
+                  {gc.tipo === 'linha' ? (
+                    <LineChart series={[{ nome: gc.titulo, cor: COR_REAL, valores: gc.valores }]} fmt={fmtGraf(gc.formato)} altura={200} />
+                  ) : (
+                    <BarChart valores={gc.valores} cor={COR_REAL} altura={200} />
+                  )}
+                </div>
+              ) : null,
             )}
           </div>
         </div>

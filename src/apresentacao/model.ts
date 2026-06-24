@@ -36,6 +36,8 @@ export interface ProjResultado {
   mFuros?: Serie12;
   /** Gráfico extra opcional (abaixo dos furos no slide operacional). */
   graficoCustom?: GraficoCustom;
+  /** Segundo gráfico extra opcional (logo abaixo do primeiro). */
+  graficoCustom2?: GraficoCustom;
 }
 
 export type Unidade = 'horas' | 'consultas';
