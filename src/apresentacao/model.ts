@@ -398,7 +398,7 @@ interface RegraImport {
   pred: (contratoNorm: string, grupoNorm: string) => boolean;
 }
 const REGRAS_IMPORT: RegraImport[] = [
-  { nomeTest: (n) => n.includes('asf') && n.includes('pediatria'), pred: (_c, g) => g.includes('pediatria') },
+  { nomeTest: (n) => n.includes('asf') && n.includes('pediatria'), pred: (c, g) => g.includes('pediatria') && c.includes('asf') },
   { nomeTest: (n) => n.includes('asf') && !n.includes('pediatria'), pred: (_c, g) => g.startsWith('asf') && !g.includes('pediatria') },
   { nomeTest: (n) => n.includes('newlife') || n.includes('maceio'), pred: (c) => c.includes('newlife') || c.includes('maceio') },
   { nomeTest: (n) => n.includes('dezemergencias') || n.includes('10emergencias'), pred: (c, g) => c.includes('dezemergencias') || g.includes('dezemergencias') },
@@ -429,11 +429,14 @@ export interface LinhaResumoImport {
   horas: number;
   consultas: number;
   perConsulta: boolean;
+  /** Projeto criado automaticamente nesta importação (card oculto). */
+  autoCreado?: boolean;
 }
 export interface ResultadoImport {
   competencia: Competencia;
   resumo: LinhaResumoImport[];
-  naoCasaram: Array<{ chave: string; n: number; receita: number }>;
+  /** Projetos criados automaticamente como ocultos nesta importação. */
+  criados: Array<{ nome: string; n: number; receita: number }>;
   totalPlantoes: number;
   totalCasados: number;
 }
@@ -449,15 +452,15 @@ function setSerie(arr: Serie12 | undefined, i: number, v: number): Serie12 {
 /** Agrega os plantões e preenche o realizado (receita, custo, horas/consultas) do
  * mês da competência em cada projeto que casou com ≥1 linha. Projetos sem linha
  * ficam intactos (não zera dados manuais). Horas = apurado, com fallback p/ planejado
- * quando apurado=0. Todos os status entram. Furos permanecem manuais. */
+ * quando apurado=0. Todos os status entram. Furos permanecem manuais.
+ * Contratos que não casam com nenhum projeto recebem um card oculto automaticamente. */
 export function importarPlantoes(c: Competencia, linhas: PlantaoRow[]): ResultadoImport {
   const m = c.mes - 1;
-  // Agrega cada linha no primeiro projeto cujo nome casa com uma regra que aceita a linha.
   const agg = new Map<string, AggImport>(); // chave = id do projeto
-  const naoCasaram = new Map<string, { n: number; receita: number }>();
+  // Contratos não casados: agrupados por nome do contrato (raw).
+  const semCasar = new Map<string, { n: number; receita: number; custo: number; horas: number }>();
   let totalCasados = 0;
 
-  // Pré-resolve a regra de cada projeto (pela ordem de REGRAS_IMPORT).
   const regraDoProjeto = new Map<string, RegraImport>();
   for (const p of c.projetos) {
     if (p.ajuste) continue;
@@ -485,11 +488,13 @@ export function importarPlantoes(c: Competencia, linhas: PlantaoRow[]): Resultad
       }
     }
     if (!casou) {
-      const chave = `${String(linha.contrato ?? '—')} / ${String(linha.grupo ?? '—')}`;
-      const u = naoCasaram.get(chave) ?? { n: 0, receita: 0 };
+      const nomeContrato = String(linha.contrato ?? '').trim() || '—';
+      const u = semCasar.get(nomeContrato) ?? { n: 0, receita: 0, custo: 0, horas: 0 };
       u.n += 1;
       u.receita += receita;
-      naoCasaram.set(chave, u);
+      u.custo += custo;
+      u.horas += horas;
+      semCasar.set(nomeContrato, u);
       continue;
     }
     totalCasados += 1;
@@ -502,12 +507,39 @@ export function importarPlantoes(c: Competencia, linhas: PlantaoRow[]): Resultad
     agg.set(casou, a);
   }
 
+  // Auto-criar projetos ocultos para contratos não casados.
+  // Busca pelo nome normalizado: reutiliza card existente se já havia sido criado antes.
+  const projetosBase = [...c.projetos];
+  const criados: Array<{ nome: string; n: number; receita: number }> = [];
+  const autoIds = new Set<string>();
+  for (const [nomeContrato, u] of semCasar) {
+    totalCasados += u.n;
+    const nN = normalizar(nomeContrato);
+    const existing = projetosBase.find((p) => normalizar(p.nome) === nN);
+    let id: string;
+    if (existing) {
+      id = existing.id;
+    } else {
+      const novoP: ProjResultado = { id: `pr-${crypto.randomUUID().slice(0, 8)}`, nome: nomeContrato, receita: 0, custo: 0, oculto: true };
+      projetosBase.push(novoP);
+      id = novoP.id;
+      criados.push({ nome: nomeContrato, n: u.n, receita: u.receita });
+    }
+    autoIds.add(id);
+    const a = agg.get(id) ?? { n: 0, receita: 0, custo: 0, horas: 0, consultas: 0 };
+    a.n += u.n;
+    a.receita += u.receita;
+    a.custo += u.custo;
+    a.horas += u.horas;
+    agg.set(id, a);
+  }
+
   const resumo: LinhaResumoImport[] = [];
-  const projetos = c.projetos.map((p) => {
+  const projetos = projetosBase.map((p) => {
     const a = agg.get(p.id);
     if (!a) return p;
     const valorOp = p.perConsulta ? Math.round(a.consultas) : Math.round(a.horas);
-    resumo.push({ nome: p.nome, n: a.n, receita: a.receita, custo: a.custo, horas: a.horas, consultas: a.consultas, perConsulta: !!p.perConsulta });
+    resumo.push({ nome: p.nome, n: a.n, receita: a.receita, custo: a.custo, horas: a.horas, consultas: a.consultas, perConsulta: !!p.perConsulta, autoCreado: autoIds.has(p.id) });
     return {
       ...p,
       receita: Math.round(a.receita),
@@ -523,7 +555,7 @@ export function importarPlantoes(c: Competencia, linhas: PlantaoRow[]): Resultad
   return {
     competencia: { ...c, projetos },
     resumo,
-    naoCasaram: Array.from(naoCasaram.entries()).map(([chave, v]) => ({ chave, n: v.n, receita: v.receita })),
+    criados,
     totalPlantoes: linhas.length,
     totalCasados,
   };
