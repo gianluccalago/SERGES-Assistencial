@@ -226,7 +226,7 @@ function ProjetosEditor({
               <Campo label="Furos no mês" v={p.furos} onChange={(n) => patchProjeto(p.id, { furos: n })} parseNum={parseNum} />
             </div>
             <div className="mt-2 flex flex-wrap items-center gap-3 text-[length:var(--text-caption)]">
-              <span className="text-[var(--color-ink-soft)]">Resultado <strong style={{ color: 'var(--color-done)' }}>{fmtBRL(resultado(p.receita, p.custo))}</strong></span>
+              <span className="text-[var(--color-ink-soft)]">Resultado <strong style={{ color: 'var(--color-serges-blue)' }}>{fmtBRL(resultado(p.receita, p.custo))}</strong></span>
               <span className="text-[var(--color-ink-soft)]">Margem <strong>{fmtPct(margem(p.receita, p.custo))}</strong></span>
               <span className="text-[var(--color-ink-soft)]">Margem orç. <strong>{fmtPct(margem(p.receitaOrcado ?? 0, p.custoOrcado ?? 0))}</strong></span>
               <input className="input ml-auto min-w-[200px] flex-1 py-1" placeholder="Comentário (aparece no slide)" value={p.comentario ?? ''} onChange={(e) => patchProjeto(p.id, { comentario: e.target.value })} />
@@ -393,7 +393,7 @@ function Comparacao({ atual, anterior, orcado, inverter }: { atual: number; ante
   const cor = (v?: number) => {
     if (v == null) return 'var(--color-ink-faint)';
     const bom = inverter ? v < 0 : v > 0;
-    return bom ? 'var(--color-done)' : 'var(--color-overdue)';
+    return bom ? 'var(--color-serges-blue)' : 'var(--color-overdue)';
   };
   const seta = (v?: number) => (v == null ? '' : v > 0 ? '▲' : v < 0 ? '▼' : '–');
   return (
@@ -476,7 +476,7 @@ function SlideView({ slide, c, onComentarioBU }: { slide: Slide; c: Competencia;
           {orcadoMes != null && orcadoMes > 0 && (
             <div className="ml-auto text-right">
               <div className="label">Atingido do orçado</div>
-              <div className="text-[length:var(--text-subheading)] font-semibold" style={{ color: realizadoMes >= orcadoMes ? 'var(--color-done)' : 'var(--color-ink)' }}>{fmtPct(realizadoMes / orcadoMes)}</div>
+              <div className="text-[length:var(--text-subheading)] font-semibold" style={{ color: realizadoMes >= orcadoMes ? 'var(--color-serges-blue)' : 'var(--color-ink)' }}>{fmtPct(realizadoMes / orcadoMes)}</div>
             </div>
           )}
         </div>
@@ -553,7 +553,7 @@ function FinanceiroSlide({ p, c, sub }: { p: ProjResultado; c: Competencia; sub:
             grupos={[
               { label: 'Receita', orcado: recOrc, realizado: p.receita },
               { label: 'Custo médico', orcado: cusOrc, realizado: p.custo },
-              { label: 'Resultado', orcado: resOrc, realizado: resReal, corReal: resReal < 0 ? 'var(--color-overdue)' : 'var(--color-done)' },
+              { label: 'Resultado', orcado: resOrc, realizado: resReal, corReal: resReal < 0 ? 'var(--color-overdue)' : 'var(--color-serges-blue)' },
             ]}
             fmt={milhar}
             corOrcado={COR_ORC}
@@ -564,7 +564,7 @@ function FinanceiroSlide({ p, c, sub }: { p: ProjResultado; c: Competencia; sub:
         <div className="flex flex-col gap-3">
           <NumeroGrande titulo="Receita" valor={p.receita} orcado={temOrcado ? recOrc : undefined} />
           <NumeroGrande titulo="Custo médico" valor={p.custo} orcado={temOrcado ? cusOrc : undefined} />
-          <NumeroGrande titulo="Resultado" valor={resReal} orcado={temOrcado ? resOrc : undefined} cor={resReal < 0 ? 'var(--color-overdue)' : 'var(--color-done)'} />
+          <NumeroGrande titulo="Resultado" valor={resReal} orcado={temOrcado ? resOrc : undefined} cor={resReal < 0 ? 'var(--color-overdue)' : 'var(--color-serges-blue)'} />
           <div className="mt-1 flex items-end justify-between rounded-[var(--radius-md)] bg-[var(--color-serges-blue-tint)] px-4 py-2">
             <div>
               <div className="label">Margem realizada</div>
