@@ -590,7 +590,7 @@ function SlideView({ slide, c, onComentarioBU }: { slide: Slide; c: Competencia;
         <div className="mt-3 grid grid-cols-1 gap-5 lg:grid-cols-[2fr_1fr]">
           <div className="min-w-0">
             <div className="label mb-1 uppercase">{unidadeLabel}: orçado × realizado (mês a mês)</div>
-            <LineChart series={series} fmt={(v) => Math.round(v).toLocaleString('pt-BR')} altura={300} />
+            <LineChart series={series} fmt={(v) => Math.round(v).toLocaleString('pt-BR')} altura={300} rotuloIdx={c.mes - 1} />
           </div>
           <div className="min-w-0">
             <div className="label mb-1 uppercase">Furos / descobertos</div>
