@@ -3,13 +3,12 @@ import { useApresentacao } from '../../apresentacao/store';
 import { novaCompetencia, duplicar, rotuloPadrao, totais, fmtBRL, fmtPct, TIPO_LABEL, type Competencia, type TipoPeriodo } from '../../apresentacao/model';
 import { CompetenciaEditor } from './CompetenciaEditor';
 
-// Identidade visual própria do módulo: acento azul-petróleo (teal), sobrescrevendo
-// as variáveis de marca apenas dentro deste container.
+// Identidade visual SERGES (azul), reforçada nos tokens de marca do módulo.
 const TEMA: CSSProperties = {
-  ['--color-serges-blue' as string]: '#0F766E',
-  ['--color-serges-blue-strong' as string]: '#0B5E57',
-  ['--color-serges-blue-tint' as string]: '#E6F2F1',
-  ['--color-serges-blue-tint-soft' as string]: '#F2F8F7',
+  ['--color-serges-blue' as string]: '#2042E1',
+  ['--color-serges-blue-strong' as string]: '#1A36BC',
+  ['--color-serges-blue-tint' as string]: '#EAEDFC',
+  ['--color-serges-blue-tint-soft' as string]: '#F4F6FE',
 } as CSSProperties;
 
 export function ApresentacaoPage() {
@@ -66,7 +65,7 @@ function CardCompetencia({ c, onAbrir, onDuplicar, onExcluir }: { c: Competencia
         <div className="mt-0.5 text-[length:var(--text-caption)] text-[var(--color-ink-faint)]">{TIPO_LABEL[c.tipo]}</div>
         <div className="mt-2 grid grid-cols-2 gap-1 text-[length:var(--text-caption)]">
           <span className="text-[var(--color-ink-soft)]">Receita</span><span className="text-right font-medium">{fmtBRL(t.receita)}</span>
-          <span className="text-[var(--color-ink-soft)]">Resultado</span><span className="text-right font-medium" style={{ color: 'var(--color-done)' }}>{fmtBRL(t.resultado)}</span>
+          <span className="text-[var(--color-ink-soft)]">Resultado</span><span className="text-right font-medium" style={{ color: 'var(--color-serges-blue)' }}>{fmtBRL(t.resultado)}</span>
           <span className="text-[var(--color-ink-soft)]">Margem</span><span className="text-right font-medium">{fmtPct(t.margem)}</span>
         </div>
       </button>
