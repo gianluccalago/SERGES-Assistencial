@@ -756,8 +756,11 @@ function ImportResumoModal({ res, onClose }: { res: ResultadoImport; onClose: ()
             </thead>
             <tbody>
               {res.resumo.map((r) => (
-                <tr key={r.nome} className="border-t border-[var(--color-line)]">
-                  <td className="px-2 py-1">{r.nome}</td>
+                <tr key={r.nome} className={`border-t border-[var(--color-line)] ${r.autoCreado ? 'opacity-60' : ''}`}>
+                  <td className="px-2 py-1">
+                    {r.nome}
+                    {r.autoCreado && <span className="ml-1.5 text-[length:var(--text-caption)] text-[var(--color-ink-faint)]">(novo · oculto)</span>}
+                  </td>
                   <td className="px-2 py-1 text-right tabular-nums">{r.n}</td>
                   <td className="px-2 py-1 text-right tabular-nums">{fmtBRL(r.receita)}</td>
                   <td className="px-2 py-1 text-right tabular-nums">{fmtBRL(r.custo)}</td>
@@ -774,15 +777,15 @@ function ImportResumoModal({ res, onClose }: { res: ResultadoImport; onClose: ()
             </tbody>
           </table>
         </div>
-        {res.naoCasaram.length > 0 && (
+        {res.criados.length > 0 && (
           <div className="mt-3">
-            <div className="label mb-1 text-[var(--color-overdue)]">Plantões que NÃO casaram com nenhum projeto ({res.naoCasaram.reduce((s, x) => s + x.n, 0)})</div>
+            <div className="label mb-1" style={{ color: 'var(--color-serges-blue)' }}>Projetos criados automaticamente (ocultos)</div>
             <ul className="space-y-0.5 text-[length:var(--text-caption)] text-[var(--color-ink-soft)]">
-              {res.naoCasaram.map((x) => (
-                <li key={x.chave}>• <strong>{x.chave}</strong> — {x.n} plantão(ões), {fmtBRL(x.receita)}</li>
+              {res.criados.map((x) => (
+                <li key={x.nome}>• <strong>{x.nome}</strong> — {x.n} plantão(ões), {fmtBRL(x.receita)}</li>
               ))}
             </ul>
-            <p className="mt-1 text-[length:var(--text-caption)] text-[var(--color-ink-faint)]">Esses não entraram em nenhum projeto. Se algum deveria entrar, me avise o nome do contrato/grupo.</p>
+            <p className="mt-1 text-[length:var(--text-caption)] text-[var(--color-ink-faint)]">Aparecem na lista de projetos com o botão "Ocultar" ativado. Você pode torná-los visíveis a qualquer momento.</p>
           </div>
         )}
       </div>
