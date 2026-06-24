@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { useApresentacao } from '../../apresentacao/store';
 import {
   type Competencia,
@@ -709,15 +710,27 @@ function SlideViewStatic({ slide, c }: { slide: Slide; c: Competencia }) {
 }
 
 // ---------- Impressão (PDF) ----------
+// Renderiza fora do #root (portal no body) e oculta todo o resto na impressão,
+// para sair somente a apresentação — sem a aba de configuração e sem desconfigurar.
 function PrintDeck({ slides, c }: { slides: Slide[]; c: Competencia }) {
-  return (
+  return createPortal(
     <div className="apr-print fixed inset-0 z-[90] overflow-auto bg-white">
-      <style>{`@media print { @page { size: A4 landscape; margin: 10mm; } body { background: #fff; } .apr-print { position: static; } .apr-print .apr-slide { break-after: page; box-shadow: none; } }`}</style>
-      <div className="space-y-4 p-6">
+      <style>{`
+        @media print {
+          @page { size: A4 landscape; margin: 10mm; }
+          html, body { background: #fff !important; }
+          #root { display: none !important; }
+          .apr-print { position: static !important; overflow: visible !important; }
+          .apr-print .apr-slide { break-after: page; box-shadow: none; }
+          .apr-print .apr-slide:last-child { break-after: auto; }
+        }
+      `}</style>
+      <div className="apr-print-deck space-y-4 p-6">
         {slides.map((s, i) => (
           <SlideViewStatic key={i} slide={s} c={c} />
         ))}
       </div>
-    </div>
+    </div>,
+    document.body,
   );
 }
