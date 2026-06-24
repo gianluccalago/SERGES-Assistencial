@@ -29,6 +29,44 @@ export function LineChart({ series, fmt, altura = 200, rotuloIdx }: { series: Se
   const y = (v: number) => padT + (H - padT - padB) * (1 - (v - lo) / (hi - lo || 1));
   const grid = [lo, (lo + hi) / 2, hi];
 
+  // Rótulos: um por série (mês corrente quando há dado; senão o último ponto).
+  // Resolve colisão vertical entre rótulos na mesma posição X — nunca sobrepõe.
+  const GAP = 24;
+  const rotulos = series
+    .map((s) => {
+      let last = -1;
+      for (let i = 0; i < s.valores.length; i++) if (s.valores[i] != null) last = i;
+      const idx = rotuloIdx != null && rotuloIdx >= 0 && s.valores[rotuloIdx] != null ? rotuloIdx : last;
+      if (idx < 0) return null;
+      const val = s.valores[idx] as number;
+      const atEnd = idx === 11;
+      return {
+        cor: s.cor,
+        val,
+        tx: atEnd ? Math.min(W - 4, x(idx) + 8) : x(idx),
+        anchor: (atEnd ? 'start' : 'middle') as 'start' | 'middle',
+        y: y(val) - 12,
+      };
+    })
+    .filter((r): r is NonNullable<typeof r> => r != null);
+  const grupos = new Map<number, typeof rotulos>();
+  for (const r of rotulos) {
+    const k = Math.round(r.tx);
+    const g = grupos.get(k) ?? [];
+    g.push(r);
+    grupos.set(k, g);
+  }
+  const topoY = padT + 12;
+  const baseY = H - padB - 4;
+  for (const g of grupos.values()) {
+    g.sort((a, b) => a.y - b.y);
+    for (let i = 1; i < g.length; i++) if (g[i].y < g[i - 1].y + GAP) g[i].y = g[i - 1].y + GAP;
+    const over = g[g.length - 1].y - baseY;
+    if (over > 0) for (const r of g) r.y -= over;
+    const under = topoY - g[0].y;
+    if (under > 0) for (const r of g) r.y += under;
+  }
+
   return (
     <div>
       <svg viewBox={`0 0 ${W} ${H}`} className="w-full" style={{ maxHeight: H }} role="img">
@@ -43,30 +81,19 @@ export function LineChart({ series, fmt, altura = 200, rotuloIdx }: { series: Se
         ))}
         {series.map((s) => {
           const pts = s.valores.map((v, i) => (v == null ? null : `${x(i)},${y(v)}`)).filter(Boolean) as string[];
-          let last = -1;
-          for (let i = 0; i < s.valores.length; i++) if (s.valores[i] != null) last = i;
-          // Rotula o ponto do mês corrente (rotuloIdx) quando há dado; senão, o último.
-          const lbl = rotuloIdx != null && rotuloIdx >= 0 && s.valores[rotuloIdx] != null ? rotuloIdx : last;
-          const atEnd = lbl === 11;
           return (
             <g key={s.nome}>
               <polyline points={pts.join(' ')} fill="none" stroke={s.cor} strokeWidth={4} strokeLinejoin="round" strokeLinecap="round" />
               {s.valores.map((v, i) => (v == null ? null : <circle key={i} cx={x(i)} cy={y(v)} r={5} fill={s.cor} />))}
-              {lbl >= 0 && (
-                <text
-                  x={atEnd ? Math.min(W - 4, x(lbl) + 8) : x(lbl)}
-                  y={Math.max(20, y(s.valores[lbl] as number) - 12)}
-                  textAnchor={atEnd ? 'start' : 'middle'}
-                  fontSize="22"
-                  fontWeight={700}
-                  fill={s.cor}
-                >
-                  {fy(s.valores[lbl] as number)}
-                </text>
-              )}
             </g>
           );
         })}
+        {/* Rótulos por cima das linhas, já sem sobreposição vertical. */}
+        {rotulos.map((r, i) => (
+          <text key={i} x={r.tx} y={r.y} textAnchor={r.anchor} fontSize="22" fontWeight={700} fill={r.cor}>
+            {fy(r.val)}
+          </text>
+        ))}
       </svg>
       <Legenda series={series} />
     </div>
