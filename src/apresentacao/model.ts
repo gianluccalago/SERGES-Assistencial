@@ -34,10 +34,20 @@ export interface ProjResultado {
   mRealReceita?: Serie12;
   mRealQtd?: Serie12;
   mFuros?: Serie12;
+  /** Gráfico extra opcional (abaixo dos furos no slide operacional). */
+  graficoCustom?: GraficoCustom;
 }
 
 export type Unidade = 'horas' | 'consultas';
 export type Serie12 = Array<number | null>;
+
+/** Gráfico extra, configurável e opcional, por projeto (ex.: custo médico médio/mês). */
+export interface GraficoCustom {
+  titulo: string;
+  tipo: 'linha' | 'barras';
+  formato: 'numero' | 'moeda';
+  valores: Serie12;
+}
 export function serie12(): Serie12 {
   return Array(12).fill(null);
 }
