@@ -297,7 +297,7 @@ function ProjetosEditor({
               <span className="text-[var(--color-ink-soft)]">Resultado <strong style={{ color: 'var(--color-serges-blue)' }}>{fmtBRL(resultado(p.receita, p.custo))}</strong></span>
               <span className="text-[var(--color-ink-soft)]">Margem <strong>{fmtPct(margem(p.receita, p.custo))}</strong></span>
               <span className="text-[var(--color-ink-soft)]">Margem orç. <strong>{fmtPct(margem(p.receitaOrcado ?? 0, p.custoOrcado ?? 0))}</strong></span>
-              <CampoTexto className="ml-auto min-w-[200px] flex-1" placeholder={SEM_COMENT} value={p.comentario ?? ''} onChange={(v) => patchProjeto(p.id, { comentario: v })} />
+              <CampoTexto className="ml-auto w-full min-w-[200px] flex-1" placeholder={SEM_COMENT} value={p.comentario ?? ''} onChange={(v) => patchProjeto(p.id, { comentario: v })} limite={220} />
             </div>
             {!p.ajuste && (
               <>
@@ -335,18 +335,40 @@ function Campo({ label, v, onChange, parseNum }: { label: string; v?: number; on
   );
 }
 
-function CampoTexto({ value, onChange, placeholder, className }: { value: string; onChange: (v: string) => void; placeholder?: string; className?: string }) {
+// Campo de comentário: cresce sozinho para mostrar o texto inteiro (sem barra de
+// rolagem) e, quando `limite` é informado, mostra um contador que avisa quando o
+// texto provavelmente passa do que cabe no slide.
+function CampoTexto({ value, onChange, placeholder, className, limite }: { value: string; onChange: (v: string) => void; placeholder?: string; className?: string; limite?: number }) {
   const [txt, setTxt] = useState(value);
+  const ref = useRef<HTMLTextAreaElement>(null);
   useEffect(() => { setTxt(value); }, [value]);
+  // Ajusta a altura ao conteúdo (auto-grow).
+  useEffect(() => {
+    const el = ref.current;
+    if (!el) return;
+    el.style.height = 'auto';
+    el.style.height = `${Math.min(el.scrollHeight, 360)}px`;
+  }, [txt]);
+  const n = txt.trim().length;
+  const excedeu = limite != null && n > limite;
   return (
-    <textarea
-      className={`input resize-none py-1 ${className ?? ''}`}
-      rows={2}
-      value={txt}
-      placeholder={placeholder}
-      onChange={(e) => setTxt(e.target.value)}
-      onBlur={(e) => onChange(e.target.value)}
-    />
+    <div className={className}>
+      <textarea
+        ref={ref}
+        className="input w-full resize-none py-1 leading-snug"
+        rows={2}
+        value={txt}
+        placeholder={placeholder}
+        onChange={(e) => setTxt(e.target.value)}
+        onBlur={(e) => onChange(e.target.value)}
+        style={{ overflowY: 'auto' }}
+      />
+      {limite != null && (
+        <div className={`mt-0.5 text-right text-[length:var(--text-caption)] ${excedeu ? 'text-[var(--color-overdue)]' : 'text-[var(--color-ink-faint)]'}`}>
+          {n}/{limite}{excedeu ? ' · pode cortar no slide' : ''}
+        </div>
+      )}
+    </div>
   );
 }
 
@@ -668,7 +690,7 @@ function SlideView({ slide, c, onComentarioBU, editavel = true }: { slide: Slide
           </div>
         </div>
         {editavel ? (
-          <CampoTexto className="mt-2 w-full" placeholder={SEM_COMENT} value={c.comentarioBU ?? ''} onChange={onComentarioBU} />
+          <CampoTexto className="mt-2 w-full" placeholder={SEM_COMENT} value={c.comentarioBU ?? ''} onChange={onComentarioBU} limite={240} />
         ) : (
           <p className="mt-2 whitespace-pre-wrap text-[length:var(--text-label)] leading-snug text-[var(--color-ink)]">{comentarioSlide(c.comentarioBU)}</p>
         )}
