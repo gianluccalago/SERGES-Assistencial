@@ -15,6 +15,7 @@ import {
   ehFuturo,
   seriesBU,
   temFuturos,
+  temAjuste,
   novoProjeto,
   novoSlideTexto,
   rotuloPadrao,
@@ -44,6 +45,7 @@ import { SergesLogo, SergesMark } from '../components/Logo';
 const COR_ORC = '#94A3B8';
 const COR_REAL = 'var(--color-serges-blue)';
 const COR_FUT = '#0D9488';
+const COR_AJ = '#6366F1';
 const COR_FUROS = 'var(--color-overdue)';
 
 /** Eixo monetário compacto p/ os gráficos do consolidado (R$ X mil). */
@@ -619,6 +621,7 @@ function SlideView({ slide, c, onComentarioBU }: { slide: Slide; c: Competencia;
   if (slide.tipo === 'bu') {
     const s = seriesBU(c);
     const comFut = temFuturos(c);
+    const comAj = temAjuste(c);
     const serieReceita: Serie[] = [
       { nome: 'Realizado', cor: COR_REAL, valores: s.receita.realizado },
       { nome: 'Orçado', cor: COR_ORC, valores: s.receita.orcado },
@@ -628,13 +631,17 @@ function SlideView({ slide, c, onComentarioBU }: { slide: Slide; c: Competencia;
       { nome: 'Orçado', cor: COR_ORC, valores: s.resultado.orcado },
     ];
     if (comFut) {
-      serieReceita.push({ nome: 'Orçado + projetos futuros', cor: COR_FUT, valores: s.receita.comFuturos });
-      serieResultado.push({ nome: 'Orçado + projetos futuros', cor: COR_FUT, valores: s.resultado.comFuturos });
+      serieReceita.push({ nome: 'Orçado + futuros', cor: COR_FUT, valores: s.receita.comFuturos });
+      serieResultado.push({ nome: 'Orçado + futuros', cor: COR_FUT, valores: s.resultado.comFuturos });
+    }
+    if (comAj) {
+      serieReceita.push({ nome: 'Orçado + ajuste', cor: COR_AJ, valores: s.receita.comFuturosAjuste });
+      serieResultado.push({ nome: 'Orçado + ajuste', cor: COR_AJ, valores: s.resultado.comFuturosAjuste });
     }
     return (
       <SlideShell sub="Consolidado · BU Total">
         <h2 className="text-[length:var(--text-heading)] font-semibold">BU Assistencial — Total</h2>
-        <div className="mt-2 grid flex-1 grid-cols-1 gap-4 lg:grid-cols-2">
+        <div className="mt-2 grid grid-cols-1 gap-4 lg:grid-cols-2">
           <div className="flex min-w-0 flex-col">
             <div className="label mb-1 uppercase">Receita — mês a mês</div>
             <LineChart series={serieReceita} fmt={fmtMilhar} altura={300} rotuloIdx={c.mes - 1} />

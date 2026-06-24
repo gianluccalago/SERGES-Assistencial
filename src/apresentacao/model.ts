@@ -198,15 +198,16 @@ export interface TrioSerie {
   realizado: Serie12;
   orcado: Serie12;
   comFuturos: Serie12;
+  comFuturosAjuste: Serie12;
 }
 export interface SeriesBU {
   receita: TrioSerie;
   resultado: TrioSerie;
 }
 
-/** Diferença mês a mês (receita − custo); null só quando ambos faltam. */
+/** Diferença mês a mês (receita − custo); null quando qualquer um está ausente. */
 function difSerie(rec: Serie12, cus: Serie12): Serie12 {
-  return rec.map((v, i) => (v == null && cus[i] == null ? null : (v ?? 0) - (cus[i] ?? 0)));
+  return rec.map((v, i) => (v == null || cus[i] == null ? null : v - cus[i]));
 }
 
 /**
@@ -220,6 +221,7 @@ export function seriesBU(c: Competencia): SeriesBU {
   const inc = c.projetos.filter((p) => entraNoPeriodo(p, c.tipo) && !p.ajuste);
   const orcados = inc.filter((p) => !ehFuturo(p));
   const futuros = inc.filter((p) => ehFuturo(p));
+  const ajuste = c.projetos.filter((p) => p.ajuste && !p.oculto);
 
   const realReceita = somaSeries(inc.map((p) => comMesCorrente(p.mRealReceita, m, p.receita)));
   const realCusto = somaSeries(inc.map((p) => comMesCorrente(p.mRealCusto, m, p.custo)));
@@ -227,15 +229,25 @@ export function seriesBU(c: Competencia): SeriesBU {
   const orcCusto = somaSeries(orcados.map((p) => p.mOrcCusto));
   const futReceita = somaSeries(futuros.map((p) => comMesCorrente(p.mRealReceita, m, p.receita)));
   const futCusto = somaSeries(futuros.map((p) => comMesCorrente(p.mRealCusto, m, p.custo)));
+  const ajReceita = somaSeries(ajuste.map((p) => p.mOrcReceita));
+  const ajCusto = somaSeries(ajuste.map((p) => p.mOrcCusto));
   const comFutReceita = somaSeries([orcReceita, futReceita]);
   const comFutCusto = somaSeries([orcCusto, futCusto]);
+  const comFutAjReceita = somaSeries([comFutReceita, ajReceita]);
+  const comFutAjCusto = somaSeries([comFutCusto, ajCusto]);
 
   return {
-    receita: { realizado: realReceita, orcado: orcReceita, comFuturos: comFutReceita },
+    receita: {
+      realizado: realReceita,
+      orcado: orcReceita,
+      comFuturos: comFutReceita,
+      comFuturosAjuste: comFutAjReceita,
+    },
     resultado: {
       realizado: difSerie(realReceita, realCusto),
       orcado: difSerie(orcReceita, orcCusto),
       comFuturos: difSerie(comFutReceita, comFutCusto),
+      comFuturosAjuste: difSerie(comFutAjReceita, comFutAjCusto),
     },
   };
 }

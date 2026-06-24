@@ -14,7 +14,7 @@ export interface Serie {
 export function LineChart({ series, fmt, altura = 200, rotuloIdx }: { series: Serie[]; fmt?: (v: number) => string; altura?: number; rotuloIdx?: number }) {
   const W = 720;
   const H = altura;
-  const padL = 92;
+  const padL = 125;
   const padR = 70;
   const padT = 18;
   const padB = 46;
