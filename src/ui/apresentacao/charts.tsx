@@ -11,7 +11,7 @@ export interface Serie {
 
 /** Gráfico de linhas multi-série, 12 meses. Escala ajustada à faixa dos dados;
  * plota só pontos com dado; rotula o último ponto de cada série. */
-export function LineChart({ series, fmt, altura = 200 }: { series: Serie[]; fmt?: (v: number) => string; altura?: number }) {
+export function LineChart({ series, fmt, altura = 200, rotuloIdx }: { series: Serie[]; fmt?: (v: number) => string; altura?: number; rotuloIdx?: number }) {
   const W = 720;
   const H = altura;
   const padL = 92;
@@ -45,13 +45,23 @@ export function LineChart({ series, fmt, altura = 200 }: { series: Serie[]; fmt?
           const pts = s.valores.map((v, i) => (v == null ? null : `${x(i)},${y(v)}`)).filter(Boolean) as string[];
           let last = -1;
           for (let i = 0; i < s.valores.length; i++) if (s.valores[i] != null) last = i;
+          // Rotula o ponto do mês corrente (rotuloIdx) quando há dado; senão, o último.
+          const lbl = rotuloIdx != null && rotuloIdx >= 0 && s.valores[rotuloIdx] != null ? rotuloIdx : last;
+          const atEnd = lbl === 11;
           return (
             <g key={s.nome}>
               <polyline points={pts.join(' ')} fill="none" stroke={s.cor} strokeWidth={4} strokeLinejoin="round" strokeLinecap="round" />
               {s.valores.map((v, i) => (v == null ? null : <circle key={i} cx={x(i)} cy={y(v)} r={5} fill={s.cor} />))}
-              {last >= 0 && (
-                <text x={Math.min(W - 4, x(last) + 8)} y={y(s.valores[last] as number) - 10} fontSize="22" fontWeight={700} fill={s.cor}>
-                  {fy(s.valores[last] as number)}
+              {lbl >= 0 && (
+                <text
+                  x={atEnd ? Math.min(W - 4, x(lbl) + 8) : x(lbl)}
+                  y={Math.max(20, y(s.valores[lbl] as number) - 12)}
+                  textAnchor={atEnd ? 'start' : 'middle'}
+                  fontSize="22"
+                  fontWeight={700}
+                  fill={s.cor}
+                >
+                  {fy(s.valores[lbl] as number)}
                 </text>
               )}
             </g>
