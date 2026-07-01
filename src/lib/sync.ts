@@ -51,7 +51,7 @@ export class Syncer<S> {
         return { s, pk, data, error };
       }),
     );
-    for (const { s, pk, data, error } of results) {
+    for (const { s, data, error } of results) {
       if (error) {
         // Uma tabela ausente/indisponível não pode derrubar o carregamento das
         // demais (ex.: tabela nova ainda não criada no banco). Ignora esta fatia.
@@ -60,11 +60,17 @@ export class Syncer<S> {
       }
       const rows = (data ?? []) as Record<string, unknown>[];
       if (rows.length) hadRows = true;
-      // Atualiza snapshot para que o primeiro push seja no-op.
+      state = s.apply(state, rows);
+    }
+    // Snapshot no MESMO formato do extract() (sem updated_at e afins). O push
+    // compara contra extract(); se o snapshot guardasse a linha crua do banco
+    // (com updated_at), TODA linha "diferiria" e o cliente reescreveria tudo no
+    // primeiro push — inclusive tabelas só-gestor (projects/holidays/tarefas_fixas),
+    // o que faz a equipe receber "Erro ao salvar". Assim o 1º push é no-op real.
+    for (const s of this.slices) {
       const snap = this.snapshot.get(s.table)!;
       snap.clear();
-      for (const r of rows) snap.set(String(r[pk]), JSON.stringify(r));
-      state = s.apply(state, rows);
+      for (const { key, row } of s.extract(state)) snap.set(key, JSON.stringify(row));
     }
     return { state, hadRows };
   }
