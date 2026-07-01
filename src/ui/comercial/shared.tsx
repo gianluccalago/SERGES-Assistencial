@@ -9,7 +9,9 @@ export function Modal({ titulo, onClose, children, footer }: { titulo: string; o
       <div className="card w-full max-w-[560px] p-[var(--spacing-24)]" onClick={(e) => e.stopPropagation()}>
         <div className="mb-3 flex items-center justify-between gap-3">
           <h3 className="text-[length:var(--text-subheading)]">{titulo}</h3>
-          <button className="btn-ghost" onClick={onClose}>✕</button>
+          <button className="btn-ghost" onClick={onClose} aria-label="Fechar">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round"><path d="M6 6l12 12M18 6L6 18" /></svg>
+          </button>
         </div>
         <div className="space-y-3">{children}</div>
         {footer && <div className="mt-4 flex flex-wrap items-center gap-2 border-t border-[var(--color-line)] pt-4">{footer}</div>}
@@ -124,9 +126,18 @@ export function AnexosEditor({
       <div className="space-y-1.5">
         {anexos.map((a) => (
           <div key={a.id} className="flex items-center justify-between gap-2 rounded-[var(--radius-sm)] border border-[var(--color-line)] px-2 py-1.5">
-            <span className="min-w-0 truncate text-[length:var(--text-label)]">
-              {a.path ? '📎 ' : '🔗 '}
-              {a.rotulo}
+            <span className="flex min-w-0 items-center gap-1.5 truncate text-[length:var(--text-label)]">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" className="shrink-0 text-[var(--color-ink-faint)]">
+                {a.path ? (
+                  <path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48" />
+                ) : (
+                  <>
+                    <path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71" />
+                    <path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71" />
+                  </>
+                )}
+              </svg>
+              <span className="truncate">{a.rotulo}</span>
             </span>
             <span className="flex shrink-0 gap-1">
               <button className="btn-secondary" onClick={() => abrirAnexo(a)}>Abrir</button>

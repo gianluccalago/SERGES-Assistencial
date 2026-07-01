@@ -52,16 +52,16 @@ export function MonthView({
 
   return (
     <>
-      {/* Desktop: grade completa */}
+      {/* Desktop: grade única, células separadas por hairlines (não 35 cartões) */}
       <div className="hidden md:block">
-        <div className="grid grid-cols-7 gap-2">
+        <div className="month-grid">
           {DOW_CURTO.map((d) => (
-            <div key={d} className="label px-2 pb-1 uppercase">
+            <div key={d} className="label border-t-0 px-2 py-2 uppercase">
               {d}
             </div>
           ))}
           {cells.map((dISO, i) => {
-            if (!dISO) return <div key={i} className="min-h-[128px] rounded-[var(--radius-md)] bg-[var(--color-surface-muted)]/40" />;
+            if (!dISO) return <div key={i} className="month-cell" data-vazio="true" />;
             const day = Number(dISO.slice(8, 10));
             const isToday = dISO === today;
             const dayItems = byDay.get(dISO) ?? [];
@@ -72,14 +72,14 @@ export function MonthView({
                 key={i}
                 onDragOver={(e) => e.preventDefault()}
                 onDrop={() => onDrop(dISO)}
-                className="card min-h-[128px] p-2"
+                className="month-cell"
               >
                 <div className="mb-1.5 flex justify-end">
                   <span
-                    className={`flex h-7 min-w-7 items-center justify-center rounded-full px-1.5 text-[length:var(--text-label)] font-semibold ${
+                    className={`display flex h-7 min-w-7 items-center justify-center rounded-full px-1.5 text-[length:var(--text-label)] ${
                       isToday
                         ? 'bg-[var(--color-serges-blue)] text-white'
-                        : 'text-[var(--color-ink)]'
+                        : 'text-[var(--color-ink-soft)]'
                     }`}
                   >
                     {day}
@@ -93,11 +93,11 @@ export function MonthView({
                       onDragStart={() => setDragItem(ro.item)}
                       onClick={() => onSelect(ro)}
                       title={`${ro.item.titulo} — ${ESTADO_LABEL[ro.estado]}`}
-                      className={`block w-full truncate rounded-[6px] border-l-[3px] bg-[var(--color-surface-muted)] px-1.5 py-1 text-left text-[length:var(--text-label)] leading-snug ${
+                      className={`block w-full cursor-grab truncate rounded-[6px] border-l-[3px] bg-[var(--color-surface-2)] px-1.5 py-1 text-left text-[length:var(--text-caption)] leading-snug transition-colors duration-150 hover:bg-[var(--color-serges-blue-tint)] active:cursor-grabbing ${
                         ro.atrasada
                           ? 'border-l-[var(--color-overdue)] text-[var(--color-overdue)]'
                           : ro.estado === 'concluida'
-                            ? 'border-l-[var(--color-done)] text-[var(--color-ink-soft)] line-through'
+                            ? 'border-l-[var(--color-done)] text-[var(--color-ink-faint)] line-through opacity-70'
                             : ro.critico
                               ? 'border-l-[var(--color-serges-blue)] text-[var(--color-ink)]'
                               : 'border-l-transparent text-[var(--color-ink)]'
@@ -108,7 +108,7 @@ export function MonthView({
                   ))}
                   {resto > 0 && (
                     <button
-                      className="btn-ghost w-full text-left text-[length:var(--text-caption)]"
+                      className="w-full rounded-[6px] px-1.5 py-0.5 text-left text-[length:var(--text-caption)] font-medium text-[var(--color-serges-blue-strong)] transition-colors duration-150 hover:bg-[var(--color-serges-blue-tint-soft)]"
                       onClick={() => setOpenDay(dISO)}
                     >
                       +{resto} mais

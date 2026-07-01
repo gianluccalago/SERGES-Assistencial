@@ -191,7 +191,7 @@ function Funil({ editais, onOpen, hoje }: { editais: Edital[]; onOpen: (e: Edita
         return (
           <div
             key={fase}
-            className="flex min-w-[244px] flex-1 flex-col overflow-hidden rounded-[var(--radius-md)] border border-[var(--color-line)] bg-[var(--color-canvas)]"
+            className="well flex min-w-[244px] flex-1 flex-col overflow-hidden"
           >
             {/* Cabeçalho colorido da fase */}
             <div className="flex items-center justify-between gap-2 px-3 py-2" style={{ backgroundColor: `${cor}14`, borderTop: `3px solid ${cor}` }}>
@@ -225,7 +225,7 @@ function EditalCard({ e, hoje, onOpen, cor }: { e: Edital; hoje: string; onOpen:
   const sub = prazoStatus(e.submissaoFim, hoje);
   return (
     <button
-      className="group w-full rounded-[var(--radius-sm)] border border-[var(--color-line)] bg-[var(--color-surface)] p-3 text-left shadow-[var(--shadow-rest)] transition hover:-translate-y-0.5 hover:shadow-[var(--shadow-pop)]"
+      className="group w-full rounded-[var(--radius-sm)] border border-[var(--color-line)] bg-[var(--color-surface-2)] p-3 text-left shadow-[var(--shadow-rest)] transition duration-150 hover:-translate-y-0.5 hover:border-[var(--color-line-strong)]"
       style={cor ? { borderLeft: `3px solid ${cor}` } : undefined}
       onClick={() => onOpen(e)}
     >
@@ -280,7 +280,7 @@ function ContratosKanban({
       {COLS_CONTRATO.map((col) => {
         const list = contratos.filter((ct) => colunaContrato(ct.status) === col.id);
         return (
-          <div key={col.id} className="flex min-w-[260px] flex-1 flex-col overflow-hidden rounded-[var(--radius-md)] border border-[var(--color-line)] bg-[var(--color-canvas)]">
+          <div key={col.id} className="well flex min-w-[260px] flex-1 flex-col overflow-hidden">
             <div className="flex items-center justify-between gap-2 px-3 py-2" style={{ backgroundColor: `${col.cor}14`, borderTop: `3px solid ${col.cor}` }}>
               <span className="flex items-center gap-2 truncate text-[length:var(--text-caption)] font-semibold uppercase tracking-wide" style={{ color: col.cor }}>
                 <span className="inline-block h-2 w-2 shrink-0 rounded-full" style={{ backgroundColor: col.cor }} />
@@ -326,7 +326,7 @@ function ContratoCard({
   const corBorda = alerta ? 'var(--color-overdue)' : cor;
   return (
     <div
-      className="rounded-[var(--radius-sm)] border border-[var(--color-line)] bg-[var(--color-surface)] p-3 shadow-[var(--shadow-rest)] transition hover:shadow-[var(--shadow-pop)]"
+      className="rounded-[var(--radius-sm)] border border-[var(--color-line)] bg-[var(--color-surface-2)] p-3 shadow-[var(--shadow-rest)] transition duration-150 hover:border-[var(--color-line-strong)]"
       style={corBorda ? { borderLeft: `3px solid ${corBorda}` } : undefined}
     >
       <button className="block w-full text-left" onClick={() => onOpen(ct)}>

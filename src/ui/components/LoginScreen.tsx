@@ -19,13 +19,13 @@ export function LoginScreen() {
   }
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-[var(--color-canvas)] p-4">
-      <form onSubmit={entrar} className="card w-full max-w-[380px] p-[var(--spacing-24)]">
-        <div className="mb-6 flex justify-center">
+    <div className="flex min-h-screen items-center justify-center p-4">
+      <form onSubmit={entrar} className="card w-full max-w-[380px] p-[var(--spacing-32)]">
+        <div className="mb-8 flex justify-center">
           <SergesLogo />
         </div>
-        <h1 className="mb-1 text-center text-[length:var(--text-subheading)]">Calendário de Obrigações</h1>
-        <p className="mb-5 text-center text-[length:var(--text-label)] text-[var(--color-ink-soft)]">Acesso restrito à equipe SERGES</p>
+        <h1 className="mb-1 text-center text-[length:var(--text-heading)]">Calendário de Obrigações</h1>
+        <p className="mb-6 text-center text-[length:var(--text-label)] text-[var(--color-ink-soft)]">Acesso restrito à equipe SERGES</p>
 
         <label className="mb-3 block">
           <span className="label mb-1 block">E-mail</span>

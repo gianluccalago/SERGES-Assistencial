@@ -61,15 +61,15 @@ export function ManualForm({
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex justify-end bg-black/40" onClick={onClose}>
+    <div className="fixed inset-0 z-50 flex justify-end bg-black/50" onClick={onClose}>
       <div
-        className="h-full w-full max-w-[480px] space-y-3 overflow-y-auto bg-[var(--color-surface)] p-[var(--spacing-24)] shadow-[var(--shadow-pop)]"
+        className="drawer h-full w-full max-w-[480px] space-y-3 overflow-y-auto border-l border-[var(--color-line)] bg-[var(--color-surface)] p-[var(--spacing-24)] shadow-[var(--shadow-pop)]"
         onClick={(e) => e.stopPropagation()}
       >
         <div className="flex items-center justify-between">
           <h2 className="text-[length:var(--text-heading)]">{existing ? 'Editar obrigação' : 'Nova obrigação'}</h2>
-          <button className="btn-ghost" onClick={onClose}>
-            ✕
+          <button className="btn-ghost" onClick={onClose} aria-label="Fechar">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round"><path d="M6 6l12 12M18 6L6 18" /></svg>
           </button>
         </div>
 

@@ -105,18 +105,18 @@ function Secao({ titulo, onAdd, children }: { titulo: string; onAdd: () => void;
           + Adicionar
         </button>
       </div>
-      <div className="space-y-2">{children}</div>
+      <div className="list-stack">{children}</div>
     </section>
   );
 }
 
 function Vazio() {
-  return <div className="label">Nenhum contato.</div>;
+  return <div className="label p-[var(--spacing-12)]">Nenhum contato.</div>;
 }
 
 function ContatoRow({ c, onEdit }: { c: Contato; onEdit: () => void }) {
   return (
-    <div className="card flex flex-wrap items-center gap-x-4 gap-y-2 p-[var(--spacing-16)]">
+    <div className="obl-row flex flex-wrap items-center gap-x-4 gap-y-2">
       <div className="min-w-0 flex-1">
         <div className="font-medium text-[var(--color-ink)]">
           {c.nome}

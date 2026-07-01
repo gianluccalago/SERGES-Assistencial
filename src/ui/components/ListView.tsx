@@ -70,12 +70,15 @@ export function ListView({
       </div>
 
       {!agruparLotes ? (
-        <div className="space-y-2">
-          {filtrados.length === 0 && <div className="label">Nenhuma obrigação com os filtros atuais.</div>}
-          {filtrados.map((ro) => (
-            <ObligationCard key={ro.item.id} ro={ro} onSelect={onSelect} variant="list" />
-          ))}
-        </div>
+        filtrados.length === 0 ? (
+          <div className="label">Nenhuma obrigação com os filtros atuais.</div>
+        ) : (
+          <div className="list-stack">
+            {filtrados.map((ro) => (
+              <ObligationCard key={ro.item.id} ro={ro} onSelect={onSelect} variant="list" />
+            ))}
+          </div>
+        )
       ) : (
         <div className="space-y-[var(--spacing-20)]">
           {lotes.grupos.map(([dia, arr]) => (
@@ -83,7 +86,7 @@ export function ListView({
               <div className="label mb-2 uppercase">
                 Lote de pagamento · {formatDateShort(dia)} (dia {fromISODate(dia).getUTCDate()})
               </div>
-              <div className="space-y-2">
+              <div className="list-stack">
                 {arr.map((ro) => (
                   <ObligationCard key={ro.item.id} ro={ro} onSelect={onSelect} variant="list" />
                 ))}
@@ -93,7 +96,7 @@ export function ListView({
           {lotes.outros.length > 0 && (
             <div>
               <div className="label mb-2 uppercase">Outras obrigações</div>
-              <div className="space-y-2">
+              <div className="list-stack">
                 {lotes.outros.map((ro) => (
                   <ObligationCard key={ro.item.id} ro={ro} onSelect={onSelect} variant="list" />
                 ))}

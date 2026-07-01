@@ -102,9 +102,9 @@ export function Sidebar({
 
   return (
     <>
-      {/* Botão de menu no mobile */}
+      {/* Botão de menu no mobile — alvo de toque de 40px, integrado ao tema */}
       <button
-        className="btn-secondary fixed left-3 top-3 z-50 md:hidden"
+        className="fixed left-3 top-3 z-50 flex h-10 w-10 items-center justify-center rounded-[var(--radius-sm)] border border-[var(--color-line)] bg-[var(--color-surface)] text-[var(--color-ink)] shadow-[var(--shadow-rest)] md:hidden"
         onClick={() => setMobileOpen(true)}
         aria-label="Abrir menu"
       >
@@ -113,7 +113,7 @@ export function Sidebar({
 
       {/* Sidebar fixa (desktop) */}
       <aside
-        className={`sticky top-0 hidden h-screen shrink-0 border-r border-[var(--color-line)] bg-[var(--color-surface)] transition-[width] duration-200 md:block ${
+        className={`sticky top-0 hidden h-screen shrink-0 border-r border-[var(--color-line)] bg-[var(--color-surface-muted)] transition-[width] duration-200 md:block ${
           collapsed ? 'w-[68px]' : 'w-[224px]'
         }`}
       >
@@ -123,8 +123,8 @@ export function Sidebar({
       {/* Off-canvas (mobile) */}
       {mobileOpen && (
         <div className="fixed inset-0 z-50 md:hidden" onClick={() => setMobileOpen(false)}>
-          <div className="absolute inset-0 bg-black/30" />
-          <aside className="absolute left-0 top-0 h-full w-[244px] border-r border-[var(--color-line)] bg-[var(--color-surface)]" onClick={(e) => e.stopPropagation()}>
+          <div className="absolute inset-0 bg-black/50" />
+          <aside className="drawer-left absolute left-0 top-0 h-full w-[264px] border-r border-[var(--color-line)] bg-[var(--color-surface)]" onClick={(e) => e.stopPropagation()}>
             {nav}
           </aside>
         </div>

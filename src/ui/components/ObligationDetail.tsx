@@ -34,9 +34,9 @@ export function ObligationDetail({ ro, onClose }: { ro: ResolvedObligation; onCl
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex justify-end bg-black/40" onClick={onClose}>
+    <div className="fixed inset-0 z-50 flex justify-end bg-black/50" onClick={onClose}>
       <div
-        className="h-full w-full max-w-[480px] overflow-y-auto bg-[var(--color-surface)] p-[var(--spacing-24)] shadow-[var(--shadow-pop)]"
+        className="drawer h-full w-full max-w-[480px] overflow-y-auto border-l border-[var(--color-line)] bg-[var(--color-surface)] p-[var(--spacing-24)] shadow-[var(--shadow-pop)]"
         onClick={(e) => e.stopPropagation()}
       >
         <div className="flex items-start justify-between gap-4">
@@ -44,7 +44,9 @@ export function ObligationDetail({ ro, onClose }: { ro: ResolvedObligation; onCl
             <div className="label">{TIPO_LABEL[item.tipo]}{item.isManual ? ' · manual' : ''}</div>
             <h2 className="mt-1 text-[length:var(--text-heading)]">{item.titulo}</h2>
           </div>
-          <button className="btn-ghost" onClick={onClose}>✕</button>
+          <button className="btn-ghost" onClick={onClose} aria-label="Fechar">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round"><path d="M6 6l12 12M18 6L6 18" /></svg>
+          </button>
         </div>
 
         {/* Status: troca livre entre os quatro estados, ida e volta. */}

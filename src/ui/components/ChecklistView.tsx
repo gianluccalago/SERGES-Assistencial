@@ -3,7 +3,7 @@ import { useStore } from '../../state/store';
 import { useMonthObligations, type ResolvedObligation } from '../useObligations';
 import { applyFiltros, type Filtros } from '../filters';
 import { addCalendarDays, fromISODate, toISODate } from '../../domain/dateUtils';
-import { TIPO_LABEL, formatDateShort, MESES } from '../format';
+import { TIPO_LABEL, formatDateShort, MESES, urgenciaAttr } from '../format';
 import { progressoTexto } from '../../domain/stateMachine';
 import { QuickActions } from './QuickActions';
 import { Selos } from './Selos';
@@ -96,22 +96,27 @@ export function ChecklistView({
 
   return (
     <div className="pb-24">
-      {/* Progresso */}
+      {/* Progresso do mês — número com presença + varredura por projeto */}
       <div className="card mb-[var(--spacing-16)] p-[var(--spacing-20)]">
         <div className="flex items-end justify-between gap-4">
           <div>
             <div className="label uppercase">Progresso do mês · {MESES[month - 1]} de {year}</div>
-            <div className="text-[length:var(--text-title)] font-semibold">
-              {concluidas}/{total}
-              <span className="label ml-2 font-normal">concluídas</span>
+            <div className="display mt-1 text-[length:var(--text-display)] leading-none text-[var(--color-ink)]">
+              {concluidas}<span className="text-[var(--color-ink-faint)]">/{total}</span>
             </div>
           </div>
+          <div className="hidden h-1.5 flex-1 self-center overflow-hidden rounded-full bg-[var(--color-surface-2)] sm:block">
+            <div
+              className="h-full rounded-full bg-[var(--color-serges-blue)] transition-[width] duration-300"
+              style={{ width: `${total ? Math.round((concluidas / total) * 100) : 0}%` }}
+            />
+          </div>
         </div>
-        <div className="mt-3 grid grid-cols-2 gap-x-6 gap-y-1 sm:grid-cols-3">
+        <div className="mt-4 grid grid-cols-2 gap-x-6 gap-y-1 border-t border-[var(--color-line)] pt-3 sm:grid-cols-3">
           {porProjeto.map((p) => (
             <div key={p.nome} className="flex justify-between text-[length:var(--text-caption)]">
               <span className="truncate text-[var(--color-ink-soft)]">{p.nome}</span>
-              <span className={p.ok === p.total ? 'text-[var(--color-done)]' : 'text-[var(--color-ink)]'}>
+              <span className={`tabular-nums ${p.ok === p.total ? 'text-[var(--color-done)]' : 'text-[var(--color-ink)]'}`}>
                 {p.ok}/{p.total}
               </span>
             </div>
@@ -144,11 +149,12 @@ export function ChecklistView({
       {/* Concluídas / resolvidas — recolhidas e expansíveis */}
       {resolvidas.length > 0 && (
         <div className="mt-[var(--spacing-16)]">
-          <button className="btn-ghost" onClick={() => setVerConcluidas((v) => !v)}>
-            Concluídas e resolvidas ({resolvidas.length}) {verConcluidas ? '▴' : '▾'}
+          <button className="btn-ghost inline-flex items-center gap-1.5" onClick={() => setVerConcluidas((v) => !v)}>
+            Concluídas e resolvidas ({resolvidas.length})
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className={`transition-transform duration-150 ${verConcluidas ? 'rotate-180' : ''}`}><path d="M6 9l6 6 6-6" /></svg>
           </button>
           {verConcluidas && (
-            <div className="mt-2 space-y-1.5">
+            <div className="list-stack mt-2">
               {resolvidas.map((ro) => (
                 <Row key={ro.item.id} ro={ro} selecionado={!!sel[ro.item.id]} onToggle={() => toggleSel(ro)} onOpen={() => onSelect(ro)} projetoNome={nomeProjeto(ro, store)} />
               ))}
@@ -157,11 +163,12 @@ export function ChecklistView({
         </div>
       )}
 
-      {/* Barra de marcação em lote (repasse) */}
+      {/* Barra de marcação em lote (repasse) — flutua acima do conteúdo */}
       {selKeys.length > 0 && (
-        <div className="fixed inset-x-0 bottom-0 z-30 border-t border-[var(--color-line)] bg-[var(--color-surface)] p-[var(--spacing-12)] shadow-[var(--shadow-pop)]">
-          <div className="mx-auto flex max-w-[1280px] flex-wrap items-center gap-3 px-[var(--spacing-16)]">
-            <span className="font-medium">{selKeys.length} selecionada(s)</span>
+        <div className="fixed inset-x-0 bottom-0 z-30 p-[var(--spacing-12)] pb-[max(var(--spacing-12),env(safe-area-inset-bottom))]">
+          <div className="mx-auto flex max-w-[920px] flex-wrap items-center gap-3 rounded-[var(--radius-md)] border border-[var(--color-line-strong)] bg-[var(--color-surface-2)] p-[var(--spacing-12)] shadow-[var(--shadow-pop)]">
+            <span className="display px-1 text-[length:var(--text-subheading)] text-[var(--color-serges-blue-strong)]">{selKeys.length}</span>
+            <span className="-ml-2 text-[length:var(--text-label)] text-[var(--color-ink-soft)]">selecionada(s)</span>
             <input
               className="input w-auto flex-1 min-w-[180px]"
               placeholder="Responsável pelo repasse (opcional)"
@@ -188,7 +195,7 @@ function Grupo({ titulo, children }: { titulo: string; children: React.ReactNode
   return (
     <div className="mb-[var(--spacing-20)]">
       <div className="label mb-2 uppercase">{titulo}</div>
-      <div className="space-y-1.5">{children}</div>
+      <div className="list-stack">{children}</div>
     </div>
   );
 }
@@ -208,7 +215,7 @@ function Row({
 }) {
   const done = ro.estado === 'concluida';
   return (
-    <div className={`card p-[var(--spacing-12)] ${ro.atrasada ? 'border-l-[3px] border-l-[var(--color-overdue)]' : ''}`}>
+    <div className="obl-row" data-urgencia={urgenciaAttr({ atrasada: ro.atrasada, concluido: done, critico: ro.critico, aguardando: ro.estado === 'aguardandoInput' })}>
       <div className="flex items-center gap-3">
         <input
           type="checkbox"

@@ -450,7 +450,19 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     );
   }
   if (!ready) {
-    return <div className="flex min-h-screen items-center justify-center text-[var(--color-ink-soft)]">Carregando…</div>;
+    // Esqueleto de carga: estrutura da tela, não texto solto.
+    return (
+      <div className="mx-auto max-w-[760px] px-6 pt-16">
+        <div className="skeleton h-7 w-56" />
+        <div className="mt-6 space-y-3">
+          <div className="skeleton h-24 w-full" />
+          <div className="skeleton h-14 w-full" />
+          <div className="skeleton h-14 w-full" />
+          <div className="skeleton h-14 w-3/4" />
+        </div>
+        <p className="label mt-6 text-center">Carregando…</p>
+      </div>
+    );
   }
 
   return <StoreContext.Provider value={store}>{children}</StoreContext.Provider>;

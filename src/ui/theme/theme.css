@@ -1,45 +1,52 @@
 @import 'tailwindcss';
 
 /* ============================================================================
- * Identidade visual SERGES Hub (tema escuro): fundo navy com brilho azul,
- * superfícies em "glass" translúcido, texto claro e azul de marca vibrante.
- * Quase tudo é dirigido por estes tokens — telas e componentes só os consomem.
- * Os slides da Apresentação ficam CLAROS (impressão/projeção): ver .apr-slide.
+ * SERGES · Console Operacional
+ * Tema escuro navy com a identidade azul SERGES (#2042E1 na marca; azul de
+ * ação calibrado para o escuro). Superfícies SÓLIDAS em camadas (sem blur),
+ * hairlines, tipografia em par (Space Grotesk p/ títulos e números de presença
+ * + Inter p/ UI densa) e um sistema de urgência unificado (data-urgencia).
+ * Disciplina de cor: azul = ação/seleção · vermelho = SÓ atrasado · verde = só
+ * concluído. Os slides da Apresentação permanecem CLAROS (ver .apr-slide).
  * ========================================================================== */
 
 @theme {
-  /* Marca (azul vibrante que se lê bem sobre o navy) */
-  --color-serges-blue: #3d6df2;
-  --color-serges-blue-strong: #5a83ff;
-  --color-serges-blue-tint: rgba(61, 109, 242, 0.22);
-  --color-serges-blue-tint-soft: rgba(61, 109, 242, 0.12);
+  /* Marca / ação (calibrado p/ fundo escuro; a marca #2042E1 vive nos slides e logos) */
+  --color-serges-blue: #4d7dff;
+  --color-serges-blue-strong: #7396ff;
+  --color-serges-blue-tint: rgba(77, 125, 255, 0.18);
+  --color-serges-blue-tint-soft: rgba(77, 125, 255, 0.09);
 
-  /* Superfícies — canvas é o navy de fundo; surface são painéis/cards elevados */
-  --color-canvas: #0a1430;
-  --color-surface: #16234a;
-  --color-surface-muted: #0f1a3a;
-  --color-line: rgba(150, 165, 210, 0.16);
+  /* Superfícies — camadas sólidas: canvas < muted (poços) < surface (cartões) < 2 (elevado) */
+  --color-canvas: #070d1f;
+  --color-surface: #0f1830;
+  --color-surface-2: #16224a;
+  --color-surface-muted: #0b1226;
+  --color-line: rgba(148, 163, 216, 0.14);
+  --color-line-strong: rgba(148, 163, 216, 0.28);
 
-  /* Texto */
-  --color-ink: #eaf0ff;
-  --color-ink-soft: #aab6d8;
-  --color-ink-faint: #7682a8;
+  /* Texto (AA sobre as superfícies acima) */
+  --color-ink: #e8edfb;
+  --color-ink-soft: #a9b4d6;
+  --color-ink-faint: #8891b4;
 
-  /* Semânticos (mais luminosos para contrastar no escuro) */
-  --color-overdue: #ff6f63;
-  --color-overdue-tint: rgba(255, 111, 99, 0.16);
-  --color-done: #3ad29a;
-  --color-done-tint: rgba(58, 210, 154, 0.16);
+  /* Semânticos — disciplinados */
+  --color-overdue: #ff7061;
+  --color-overdue-tint: rgba(255, 112, 97, 0.12);
+  --color-done: #3dd68c;
+  --color-done-tint: rgba(61, 214, 140, 0.12);
 
   --font-ui: 'Inter', ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
-  --font-brand: 'Fredoka', 'Baloo 2', 'Nunito', ui-rounded, system-ui, sans-serif;
+  --font-display: 'Space Grotesk', 'Inter', ui-sans-serif, system-ui, sans-serif;
 
-  --text-caption: 12.5px;
-  --text-label: 14px;
-  --text-body: 15px;
-  --text-subheading: 17px;
-  --text-heading: 21px;
-  --text-title: 26px;
+  /* Escala tipográfica — densa, com hierarquia real */
+  --text-caption: 12px;
+  --text-label: 13px;
+  --text-body: 14px;
+  --text-subheading: 16px;
+  --text-heading: 19px;
+  --text-title: 24px;
+  --text-display: 34px;
 
   --font-weight-regular: 400;
   --font-weight-medium: 500;
@@ -57,13 +64,15 @@
   --spacing-40: 40px;
 
   --radius-sm: 8px;
-  --radius-md: 14px;
+  --radius-md: 12px;
   --radius-full: 9999px;
 
-  --shadow-rest: 0 1px 2px rgba(0, 0, 0, 0.35), 0 4px 14px rgba(0, 0, 0, 0.28);
-  --shadow-pop: 0 16px 40px rgba(0, 0, 0, 0.5);
+  /* Sombras curtas — definição vem das hairlines, não do borrão */
+  --shadow-rest: 0 1px 2px rgba(3, 7, 18, 0.5);
+  --shadow-pop: 0 12px 32px rgba(3, 7, 18, 0.55);
 
-  --ease: cubic-bezier(0.2, 0, 0, 1);
+  --ease: cubic-bezier(0.16, 1, 0.3, 1);
+  --dur: 160ms;
 }
 
 @layer base {
@@ -74,12 +83,11 @@
   }
   body {
     margin: 0;
-    /* Fundo navy com brilho azul no topo, igual à home do Serges Hub. */
+    /* Navy profundo com um único brilho de marca no topo — calmo, não decorado. */
     background-color: var(--color-canvas);
     background-image:
-      radial-gradient(1100px 520px at 50% -8%, rgba(61, 109, 242, 0.30), transparent 62%),
-      radial-gradient(900px 600px at 88% 2%, rgba(96, 76, 220, 0.18), transparent 60%),
-      linear-gradient(180deg, #0b1638 0%, #070d22 100%);
+      radial-gradient(900px 420px at 50% -10%, rgba(61, 96, 214, 0.22), transparent 62%),
+      linear-gradient(180deg, #0a1229 0%, #060b1a 100%);
     background-attachment: fixed;
     background-repeat: no-repeat;
     color: var(--color-ink);
@@ -87,15 +95,20 @@
     font-size: var(--text-body);
     line-height: 1.5;
     -webkit-font-smoothing: antialiased;
-    /* Números tabulares em tudo: datas, contadores, progresso alinham. */
+    /* Números tabulares em tudo: datas, contadores e valores alinham. */
     font-variant-numeric: tabular-nums;
   }
   h1, h2, h3 {
     color: var(--color-ink);
+    font-family: var(--font-display);
     font-weight: var(--font-weight-semibold);
     margin: 0;
-    line-height: 1.2;
-    letter-spacing: -0.01em;
+    line-height: 1.15;
+    letter-spacing: -0.015em;
+  }
+  /* Slides da Apresentação mantêm a tipografia original (material curado). */
+  .apr-slide h1, .apr-slide h2, .apr-slide h3 {
+    font-family: var(--font-ui);
   }
   * {
     box-sizing: border-box;
@@ -108,12 +121,23 @@
   .apr-slide img[alt='SERGES'] {
     filter: none;
   }
-  /* Foco de teclado sempre visível; mouse não mostra anel. */
+  /* Foco de teclado sempre visível; clique de mouse não mostra anel. */
   :focus-visible {
     outline: 2px solid var(--color-serges-blue);
     outline-offset: 2px;
     border-radius: 4px;
   }
+  ::selection {
+    background: rgba(77, 125, 255, 0.35);
+  }
+  /* Barra de rolagem discreta, coerente com o navy. */
+  * {
+    scrollbar-width: thin;
+    scrollbar-color: rgba(148, 163, 216, 0.28) transparent;
+  }
+  *::-webkit-scrollbar { width: 10px; height: 10px; }
+  *::-webkit-scrollbar-thumb { background: rgba(148, 163, 216, 0.22); border-radius: 8px; border: 2px solid transparent; background-clip: content-box; }
+  *::-webkit-scrollbar-track { background: transparent; }
   /* Respeita quem pede menos movimento. */
   @media (prefers-reduced-motion: reduce) {
     *,
@@ -126,53 +150,63 @@
 }
 
 @layer components {
+  /* ---------- Números e títulos de presença ---------- */
+  .display {
+    font-family: var(--font-display);
+    font-weight: var(--font-weight-bold);
+    letter-spacing: -0.02em;
+    font-variant-numeric: tabular-nums;
+  }
+
+  /* ---------- Botões (altura única 32px; estados completos) ---------- */
   .btn-primary {
     background-color: var(--color-serges-blue);
-    background-image: linear-gradient(180deg, color-mix(in srgb, var(--color-serges-blue) 86%, white), var(--color-serges-blue));
+    background-image: linear-gradient(180deg, rgba(255, 255, 255, 0.14), rgba(255, 255, 255, 0) 55%);
     color: #fff;
     font-size: var(--text-label);
     font-weight: var(--font-weight-semibold);
     border: none;
     border-radius: var(--radius-sm);
-    padding: 9px 16px;
-    box-shadow: var(--shadow-rest);
-    transition: filter 160ms var(--ease), transform 120ms var(--ease);
+    padding: 7px 14px;
+    min-height: 32px;
+    box-shadow: var(--shadow-rest), inset 0 0 0 1px rgba(255, 255, 255, 0.08);
+    transition: filter var(--dur) var(--ease), transform 120ms var(--ease);
     white-space: nowrap;
   }
   .btn-primary:hover { filter: brightness(1.12); }
-  .btn-primary:active { transform: translateY(0.5px); }
+  .btn-primary:active { transform: translateY(0.5px) scale(0.99); }
   .btn-primary:disabled { opacity: 0.45; cursor: not-allowed; box-shadow: none; }
 
   .btn-secondary {
-    background-color: color-mix(in srgb, var(--color-surface) 55%, transparent);
+    background-color: var(--color-surface-2);
     color: var(--color-ink);
     border: 1px solid var(--color-line);
     border-radius: var(--radius-sm);
-    padding: 8px 14px;
+    padding: 6px 12px;
+    min-height: 32px;
     font-size: var(--text-label);
     font-weight: var(--font-weight-medium);
-    backdrop-filter: blur(8px);
-    -webkit-backdrop-filter: blur(8px);
-    transition: border-color 160ms var(--ease), color 160ms var(--ease), background-color 160ms var(--ease);
+    transition: border-color var(--dur) var(--ease), background-color var(--dur) var(--ease), transform 120ms var(--ease);
     white-space: nowrap;
   }
-  .btn-secondary:hover {
-    border-color: color-mix(in srgb, var(--color-ink-faint) 60%, transparent);
-    background-color: color-mix(in srgb, var(--color-surface) 80%, transparent);
-  }
+  .btn-secondary:hover { border-color: var(--color-line-strong); background-color: color-mix(in srgb, var(--color-surface-2) 82%, white 6%); }
+  .btn-secondary:active { transform: scale(0.99); }
+  .btn-secondary:disabled { opacity: 0.45; cursor: not-allowed; }
 
   .btn-ghost {
     background: transparent;
     border: none;
     color: var(--color-ink-soft);
     padding: 6px 10px;
+    min-height: 32px;
     border-radius: var(--radius-sm);
     font-size: var(--text-label);
-    transition: color 160ms var(--ease), background-color 160ms var(--ease);
+    transition: color var(--dur) var(--ease), background-color var(--dur) var(--ease);
   }
   .btn-ghost:hover { color: var(--color-serges-blue-strong); background-color: var(--color-serges-blue-tint-soft); }
+  .btn-ghost:disabled { opacity: 0.45; cursor: not-allowed; }
 
-  /* Controle segmentado coeso (seletor de visão). */
+  /* ---------- Controle segmentado (seletor de visão) ---------- */
   .segmented {
     display: inline-flex;
     gap: 2px;
@@ -186,20 +220,43 @@
     background: transparent;
     color: var(--color-ink-soft);
     border-radius: var(--radius-full);
-    padding: 6px 14px;
+    padding: 5px 13px;
     font-size: var(--text-label);
     font-weight: var(--font-weight-medium);
-    transition: all 160ms var(--ease);
+    transition: color var(--dur) var(--ease), background-color var(--dur) var(--ease), box-shadow var(--dur) var(--ease);
     white-space: nowrap;
   }
   .seg-btn:hover { color: var(--color-ink); }
   .seg-btn[data-active='true'] {
-    background-color: color-mix(in srgb, var(--color-serges-blue) 28%, var(--color-surface));
-    color: #fff;
-    box-shadow: var(--shadow-rest);
+    background-color: var(--color-serges-blue-tint);
+    color: #d3deff;
+    box-shadow: inset 0 0 0 1px rgba(77, 125, 255, 0.35);
   }
 
-  /* Itens de navegação da sidebar. */
+  /* ---------- Pill de filtro (Lista, seleção de estado) ---------- */
+  .pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    background: transparent;
+    border: 1px solid var(--color-line);
+    border-radius: var(--radius-full);
+    color: var(--color-ink-soft);
+    font-size: var(--text-label);
+    font-weight: var(--font-weight-medium);
+    padding: 5px 12px;
+    min-height: 30px;
+    white-space: nowrap;
+    transition: color var(--dur) var(--ease), border-color var(--dur) var(--ease), background-color var(--dur) var(--ease);
+  }
+  .pill:hover { color: var(--color-ink); border-color: var(--color-line-strong); }
+  .pill[data-active='true'] {
+    background-color: var(--color-serges-blue-tint);
+    border-color: rgba(77, 125, 255, 0.45);
+    color: #d3deff;
+  }
+
+  /* ---------- Navegação lateral ---------- */
   .nav-item {
     display: flex;
     align-items: center;
@@ -210,25 +267,28 @@
     color: var(--color-ink-soft);
     border-radius: var(--radius-sm);
     padding: 8px 10px;
+    min-height: 36px;
     font-size: var(--text-label);
     font-weight: var(--font-weight-medium);
     text-align: left;
-    transition: all 140ms var(--ease);
+    transition: background-color 140ms var(--ease), color 140ms var(--ease), box-shadow 140ms var(--ease);
   }
-  .nav-item:hover { background-color: rgba(255, 255, 255, 0.06); color: var(--color-ink); }
+  .nav-item:hover { background-color: rgba(255, 255, 255, 0.05); color: var(--color-ink); }
   .nav-item[data-active='true'] {
     background-color: var(--color-serges-blue-tint);
-    color: #cdd9ff;
+    color: #d3deff;
+    box-shadow: inset 2px 0 0 var(--color-serges-blue);
   }
 
+  /* ---------- Chips e contadores ---------- */
   .chip {
     display: inline-flex;
     align-items: center;
     gap: 6px;
-    background-color: color-mix(in srgb, var(--color-surface) 65%, transparent);
+    background-color: transparent;
     border: 1px solid var(--color-line);
     border-radius: var(--radius-full);
-    color: var(--color-ink);
+    color: var(--color-ink-soft);
     font-size: var(--text-caption);
     font-weight: var(--font-weight-medium);
     line-height: 1;
@@ -236,49 +296,111 @@
     white-space: nowrap;
   }
 
-  /* Contadores globais do cabeçalho. */
+  /* Sinal do cabeçalho: número com presença + rótulo discreto. */
   .counter {
     display: inline-flex;
     align-items: baseline;
     gap: 6px;
-    padding: 5px 12px;
+    padding: 4px 11px;
     border-radius: var(--radius-full);
-    background-color: color-mix(in srgb, var(--color-surface) 65%, transparent);
+    background-color: var(--color-surface);
     border: 1px solid var(--color-line);
     font-size: var(--text-caption);
-    color: var(--color-ink-soft);
+    color: var(--color-ink-faint);
     white-space: nowrap;
   }
-  .counter strong { font-size: var(--text-label); font-weight: var(--font-weight-semibold); color: var(--color-ink); }
+  .counter strong {
+    font-family: var(--font-display);
+    font-size: 15px;
+    font-weight: var(--font-weight-bold);
+    color: var(--color-ink);
+    font-variant-numeric: tabular-nums;
+  }
+  /* O contador de atrasadas impõe presença quando > 0. */
+  .counter[data-alert='true'] {
+    border-color: rgba(255, 112, 97, 0.4);
+    background-color: var(--color-overdue-tint);
+    color: color-mix(in srgb, var(--color-overdue) 75%, white 25%);
+  }
+  .counter[data-alert='true'] strong { color: var(--color-overdue); }
 
+  /* ---------- Cartões e poços ---------- */
   .card {
-    background-color: color-mix(in srgb, var(--color-surface) 82%, transparent);
+    background-color: var(--color-surface);
     border: 1px solid var(--color-line);
     border-radius: var(--radius-md);
     box-shadow: var(--shadow-rest);
-    backdrop-filter: blur(10px);
-    -webkit-backdrop-filter: blur(10px);
+  }
+  /* Poço rebaixado (colunas de kanban, blocos de apoio). */
+  .well {
+    background-color: var(--color-surface-muted);
+    border: 1px solid var(--color-line);
+    border-radius: var(--radius-md);
   }
 
+  /* ---------- Lista de trabalho: linhas, não caixinhas ----------
+   * .list-stack agrupa; .obl-row é a linha com trilho de urgência à esquerda.
+   * data-urgencia: atrasada | critico | aguardando | done | normal
+   */
+  .list-stack {
+    background-color: var(--color-surface);
+    border: 1px solid var(--color-line);
+    border-radius: var(--radius-md);
+    box-shadow: var(--shadow-rest);
+    overflow: hidden;
+  }
+  .list-stack > * + * {
+    border-top: 1px solid var(--color-line);
+  }
+  .obl-row {
+    position: relative;
+    padding: 10px 14px 10px 17px;
+    transition: background-color 140ms var(--ease);
+  }
+  .obl-row::before {
+    content: '';
+    position: absolute;
+    left: 0;
+    top: 0;
+    bottom: 0;
+    width: 3px;
+    background: transparent;
+  }
+  .obl-row:hover { background-color: rgba(255, 255, 255, 0.03); }
+  .obl-row[data-urgencia='atrasada']::before { background: var(--color-overdue); }
+  .obl-row[data-urgencia='atrasada'] {
+    background-image: linear-gradient(90deg, rgba(255, 112, 97, 0.07), transparent 45%);
+  }
+  .obl-row[data-urgencia='critico']::before { background: var(--color-serges-blue); }
+  .obl-row[data-urgencia='aguardando']::before {
+    background: repeating-linear-gradient(180deg, var(--color-ink-faint) 0 5px, transparent 5px 10px);
+  }
+  .obl-row[data-urgencia='done'] { opacity: 0.55; }
+  .obl-row[data-urgencia='done']::before { background: var(--color-done); }
+
+  /* ---------- Formulários ---------- */
   .input,
   .select {
-    background-color: color-mix(in srgb, var(--color-ink) 6%, var(--color-surface));
+    background-color: var(--color-surface-muted);
     border: 1px solid var(--color-line);
     border-radius: var(--radius-sm);
     color: var(--color-ink);
     font-size: var(--text-body);
     font-family: inherit;
-    padding: 9px 11px;
+    padding: 8px 11px;
     width: 100%;
-    transition: border-color 160ms var(--ease), box-shadow 160ms var(--ease);
+    transition: border-color var(--dur) var(--ease), box-shadow var(--dur) var(--ease), background-color var(--dur) var(--ease);
   }
   .input::placeholder { color: var(--color-ink-faint); }
+  .input:hover, .select:hover { border-color: var(--color-line-strong); }
   .input:focus,
   .select:focus {
     outline: none;
     border-color: var(--color-serges-blue);
     box-shadow: 0 0 0 3px var(--color-serges-blue-tint);
+    background-color: var(--color-surface);
   }
+  .input:disabled, .select:disabled { opacity: 0.55; cursor: not-allowed; }
   /* Opções do <select> nativo: legíveis no menu do SO (fundo claro). */
   .select option { color: #14161d; background-color: #ffffff; }
   .label {
@@ -287,18 +409,95 @@
     font-weight: var(--font-weight-medium);
     letter-spacing: 0.02em;
   }
+  input[type='checkbox'] { accent-color: var(--color-serges-blue); }
+
+  /* ---------- Toast (aviso + desfazer) ---------- */
+  .toast {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    background-color: var(--color-surface-2);
+    border: 1px solid var(--color-line-strong);
+    border-radius: var(--radius-md);
+    color: var(--color-ink);
+    padding: 10px 16px;
+    font-size: var(--text-label);
+    box-shadow: var(--shadow-pop);
+    animation: toast-in 200ms var(--ease);
+  }
+  @keyframes toast-in {
+    from { opacity: 0; transform: translateY(8px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  /* ---------- Esqueleto de carregamento ---------- */
+  .skeleton {
+    position: relative;
+    overflow: hidden;
+    background-color: var(--color-surface-2);
+    border-radius: var(--radius-sm);
+  }
+  .skeleton::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.06), transparent);
+    animation: shimmer 1.4s infinite;
+  }
+  @keyframes shimmer {
+    from { transform: translateX(-100%); }
+    to { transform: translateX(100%); }
+  }
+
+  /* ---------- Painéis deslizantes (detalhe da obrigação, formulários) ---------- */
+  .drawer {
+    animation: drawer-in 220ms var(--ease);
+  }
+  @keyframes drawer-in {
+    from { opacity: 0.4; transform: translateX(24px); }
+    to { opacity: 1; transform: translateX(0); }
+  }
+  .drawer-left {
+    animation: drawer-left-in 220ms var(--ease);
+  }
+  @keyframes drawer-left-in {
+    from { opacity: 0.4; transform: translateX(-24px); }
+    to { opacity: 1; transform: translateX(0); }
+  }
+
+  /* ---------- Grade do mês: um contêiner, células internas ---------- */
+  .month-grid {
+    display: grid;
+    grid-template-columns: repeat(7, minmax(0, 1fr));
+    background-color: var(--color-surface);
+    border: 1px solid var(--color-line);
+    border-radius: var(--radius-md);
+    overflow: hidden;
+    box-shadow: var(--shadow-rest);
+  }
+  .month-cell {
+    min-height: 128px;
+    padding: 8px;
+    border-top: 1px solid var(--color-line);
+    transition: background-color 140ms var(--ease);
+  }
+  .month-cell:not(:nth-child(7n + 1)) { border-left: 1px solid var(--color-line); }
+  .month-cell[data-vazio='true'] { background-color: var(--color-surface-muted); }
+  .month-cell:not([data-vazio='true']):hover { background-color: rgba(255, 255, 255, 0.025); }
 }
 
 /* ============================================================================
  * Slides da Apresentação de Resultados: paleta CLARA escopada.
- * Tudo dentro de .apr-slide volta às cores originais (branco/azul), para
- * impressão em PDF e projeção. Vale também para os gráficos (consomem tokens).
+ * Tudo dentro de .apr-slide volta às cores originais (branco/azul da marca),
+ * para impressão/projeção. Vale também para os gráficos (consomem os tokens).
  * ========================================================================== */
 .apr-slide {
   --color-canvas: #fafbfc;
   --color-surface: #ffffff;
+  --color-surface-2: #f4f6f8;
   --color-surface-muted: #f4f6f8;
   --color-line: #e8eaee;
+  --color-line-strong: #d5d9e0;
   --color-ink: #14161d;
   --color-ink-soft: #5b6172;
   --color-ink-faint: #8a90a0;
@@ -312,6 +511,5 @@
   --color-done-tint: #e9f6ef;
   color: var(--color-ink);
   box-shadow: var(--shadow-pop);
-  backdrop-filter: none;
 }
 .apr-slide .select option { color: #14161d; background-color: #ffffff; }

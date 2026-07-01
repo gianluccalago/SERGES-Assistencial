@@ -120,7 +120,7 @@ export function App() {
 
       <div className="min-w-0 flex-1">
         {/* Cabeçalho de página padrão */}
-        <header className="sticky top-0 z-30 border-b border-[var(--color-line)] bg-[color-mix(in_srgb,var(--color-canvas)_88%,transparent)] backdrop-blur">
+        <header className="sticky top-0 z-30 border-b border-[var(--color-line)] bg-[color-mix(in_srgb,var(--color-canvas)_92%,transparent)] backdrop-blur-sm">
           <div className="px-[var(--spacing-16)] py-[var(--spacing-12)] md:px-[var(--spacing-24)]">
             <div className="flex flex-wrap items-center gap-3 pl-12 md:pl-0">
               <h1 className="text-[length:var(--text-heading)]">{TITULO_PAGINA[screen]}</h1>
@@ -128,8 +128,9 @@ export function App() {
 
               {isCalendar && (
                 <div className="ml-auto flex flex-wrap items-center gap-2">
-                  <span className="counter">
-                    <strong className={contadores.atrasadas ? 'text-[var(--color-overdue)]' : ''}>{contadores.atrasadas}</strong> atrasadas
+                  {/* Atrasadas impõem presença quando existem; o resto fica quieto. */}
+                  <span className="counter" data-alert={contadores.atrasadas > 0}>
+                    <strong>{contadores.atrasadas}</strong> atrasadas
                   </span>
                   <span className="counter">
                     <strong>{contadores.vencendo}</strong> vencendo

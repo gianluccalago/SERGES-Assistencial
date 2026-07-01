@@ -66,8 +66,11 @@ function Check({ label, checked, onChange }: { label: string; checked: boolean; 
 // Aviso (não bloqueia) de contrato social no lote de pagamento.
 function ContratoSocialAviso() {
   return (
-    <div className="card mt-[var(--spacing-16)] border-[var(--color-overdue)] p-[var(--spacing-16)] text-[length:var(--text-label)] text-[var(--color-overdue)]">
-      Projeto exige contrato social · nota fiscal não permitida · risco de quarteirização.
+    <div className="mt-[var(--spacing-16)] flex items-start gap-2.5 rounded-[var(--radius-md)] border border-[rgba(255,112,97,0.4)] bg-[var(--color-overdue-tint)] p-[var(--spacing-16)] text-[length:var(--text-label)] text-[color-mix(in_srgb,var(--color-overdue)_80%,white_20%)]">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="mt-0.5 shrink-0">
+        <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z" /><path d="M12 9v4M12 17h.01" />
+      </svg>
+      <span>Projeto exige contrato social · nota fiscal não permitida · risco de quarteirização.</span>
     </div>
   );
 }

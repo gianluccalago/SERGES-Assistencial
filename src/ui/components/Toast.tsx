@@ -31,14 +31,11 @@ export function ToastProvider({ children }: { children: ReactNode }) {
       {children}
       <div className="pointer-events-none fixed inset-x-0 bottom-4 z-[80] flex flex-col items-center gap-2 px-4">
         {toasts.map((t) => (
-          <div
-            key={t.id}
-            className="pointer-events-auto flex items-center gap-4 rounded-[var(--radius-md)] bg-[var(--color-ink)] px-4 py-2.5 text-[length:var(--text-label)] text-white shadow-[var(--shadow-pop)]"
-          >
+          <div key={t.id} className="toast pointer-events-auto">
             <span>{t.message}</span>
             {t.onUndo && (
               <button
-                className="font-semibold text-[var(--color-serges-blue-tint)] underline"
+                className="-my-1 rounded-[var(--radius-sm)] px-2 py-1 font-semibold text-[var(--color-serges-blue-strong)] transition-colors duration-150 hover:bg-[var(--color-serges-blue-tint-soft)]"
                 onClick={() => {
                   t.onUndo?.();
                   dismiss(t.id);

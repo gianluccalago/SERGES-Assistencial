@@ -74,14 +74,14 @@ export function WeekView({
               key={dISO}
               onDragOver={(e) => e.preventDefault()}
               onDrop={() => onDrop(dISO)}
-              className={`card flex flex-col gap-3 p-[var(--spacing-12)] sm:flex-row sm:items-stretch ${
-                isToday ? 'ring-2 ring-[var(--color-serges-blue)]' : ''
-              } ${isWeekend ? 'bg-[var(--color-surface-muted)]' : ''}`}
+              className={`card flex flex-col gap-3 p-[var(--spacing-12)] transition-colors duration-150 sm:flex-row sm:items-stretch ${
+                isToday ? 'border-l-[3px] border-l-[var(--color-serges-blue)]' : ''
+              } ${isWeekend ? 'bg-[var(--color-surface-muted)]' : ''} ${dragItem ? 'outline-dashed outline-1 outline-offset-2 outline-[var(--color-serges-blue-tint)]' : ''}`}
             >
               {/* Coluna fixa do dia */}
               <div className="flex shrink-0 items-center gap-3 sm:w-[120px] sm:flex-col sm:items-start sm:justify-start sm:border-r sm:border-[var(--color-line)] sm:pr-3">
                 <span
-                  className={`flex h-9 w-9 items-center justify-center rounded-full text-[length:var(--text-subheading)] font-semibold ${
+                  className={`display flex h-9 w-9 items-center justify-center rounded-full text-[length:var(--text-subheading)] ${
                     isToday ? 'bg-[var(--color-serges-blue)] text-white' : 'text-[var(--color-ink)]'
                   }`}
                 >

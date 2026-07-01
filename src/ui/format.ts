@@ -70,11 +70,20 @@ export function estadoChipClass(estado: ObligationEstado): string {
   }
 }
 
-/** Classe da borda lateral / acento conforme marcadores. */
+/** Classe da borda lateral / acento conforme marcadores (contexto de cartão). */
 export function itemAccentClass(p: { atrasada?: boolean; concluido?: boolean; critico?: boolean; aguardando?: boolean }): string {
   if (p.atrasada) return 'border-l-[3px] border-l-[var(--color-overdue)]';
   if (p.aguardando) return 'border-l-[3px] border-dashed border-l-[var(--color-ink-faint)]';
-  if (p.concluido) return 'border-l-[3px] border-l-[var(--color-done)] opacity-70';
+  if (p.concluido) return 'border-l-[3px] border-l-[var(--color-done)] opacity-60';
   if (p.critico) return 'border-l-[3px] border-l-[var(--color-serges-blue)]';
   return 'border-l-[3px] border-l-transparent';
+}
+
+/** Valor de data-urgencia para linhas de lista (.obl-row) — trilho + presença. */
+export function urgenciaAttr(p: { atrasada?: boolean; concluido?: boolean; critico?: boolean; aguardando?: boolean }): string {
+  if (p.atrasada) return 'atrasada';
+  if (p.concluido) return 'done';
+  if (p.aguardando) return 'aguardando';
+  if (p.critico) return 'critico';
+  return 'normal';
 }

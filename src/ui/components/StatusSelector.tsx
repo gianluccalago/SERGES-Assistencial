@@ -33,10 +33,10 @@ export function StatusSelector({ ro }: { ro: ResolvedObligation }) {
         store.setEstado(item, novo);
       }}
       aria-label="Status"
-      className={`w-auto cursor-pointer appearance-none rounded-full border border-[var(--color-line)] bg-[var(--color-surface)] bg-[length:14px] bg-[right_8px_center] bg-no-repeat py-1 pl-3 pr-7 text-[length:var(--text-caption)] font-medium hover:border-[var(--color-serges-blue)] focus:border-[var(--color-serges-blue)] focus:outline-none ${COR[estado]}`}
+      className={`w-auto cursor-pointer appearance-none rounded-full border border-[var(--color-line)] bg-[var(--color-surface-2)] bg-[length:14px] bg-[right_8px_center] bg-no-repeat py-1 pl-3 pr-7 text-[length:var(--text-caption)] font-medium transition-colors duration-150 hover:border-[var(--color-serges-blue)] focus:border-[var(--color-serges-blue)] focus:outline-none ${COR[estado]}`}
       style={{
         backgroundImage:
-          "url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%235B6170' stroke-width='3' stroke-linecap='round'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E\")",
+          "url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%23A9B4D6' stroke-width='3' stroke-linecap='round'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E\")",
       }}
     >
       {ORDEM.map((s) => (

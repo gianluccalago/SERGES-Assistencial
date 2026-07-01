@@ -22,7 +22,12 @@ export function AuthGate({ children }: { children: ReactNode }) {
   }
 
   if (loading) {
-    return <div className="flex min-h-screen items-center justify-center text-[var(--color-ink-soft)]">Carregando…</div>;
+    return (
+      <div className="flex min-h-screen flex-col items-center justify-center gap-4 p-6">
+        <div className="skeleton h-9 w-32 rounded-[var(--radius-md)]" />
+        <p className="label">Carregando…</p>
+      </div>
+    );
   }
 
   if (!session) return <LoginScreen />;
