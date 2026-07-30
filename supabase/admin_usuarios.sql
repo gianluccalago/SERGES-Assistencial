@@ -188,7 +188,37 @@ begin
 end;
 $seed$;
 
--- Confere:
+-- ---------------------------------------------------------------------------
+-- 4. VERIFICAÇÃO — confere as pré-condições reais do login do Vinícius.
+--    Se a última coluna disser "LOGIN OK", pode entrar no app com a senha.
+-- ---------------------------------------------------------------------------
+select
+  u.email,
+  p.role                                                        as papel,
+  (u.encrypted_password = extensions.crypt('coxalider', u.encrypted_password))
+                                                                as senha_confere,
+  (u.email_confirmed_at is not null)                            as email_confirmado,
+  (i.id is not null)                                            as identidade_ok,
+  (u.confirmation_token is not null and u.recovery_token is not null
+   and u.email_change_token_new is not null and u.email_change is not null)
+                                                                as tokens_ok,
+  case
+    when u.encrypted_password is distinct from extensions.crypt('coxalider', u.encrypted_password)
+      then 'FALHA: senha não confere'
+    when u.email_confirmed_at is null then 'FALHA: e-mail não confirmado'
+    when i.id is null then 'FALHA: falta a identidade de e-mail'
+    when u.confirmation_token is null or u.recovery_token is null
+      or u.email_change_token_new is null or u.email_change is null
+      then 'FALHA: tokens nulos quebram o login do GoTrue'
+    when p.id is null then 'FALHA: perfil não criado em public.profiles'
+    else 'LOGIN OK'
+  end                                                           as veredito
+from auth.users u
+left join public.profiles p on p.id = u.id
+left join auth.identities i on i.user_id = u.id and i.provider = 'email'
+where lower(u.email) = 'vinicius.veiga@serges.org';
+
+-- Panorama de todos os usuários:
 select p.email, p.nome, p.role, (u.email_confirmed_at is not null) as email_confirmado
 from public.profiles p join auth.users u on u.id = p.id
 order by p.email;
