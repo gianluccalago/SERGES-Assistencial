@@ -1,6 +1,8 @@
 import { useState } from 'react';
 import { useStore } from '../../state/store';
 import type { DependenciaFaturamento, Project } from '../../domain/types';
+import { prefixoSetor } from '../../domain/types';
+import { useAuth } from '../../auth/AuthProvider';
 import { DEP_LABEL } from '../format';
 
 const DEPENDENCIAS: DependenciaFaturamento[] = [
@@ -87,6 +89,7 @@ function ProjectForm({
   onCancel: () => void;
   onDelete?: () => void;
 }) {
+  const { setor } = useAuth();
   const [draft, setDraft] = useState<Project>(project);
   const isNew = !project.id;
 
@@ -94,7 +97,10 @@ function ProjectForm({
     setDraft((d) => ({ ...d, [key]: value }));
   }
 
+  // O id vem do nome. Como a chave primária é global no banco, setores fora do
+  // assistencial ganham prefixo — dois setores podem ter "Fornecedores" sem colidir.
   const slug = (s: string) =>
+    prefixoSetor(setor) +
     s.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/[^a-z0-9]+/g, '');
 
   return (

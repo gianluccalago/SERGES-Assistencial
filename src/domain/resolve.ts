@@ -6,7 +6,7 @@ import type {
   Project,
   TarefaFixa,
 } from './types';
-import { deriveObligations } from './engine';
+import { deriveObligations, type DerivacaoOpcoes } from './engine';
 import { competencia as fmtCompetencia } from './dateUtils';
 
 /** Converte uma Obligation derivada + seu Override em CalendarItem (ou null se dismissed). */
@@ -80,6 +80,7 @@ export function assembleMonth(
   overrides: Record<string, Override>,
   manuals: ManualObligation[],
   tarefasFixas?: TarefaFixa[],
+  opcoes?: DerivacaoOpcoes,
 ): CalendarItem[] {
   const comp = fmtCompetencia(year, month);
   const items: CalendarItem[] = [];
@@ -97,7 +98,7 @@ export function assembleMonth(
       mm = 1;
       y += 1;
     }
-    for (const o of deriveObligations(y, mm, projects, holidays, tarefasFixas)) {
+    for (const o of deriveObligations(y, mm, projects, holidays, tarefasFixas, opcoes)) {
       derivedById.set(o.id, o);
     }
   }

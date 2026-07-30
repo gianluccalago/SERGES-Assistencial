@@ -194,3 +194,55 @@ describe('utilitário', () => {
     expect(toISODate(fromISODate('2026-07-10'))).toBe('2026-07-10');
   });
 });
+
+// ---------------------------------------------------------------------------
+// Setores: um setor fora do assistencial (ex.: Financeiro) tem calendário
+// próprio — só séries mensais e obrigações manuais. Nada do assistencial pode
+// vazar para lá (nem as regras de faturamento, nem as séries-semente).
+// ---------------------------------------------------------------------------
+describe('setores — calendário isolado fora do assistencial', () => {
+  const semMotor = { motorAssistencial: false };
+
+  it('não gera nada derivado de projeto (lote, faturamento, card)', () => {
+    const obls = deriveObligations(2026, 7, seedProjects, holidays2026, [], semMotor);
+    expect(obls.filter((o) => o.tipo === 'lotePagamento')).toHaveLength(0);
+    expect(obls.filter((o) => o.tipo === 'faturamentoIniciar')).toHaveLength(0);
+    expect(obls.filter((o) => o.tipo === 'faturamentoCard')).toHaveLength(0);
+  });
+
+  it('não gera FOPAM nem apresentações (compromissos do assistencial)', () => {
+    const obls = deriveObligations(2026, 7, seedProjects, holidays2026, [], semMotor);
+    expect(obls.filter((o) => o.tipo === 'fechamento')).toHaveLength(0);
+    expect(obls.filter((o) => o.tipo === 'apresentacao')).toHaveLength(0);
+  });
+
+  it('setor sem série cadastrada tem o mês vazio (não cai nas séries-semente)', () => {
+    expect(deriveObligations(2026, 7, seedProjects, holidays2026, [], semMotor)).toHaveLength(0);
+  });
+
+  it('gera as séries do próprio setor, com a regra de dia útil', () => {
+    const serie = { chave: 'financeiro-caixa', dia: 5, titulo: 'Fechar o caixa', modo: 'antecipa' as const };
+    const obls = deriveObligations(2026, 7, seedProjects, holidays2026, [serie], semMotor);
+    expect(obls).toHaveLength(1);
+    expect(obls[0].titulo).toBe('Fechar o caixa');
+    // 5/7/2026 é domingo: prazo crítico antecipa para sexta 3/7.
+    expect(obls[0].prazoCalculado).toBe('2026-07-03');
+  });
+
+  it('obrigações manuais do setor continuam aparecendo', () => {
+    const manual: ManualObligation = {
+      id: 'manual:fin1', titulo: 'Pagar aluguel', data: '2026-07-09',
+      tipo: 'evento', estado: 'pendente', responsavel: 'Estagiário',
+    };
+    const itens = assembleMonth(2026, 7, [], holidays2026, {}, [manual], [], semMotor);
+    expect(itens).toHaveLength(1);
+    expect(itens[0].titulo).toBe('Pagar aluguel');
+  });
+
+  it('o assistencial segue intacto (mesma derivação de sempre)', () => {
+    const antes = deriveObligations(2026, 7, seedProjects, holidays2026);
+    const depois = deriveObligations(2026, 7, seedProjects, holidays2026, undefined, { motorAssistencial: true });
+    expect(depois).toEqual(antes);
+    expect(antes.some((o) => o.tipo === 'fechamento')).toBe(true);
+  });
+});

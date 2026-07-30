@@ -1,6 +1,7 @@
 import { createContext, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import type { Session } from '@supabase/supabase-js';
 import { supabase, supabaseConfigured } from '../lib/supabase';
+import type { Setor } from '../domain/types';
 
 export type Papel = 'gestor' | 'equipe';
 
@@ -9,6 +10,8 @@ export interface Perfil {
   email: string;
   nome: string | null;
   role: Papel;
+  /** Setor dono dos dados que este usuário enxerga. */
+  setor: Setor;
 }
 
 interface AuthApi {
@@ -16,6 +19,8 @@ interface AuthApi {
   perfil: Perfil | null;
   loading: boolean;
   isGestor: boolean;
+  /** Setor do usuário logado (assistencial enquanto o perfil não carregou). */
+  setor: Setor;
   signIn: (email: string, senha: string) => Promise<{ error: string | null }>;
   signOut: () => Promise<void>;
 }
@@ -34,10 +39,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     perfilDeRef.current = userId;
     const { data } = await supabase.from('profiles').select('*').eq('id', userId).maybeSingle();
     if (data) {
-      setPerfil({ id: data.id, email: data.email ?? email, nome: data.nome ?? null, role: (data.role as Papel) ?? 'equipe' });
+      setPerfil({
+        id: data.id,
+        email: data.email ?? email,
+        nome: data.nome ?? null,
+        role: (data.role as Papel) ?? 'equipe',
+        setor: (data.setor as Setor) ?? 'assistencial',
+      });
     } else {
       // Sem perfil cadastrado: trata como equipe (sem ações de gestor) até ser provisionado.
-      setPerfil({ id: userId, email, nome: null, role: 'equipe' });
+      setPerfil({ id: userId, email, nome: null, role: 'equipe', setor: 'assistencial' });
     }
   }
 
@@ -80,6 +91,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       perfil,
       loading,
       isGestor: perfil?.role === 'gestor',
+      setor: perfil?.setor ?? 'assistencial',
       async signIn(email, senha) {
         const { error } = await supabase.auth.signInWithPassword({ email: email.trim(), password: senha });
         return { error: error ? traduzErro(error.message) : null };

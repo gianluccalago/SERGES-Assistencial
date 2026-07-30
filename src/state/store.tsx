@@ -20,6 +20,8 @@ import type {
 } from '../domain/types';
 import { proximaCompetencia, textoRecuperacao } from '../domain/workflows';
 import type { ResolucaoMes } from '../domain/types';
+import { usaMotorAssistencial, idConfigSetor, type Setor } from '../domain/types';
+import { useAuth } from '../auth/AuthProvider';
 import {
   loadState,
   defaultState,
@@ -41,7 +43,10 @@ function emptyFull(): FullState {
 }
 
 // Mapeamento estado <-> tabelas Postgres (uma linha jsonb por entidade).
-const SLICES: Slice<FullState>[] = [
+// O RLS já filtra tudo pelo setor do usuário; aqui só garantimos que a linha
+// única de configuração não colida entre setores (a chave primária é global).
+function slicesDoSetor(setor: Setor): Slice<FullState>[] {
+  return [
   {
     table: 'projects',
     extract: (s) => s.projects.map((p) => ({ key: p.id, row: { id: p.id, data: p } })),
@@ -76,10 +81,11 @@ const SLICES: Slice<FullState>[] = [
   },
   {
     table: 'app_config',
-    extract: (s) => [{ key: '1', row: { id: 1, data: s.config } }],
+    extract: (s) => [{ key: String(idConfigSetor(setor)), row: { id: idConfigSetor(setor), data: s.config } }],
     apply: (b, rows) => (rows.length ? { ...b, config: rows[0].data as AppConfig } : b),
   },
-];
+  ];
+}
 
 interface AppStore {
   state: PersistedState;
@@ -135,17 +141,29 @@ interface AppStore {
 
 const StoreContext = createContext<AppStore | null>(null);
 
+/** Estado vazio — base de um setor novo, que não herda nada do assistencial. */
+function estadoVazio(): PersistedState {
+  return { version: 0, projects: [], extraHolidays: [], overrides: {}, manualObligations: [], contatos: [], tarefasFixas: [] };
+}
+
 export function StoreProvider({ children }: { children: ReactNode }) {
+  const { perfil } = useAuth();
+  const setor: Setor = perfil?.setor ?? 'assistencial';
+  // Só o assistencial roda o motor de faturamento e herda os seeds históricos.
+  // Enquanto o perfil não chega, não derivamos nada do assistencial — assim um
+  // usuário de outro setor nunca vê FOPAM/apresentações num piscar de tela.
+  // (Sem Supabase, é o modo offline de desenvolvimento: mantém o assistencial.)
+  const motorAssistencial = !supabaseConfigured || (perfil != null && usaMotorAssistencial(setor));
   // Sem Supabase configurado, opera offline a partir do localStorage (fallback).
   const [state, setState] = useState<PersistedState>(() =>
-    supabaseConfigured ? { version: 0, projects: [], extraHolidays: [], overrides: {}, manualObligations: [], contatos: [], tarefasFixas: [] } : loadState(),
+    supabaseConfigured ? estadoVazio() : loadState(),
   );
   const [config, setConfigState] = useState<AppConfig>(() => loadConfig());
   const [ready, setReady] = useState(!supabaseConfigured);
   const [saveStatus, setSaveStatus] = useState<SaveStatus>('idle');
   const [erroCarga, setErroCarga] = useState<string | null>(null);
   const syncerRef = useRef<Syncer<FullState>>();
-  if (!syncerRef.current) syncerRef.current = new Syncer<FullState>(SLICES, emptyFull);
+  if (!syncerRef.current) syncerRef.current = new Syncer<FullState>(slicesDoSetor(setor), emptyFull);
   const syncer = syncerRef.current;
   const loadedRef = useRef(!supabaseConfigured);
 
@@ -157,7 +175,13 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       try {
         const { state: loaded, hadRows } = await syncer.load();
         if (cancelado) return;
-        if (!hadRows) {
+        if (!hadRows && !motorAssistencial) {
+          // Setor novo (ex.: Financeiro) começa VAZIO — nunca herda os projetos,
+          // contatos e séries do assistencial, que são de outra operação.
+          setState(estadoVazio());
+          loadedRef.current = true;
+          setReady(true);
+        } else if (!hadRows) {
           // Banco vazio: importa o que houver no localStorage (ou os seeds).
           const local = loadState();
           const localCfg = loadConfig();
@@ -416,8 +440,12 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       },
       itemsFor(year, month) {
         const holidays = buildHolidaySet([year - 1, year, year + 1], state.extraHolidays);
-        const tf = state.tarefasFixas.length ? state.tarefasFixas : undefined;
-        return assembleMonth(year, month, state.projects, holidays, state.overrides, state.manualObligations, tf);
+        // Fora do assistencial NÃO cai nas séries-semente (0600, ASF, contrato
+        // social…): setor sem série cadastrada tem calendário vazio mesmo.
+        const tf = state.tarefasFixas.length || !motorAssistencial ? state.tarefasFixas : undefined;
+        return assembleMonth(year, month, state.projects, holidays, state.overrides, state.manualObligations, tf, {
+          motorAssistencial,
+        });
       },
       dismissedFor(year, month) {
         const comp = `${year}-${String(month).padStart(2, '0')}`;
@@ -428,8 +456,8 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       dismissedItemsFor(year, month) {
         const holidays = buildHolidaySet([year - 1, year, year + 1], state.extraHolidays);
         const comp = `${year}-${String(month).padStart(2, '0')}`;
-        const tf = state.tarefasFixas.length ? state.tarefasFixas : undefined;
-        return deriveObligations(year, month, state.projects, holidays, tf)
+        const tf = state.tarefasFixas.length || !motorAssistencial ? state.tarefasFixas : undefined;
+        return deriveObligations(year, month, state.projects, holidays, tf, { motorAssistencial })
           .filter((o) => state.overrides[o.id]?.dismissed && o.competencia === comp)
           .map((o) => ({ id: o.id, titulo: o.titulo }));
       },
@@ -437,7 +465,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
         setState(defaultState());
       },
     };
-  }, [state, config, saveStatus]);
+  }, [state, config, saveStatus, motorAssistencial]);
 
   if (erroCarga) {
     return (

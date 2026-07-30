@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { supabase } from '../../lib/supabase';
 import type { Papel, Perfil } from '../../auth/AuthProvider';
 import { useAuth } from '../../auth/AuthProvider';
+import { SETORES, SETOR_LABEL, type Setor } from '../../domain/types';
 
 const PAPEL_LABEL: Record<Papel, string> = { gestor: 'Gestor', equipe: 'Equipe' };
 
@@ -28,12 +29,13 @@ async function viaEdgeFunction(body: Record<string, unknown>) {
   return data;
 }
 
-async function criarUsuario(p: { email: string; senha: string; nome: string; role: Papel }) {
+async function criarUsuario(p: { email: string; senha: string; nome: string; role: Papel; setor: Setor }) {
   const { error } = await supabase.rpc('admin_criar_usuario', {
     p_email: p.email,
     p_senha: p.senha,
     p_nome: p.nome,
     p_papel: p.role,
+    p_setor: p.setor,
   });
   if (!error) return;
   if (!rpcAusente(error)) throw new Error(error.message);
@@ -49,7 +51,7 @@ async function excluirUsuario(id: string) {
 
 /** Papel e nome ficam em public.profiles — o RLS já permite ao gestor gravar,
  * então não precisa de servidor nenhum. */
-async function atualizarPerfil(id: string, patch: { role?: Papel; nome?: string }) {
+async function atualizarPerfil(id: string, patch: { role?: Papel; nome?: string; setor?: Setor }) {
   const { error } = await supabase.from('profiles').update(patch).eq('id', id);
   if (error) throw new Error(error.message);
 }
@@ -60,7 +62,7 @@ export function UsersAdmin() {
   const [erro, setErro] = useState<string | null>(null);
   const [carregando, setCarregando] = useState(true);
   const [criando, setCriando] = useState(false);
-  const [novo, setNovo] = useState({ email: '', senha: '', nome: '', role: 'equipe' as Papel });
+  const [novo, setNovo] = useState({ email: '', senha: '', nome: '', role: 'equipe' as Papel, setor: 'assistencial' as Setor });
   const [salvando, setSalvando] = useState(false);
 
   async function carregar() {
@@ -79,8 +81,8 @@ export function UsersAdmin() {
     setErro(null);
     setSalvando(true);
     try {
-      await criarUsuario({ email: novo.email.trim(), senha: novo.senha, nome: novo.nome.trim(), role: novo.role });
-      setNovo({ email: '', senha: '', nome: '', role: 'equipe' });
+      await criarUsuario({ email: novo.email.trim(), senha: novo.senha, nome: novo.nome.trim(), role: novo.role, setor: novo.setor });
+      setNovo({ email: '', senha: '', nome: '', role: 'equipe', setor: 'assistencial' });
       setCriando(false);
       await carregar();
     } catch (e) {
@@ -97,6 +99,17 @@ export function UsersAdmin() {
       await atualizarPerfil(id, { role });
     } catch (e) {
       setErro(e instanceof Error ? e.message : 'Falha ao atualizar.');
+      void carregar();
+    }
+  }
+
+  async function mudarSetor(id: string, setor: Setor) {
+    setErro(null);
+    setPerfis((ps) => ps.map((p) => (p.id === id ? { ...p, setor } : p)));
+    try {
+      await atualizarPerfil(id, { setor });
+    } catch (e) {
+      setErro(e instanceof Error ? e.message : 'Falha ao mudar o setor.');
       void carregar();
     }
   }
@@ -141,6 +154,12 @@ export function UsersAdmin() {
               <select className="select" value={novo.role} onChange={(e) => setNovo({ ...novo, role: e.target.value as Papel })}>
                 {(Object.keys(PAPEL_LABEL) as Papel[]).map((r) => <option key={r} value={r}>{PAPEL_LABEL[r]}</option>)}
               </select>
+              <label className="block sm:col-span-2">
+                <span className="label mb-1 block">Setor — define qual calendário a pessoa enxerga</span>
+                <select className="select" value={novo.setor} onChange={(e) => setNovo({ ...novo, setor: e.target.value as Setor })}>
+                  {SETORES.map((s) => <option key={s} value={s}>{SETOR_LABEL[s]}</option>)}
+                </select>
+              </label>
             </div>
             <button className="btn-primary mt-3" disabled={salvando || !novo.email || novo.senha.length < 6} onClick={criar}>
               {salvando ? 'Criando…' : 'Criar usuário'}
@@ -165,7 +184,10 @@ export function UsersAdmin() {
                   />
                   <div className="mt-0.5 truncate text-[length:var(--text-label)] text-[var(--color-ink-soft)]">{p.email}</div>
                 </div>
-                <select className="select w-auto" value={p.role} onChange={(e) => mudarPapel(p.id, e.target.value as Papel)}>
+                <select className="select w-auto" title="Setor (qual calendário a pessoa enxerga)" value={p.setor ?? 'assistencial'} onChange={(e) => mudarSetor(p.id, e.target.value as Setor)}>
+                  {SETORES.map((s) => <option key={s} value={s}>{SETOR_LABEL[s]}</option>)}
+                </select>
+                <select className="select w-auto" title="Papel" value={p.role} onChange={(e) => mudarPapel(p.id, e.target.value as Papel)}>
                   {(Object.keys(PAPEL_LABEL) as Papel[]).map((r) => <option key={r} value={r}>{PAPEL_LABEL[r]}</option>)}
                 </select>
                 <button

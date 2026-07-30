@@ -2,6 +2,7 @@ import { useState, type ReactNode } from 'react';
 import { useStore } from '../../state/store';
 import { useAuth } from '../../auth/AuthProvider';
 import { SergesLogo, SergesMark } from './Logo';
+import { SETOR_LABEL, type Setor } from '../../domain/types';
 
 type Dest = 'calendario' | 'contatos' | 'projetos' | 'series' | 'comercial' | 'apresentacao' | 'usuarios';
 
@@ -33,6 +34,9 @@ export function Sidebar({
 }) {
   const store = useStore();
   const { perfil, isGestor, signOut } = useAuth();
+  const setor: Setor = perfil?.setor ?? 'assistencial';
+  // Comercial e Apresentação de Resultados são do Assistencial.
+  const doAssistencial = setor === 'assistencial';
   const [collapsed, setCollapsed] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
 
@@ -42,8 +46,8 @@ export function Sidebar({
     { id: 'projetos', label: 'Projetos' },
     { id: 'series', label: 'Séries' },
     // Setor Comercial Público e Apresentação de Resultados são exclusivos de gestores.
-    ...(isGestor ? [{ id: 'comercial' as Dest, label: 'Setor Comercial Público' }] : []),
-    ...(isGestor ? [{ id: 'apresentacao' as Dest, label: 'Apresentação de Resultados' }] : []),
+    ...(isGestor && doAssistencial ? [{ id: 'comercial' as Dest, label: 'Setor Comercial Público' }] : []),
+    ...(isGestor && doAssistencial ? [{ id: 'apresentacao' as Dest, label: 'Apresentação de Resultados' }] : []),
     { id: 'usuarios', label: 'Usuários' },
   ];
 
@@ -89,7 +93,9 @@ export function Sidebar({
         {perfil && !collapsed && (
           <div className="px-2 pt-1">
             <div className="truncate text-[length:var(--text-caption)] text-[var(--color-ink-soft)]" title={perfil.email}>{perfil.email}</div>
-            <div className="text-[length:var(--text-caption)] text-[var(--color-ink-faint)]">{isGestor ? 'Gestor' : 'Equipe'}</div>
+            <div className="text-[length:var(--text-caption)] text-[var(--color-ink-faint)]">
+              {SETOR_LABEL[setor]} · {isGestor ? 'Gestor' : 'Equipe'}
+            </div>
           </div>
         )}
         <button className="nav-item w-full" onClick={() => void signOut()} title="Sair">

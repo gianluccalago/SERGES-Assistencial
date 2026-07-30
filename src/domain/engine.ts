@@ -73,6 +73,17 @@ const DEP_EXIGE_RETORNO = new Set([
   'escalista',
 ]);
 
+/** Opções de derivação — o que muda entre setores. */
+export interface DerivacaoOpcoes {
+  /**
+   * Aplica as regras do assistencial: obrigações derivadas de projeto (lote de
+   * pagamento, iniciar faturamento, card de faturamento), FOPAM de fechamento e
+   * apresentações. Padrão `true` (comportamento histórico). Setores como o
+   * Financeiro passam `false` e usam só séries + obrigações manuais.
+   */
+  motorAssistencial?: boolean;
+}
+
 /** Séries fixas padrão (seed). A partir daqui são editáveis e persistidas. */
 export const SEED_TAREFAS_FIXAS: TarefaFixa[] = [
   {
@@ -127,10 +138,15 @@ export function deriveObligations(
   projects: Project[],
   holidays: Set<string>,
   tarefasFixas: TarefaFixa[] = SEED_TAREFAS_FIXAS,
+  opcoes: DerivacaoOpcoes = {},
 ): Obligation[] {
+  // Regras específicas do assistencial (lotes de pagamento, cards de
+  // faturamento, FOPAM e apresentações). Outros setores montam o calendário
+  // só com séries mensais e obrigações manuais.
+  const { motorAssistencial = true } = opcoes;
   const comp = fmtCompetencia(year, month);
   const out: Obligation[] = [];
-  const ativos = projects.filter((p) => p.ativo);
+  const ativos = motorAssistencial ? projects.filter((p) => p.ativo) : [];
 
   for (const p of ativos) {
     // --- Lote de pagamento (um por projeto/mês, contém os cards de médico) ---
@@ -214,6 +230,9 @@ export function deriveObligations(
       critico: t.critico,
     });
   }
+
+  // FOPAM e apresentações são compromissos do assistencial.
+  if (!motorAssistencial) return out;
 
   // --- FOPAM de fechamento: último dia útil do mês ---
   {

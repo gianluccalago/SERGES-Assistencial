@@ -1,5 +1,48 @@
 // Tipos centrais do domínio. Nenhuma dependência de UI ou persistência.
 
+/**
+ * Setor (área da empresa) dono dos dados. Cada setor tem o próprio calendário:
+ * projetos, séries, obrigações e contatos são isolados — ninguém vê o do outro
+ * (o isolamento é garantido no banco por RLS, não só na tela).
+ *
+ * - `assistencial`: setor original, com o motor de faturamento (lotes de
+ *   pagamento, cards de faturamento, FOPAM e apresentações).
+ * - `financeiro`: calendário próprio, montado por séries mensais e obrigações
+ *   criadas à mão — sem as regras específicas do assistencial.
+ */
+export type Setor = 'assistencial' | 'financeiro';
+
+export const SETORES: Setor[] = ['assistencial', 'financeiro'];
+
+export const SETOR_LABEL: Record<Setor, string> = {
+  assistencial: 'Assistencial',
+  financeiro: 'Financeiro',
+};
+
+/** O setor roda o motor de regras do assistencial (faturamento/FOPAM)? */
+export function usaMotorAssistencial(setor: Setor): boolean {
+  return setor === 'assistencial';
+}
+
+/**
+ * Prefixo dos ids criados no setor. As chaves primárias são globais no banco,
+ * então ids gerados a partir do nome (projetos) precisam ser separados por
+ * setor para dois setores poderem ter "Fornecedores" sem colidir. O
+ * assistencial fica sem prefixo, preservando todos os ids já existentes.
+ */
+export function prefixoSetor(setor: Setor): string {
+  return setor === 'assistencial' ? '' : `${setor}-`;
+}
+
+/**
+ * Id da linha única de configuração do setor em `app_config` (chave primária
+ * numérica e global). O assistencial mantém o id 1 histórico.
+ */
+export function idConfigSetor(setor: Setor): number {
+  const i = SETORES.indexOf(setor);
+  return i < 0 ? 1 : i + 1;
+}
+
 export type DependenciaFaturamento =
   | 'nenhuma'
   | 'fixo'

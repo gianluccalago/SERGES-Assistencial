@@ -49,7 +49,8 @@ const TITULO_PAGINA: Record<Screen, string> = {
 
 export function App() {
   const store = useStore();
-  const { isGestor } = useAuth();
+  const { isGestor, setor } = useAuth();
+  const doAssistencial = setor === 'assistencial';
   const [screen, setScreen] = useState<Screen>('dia');
   const [view, setView] = useState<View>('dia');
   const [cursorISO, setCursorISO] = useState<string>(todayISO());
@@ -197,8 +198,8 @@ export function App() {
           {screen === 'contatos' && <ContatosPage />}
           {screen === 'projetos' && <AdminGuard><ProjectsAdmin /></AdminGuard>}
           {screen === 'series' && <AdminGuard><SeriesAdmin /></AdminGuard>}
-          {screen === 'comercial' && (isGestor ? <ComercialPage /> : <p className="text-[var(--color-ink-soft)]">Área exclusiva do gestor.</p>)}
-          {screen === 'apresentacao' && (isGestor ? <ApresentacaoPage /> : <p className="text-[var(--color-ink-soft)]">Área exclusiva do gestor.</p>)}
+          {screen === 'comercial' && (isGestor && doAssistencial ? <ComercialPage /> : <p className="text-[var(--color-ink-soft)]">Área exclusiva do gestor do Assistencial.</p>)}
+          {screen === 'apresentacao' && (isGestor && doAssistencial ? <ApresentacaoPage /> : <p className="text-[var(--color-ink-soft)]">Área exclusiva do gestor do Assistencial.</p>)}
           {screen === 'usuarios' && <AdminGuard><UsersAdmin /></AdminGuard>}
         </main>
       </div>
