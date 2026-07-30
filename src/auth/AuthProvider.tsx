@@ -1,4 +1,4 @@
-import { createContext, useContext, useEffect, useMemo, useState, type ReactNode } from 'react';
+import { createContext, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import type { Session } from '@supabase/supabase-js';
 import { supabase, supabaseConfigured } from '../lib/supabase';
 
@@ -26,8 +26,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [session, setSession] = useState<Session | null>(null);
   const [perfil, setPerfil] = useState<Perfil | null>(null);
   const [loading, setLoading] = useState(true);
+  /** Usuário cujo perfil já foi buscado — evita refetch a cada renovação de token. */
+  const perfilDeRef = useRef<string | null>(null);
 
   async function carregarPerfil(userId: string, email: string) {
+    if (perfilDeRef.current === userId) return;
+    perfilDeRef.current = userId;
     const { data } = await supabase.from('profiles').select('*').eq('id', userId).maybeSingle();
     if (data) {
       setPerfil({ id: data.id, email: data.email ?? email, nome: data.nome ?? null, role: (data.role as Papel) ?? 'equipe' });
@@ -42,17 +46,32 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setLoading(false);
       return;
     }
-    supabase.auth.getSession().then(async ({ data }) => {
-      setSession(data.session);
-      if (data.session?.user) await carregarPerfil(data.session.user.id, data.session.user.email ?? '');
-      setLoading(false);
-    });
+    // Failsafe: se getSession()/perfil travarem (token renovando, rede ruim), o app
+    // não pode ficar preso no "Carregando…" para sempre. Libera e segue.
+    const destravar = setTimeout(() => setLoading(false), 8000);
+    supabase.auth
+      .getSession()
+      .then(async ({ data }) => {
+        setSession(data.session);
+        if (data.session?.user) await carregarPerfil(data.session.user.id, data.session.user.email ?? '');
+      })
+      .catch((e) => console.error('[auth] falha ao obter sessão', e))
+      .finally(() => {
+        clearTimeout(destravar);
+        setLoading(false);
+      });
     const { data: sub } = supabase.auth.onAuthStateChange(async (_e, s) => {
       setSession(s);
       if (s?.user) await carregarPerfil(s.user.id, s.user.email ?? '');
-      else setPerfil(null);
+      else {
+        perfilDeRef.current = null;
+        setPerfil(null);
+      }
     });
-    return () => sub.subscription.unsubscribe();
+    return () => {
+      clearTimeout(destravar);
+      sub.subscription.unsubscribe();
+    };
   }, []);
 
   const api = useMemo<AuthApi>(

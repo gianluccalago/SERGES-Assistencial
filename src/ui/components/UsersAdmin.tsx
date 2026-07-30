@@ -5,12 +5,53 @@ import { useAuth } from '../../auth/AuthProvider';
 
 const PAPEL_LABEL: Record<Papel, string> = { gestor: 'Gestor', equipe: 'Equipe' };
 
-/** Chama a Edge Function admin-users; lança erro com mensagem amigável. */
-async function adminUsers(body: Record<string, unknown>) {
+/**
+ * Criar/excluir usuário roda no banco (funções admin_criar_usuario /
+ * admin_excluir_usuario, que checam o papel de gestor). Se elas ainda não
+ * existirem, cai na Edge Function admin-users — e, se nenhuma das duas estiver
+ * disponível, explica exatamente o que fazer em vez de um erro genérico.
+ */
+const FALTA_SETUP =
+  'A administração de usuários ainda não foi instalada no banco. Rode o arquivo ' +
+  'supabase/admin_usuarios.sql no SQL Editor do Supabase (uma vez) e tente de novo.';
+
+/** Erro de "função inexistente" no PostgREST (não instalada ainda). */
+function rpcAusente(e: { code?: string; message?: string } | null): boolean {
+  if (!e) return false;
+  return e.code === 'PGRST202' || /could not find the function|does not exist/i.test(e.message ?? '');
+}
+
+async function viaEdgeFunction(body: Record<string, unknown>) {
   const { data, error } = await supabase.functions.invoke('admin-users', { body });
-  if (error) throw new Error('Falha ao falar com o servidor. A função admin-users está publicada?');
+  if (error) throw new Error(FALTA_SETUP);
   if (!data?.ok) throw new Error(data?.error || 'Operação não permitida.');
   return data;
+}
+
+async function criarUsuario(p: { email: string; senha: string; nome: string; role: Papel }) {
+  const { error } = await supabase.rpc('admin_criar_usuario', {
+    p_email: p.email,
+    p_senha: p.senha,
+    p_nome: p.nome,
+    p_papel: p.role,
+  });
+  if (!error) return;
+  if (!rpcAusente(error)) throw new Error(error.message);
+  await viaEdgeFunction({ action: 'create', email: p.email, password: p.senha, nome: p.nome, role: p.role });
+}
+
+async function excluirUsuario(id: string) {
+  const { error } = await supabase.rpc('admin_excluir_usuario', { p_id: id });
+  if (!error) return;
+  if (!rpcAusente(error)) throw new Error(error.message);
+  await viaEdgeFunction({ action: 'delete', id });
+}
+
+/** Papel e nome ficam em public.profiles — o RLS já permite ao gestor gravar,
+ * então não precisa de servidor nenhum. */
+async function atualizarPerfil(id: string, patch: { role?: Papel; nome?: string }) {
+  const { error } = await supabase.from('profiles').update(patch).eq('id', id);
+  if (error) throw new Error(error.message);
 }
 
 export function UsersAdmin() {
@@ -38,7 +79,7 @@ export function UsersAdmin() {
     setErro(null);
     setSalvando(true);
     try {
-      await adminUsers({ action: 'create', email: novo.email.trim(), password: novo.senha, nome: novo.nome.trim(), role: novo.role });
+      await criarUsuario({ email: novo.email.trim(), senha: novo.senha, nome: novo.nome.trim(), role: novo.role });
       setNovo({ email: '', senha: '', nome: '', role: 'equipe' });
       setCriando(false);
       await carregar();
@@ -53,7 +94,7 @@ export function UsersAdmin() {
     setErro(null);
     setPerfis((ps) => ps.map((p) => (p.id === id ? { ...p, role } : p)));
     try {
-      await adminUsers({ action: 'update', id, role });
+      await atualizarPerfil(id, { role });
     } catch (e) {
       setErro(e instanceof Error ? e.message : 'Falha ao atualizar.');
       void carregar();
@@ -63,7 +104,7 @@ export function UsersAdmin() {
   async function renomear(id: string, nome: string) {
     setErro(null);
     try {
-      await adminUsers({ action: 'update', id, nome });
+      await atualizarPerfil(id, { nome });
     } catch (e) {
       setErro(e instanceof Error ? e.message : 'Falha ao renomear.');
       void carregar();
@@ -74,7 +115,7 @@ export function UsersAdmin() {
     if (!confirm(`Excluir o usuário ${p.email}? Esta ação não pode ser desfeita.`)) return;
     setErro(null);
     try {
-      await adminUsers({ action: 'delete', id: p.id });
+      await excluirUsuario(p.id);
       setPerfis((ps) => ps.filter((x) => x.id !== p.id));
     } catch (e) {
       setErro(e instanceof Error ? e.message : 'Falha ao excluir.');

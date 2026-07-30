@@ -51,20 +51,24 @@ A migração é **automática e sem perda**:
 
 ### Administração de usuários (criar/excluir pela tela "Usuários")
 
-Criar e excluir usuários usa a Admin API do Supabase, que exige a chave secreta — por isso fica numa **Edge Function** (`supabase/functions/admin-users`), nunca no navegador. Publique uma vez:
+**Recomendado — rode [`admin_usuarios.sql`](./admin_usuarios.sql) no SQL Editor (uma vez).**
+Ele cria duas funções no próprio Postgres (`admin_criar_usuario` e
+`admin_excluir_usuario`) que rodam com privilégio elevado mas **só aceitam
+chamadas de gestor**. Com isso a tela **Usuários** funciona por completo —
+criar, renomear, mudar papel e excluir — **sem publicar nenhuma Edge Function**.
 
-**Opção A — pelo painel (sem instalar nada):**
-1. No Supabase, vá em **Edge Functions → Create a function**, nome **`admin-users`**.
-2. Cole o conteúdo de [`functions/admin-users/index.ts`](./functions/admin-users/index.ts) e **Deploy**.
+> Renomear e mudar papel nem passam por essas funções: gravam direto em
+> `public.profiles`, onde o RLS já permite ao gestor escrever.
 
-**Opção B — pela CLI:**
-```bash
-supabase functions deploy admin-users
-```
+**Alternativa — Edge Function** (`supabase/functions/admin-users`), caso prefira
+usar a Admin API em vez das funções SQL. O app tenta as funções do banco
+primeiro e cai nesta automaticamente se elas não existirem.
+
+- Pelo painel: **Edge Functions → Create a function**, nome **`admin-users`**,
+  cole [`functions/admin-users/index.ts`](./functions/admin-users/index.ts) e **Deploy**.
+- Pela CLI: `supabase functions deploy admin-users`
 
 > Não precisa configurar segredos: `SUPABASE_URL`, `SUPABASE_ANON_KEY` e `SUPABASE_SERVICE_ROLE_KEY` já existem no ambiente das Edge Functions. A função verifica que o chamador é **gestor** antes de qualquer ação.
-
-Depois disso, na tela **Usuários** (logado como gestor) dá para **criar, renomear, mudar o papel e excluir** usuários direto pelo app.
 
 ## 5. Verificação
 

@@ -8,6 +8,24 @@ import { supabase } from './supabase';
 
 export type SaveStatus = 'idle' | 'saving' | 'saved' | 'error';
 
+/** Teto de espera por consulta de tabela na carga inicial. Uma requisição presa
+ * (rede instável, token renovando) não pode travar o app para sempre: a fatia
+ * lenta é ignorada e o realtime/reload traz os dados quando chegarem. */
+const TIMEOUT_CARGA_MS = 12_000;
+
+/** Resolve com `fallback` se a promessa demorar demais ou falhar (nunca rejeita). */
+async function comTimeout<T>(p: PromiseLike<T>, ms: number, fallback: T): Promise<T> {
+  let timer: ReturnType<typeof setTimeout> | undefined;
+  const limite = new Promise<T>((resolve) => {
+    timer = setTimeout(() => resolve(fallback), ms);
+  });
+  try {
+    return await Promise.race([Promise.resolve(p).catch(() => fallback), limite]);
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
 /** Descreve uma coleção do estado mapeada para uma tabela do Postgres. */
 export interface Slice<S> {
   /** Nome da tabela. */
@@ -47,7 +65,14 @@ export class Syncer<S> {
     const results = await Promise.all(
       this.slices.map(async (s) => {
         const pk = this.pkOf(s);
-        const { data, error } = await supabase.from(s.table).select('*').order(pk);
+        const consulta = (async () => {
+          const r = await supabase.from(s.table).select('*').order(pk);
+          return { data: r.data as Record<string, unknown>[] | null, error: r.error as { message: string } | null };
+        })();
+        const { data, error } = await comTimeout(consulta, TIMEOUT_CARGA_MS, {
+          data: null,
+          error: { message: `tempo esgotado (> ${TIMEOUT_CARGA_MS / 1000}s)` },
+        });
         return { s, pk, data, error };
       }),
     );

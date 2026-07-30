@@ -445,27 +445,33 @@ export function StoreProvider({ children }: { children: ReactNode }) {
         <div>
           <p className="mb-2 font-medium text-[var(--color-overdue)]">Falha ao carregar os dados</p>
           <p className="text-[length:var(--text-label)] text-[var(--color-ink-soft)]">{erroCarga}</p>
+          <button className="btn-secondary mt-4" onClick={() => window.location.reload()}>
+            Tentar de novo
+          </button>
         </div>
       </div>
     );
   }
-  if (!ready) {
-    // Esqueleto de carga: estrutura da tela, não texto solto.
-    return (
-      <div className="mx-auto max-w-[760px] px-6 pt-16">
-        <div className="skeleton h-7 w-56" />
-        <div className="mt-6 space-y-3">
-          <div className="skeleton h-24 w-full" />
-          <div className="skeleton h-14 w-full" />
-          <div className="skeleton h-14 w-full" />
-          <div className="skeleton h-14 w-3/4" />
+  // Enquanto carrega, mostra o esqueleto MAS já monta os filhos (ocultos): assim
+  // os providers aninhados (Comercial, Apresentação) disparam suas consultas em
+  // paralelo com as daqui, em vez de esperarem esta carga terminar (cascata).
+  return (
+    <StoreContext.Provider value={store}>
+      {!ready && (
+        <div className="mx-auto max-w-[760px] px-6 pt-16">
+          <div className="skeleton h-7 w-56" />
+          <div className="mt-6 space-y-3">
+            <div className="skeleton h-24 w-full" />
+            <div className="skeleton h-14 w-full" />
+            <div className="skeleton h-14 w-full" />
+            <div className="skeleton h-14 w-3/4" />
+          </div>
+          <p className="label mt-6 text-center">Carregando…</p>
         </div>
-        <p className="label mt-6 text-center">Carregando…</p>
-      </div>
-    );
-  }
-
-  return <StoreContext.Provider value={store}>{children}</StoreContext.Provider>;
+      )}
+      {ready ? children : <div hidden>{children}</div>}
+    </StoreContext.Provider>
+  );
 }
 
 export function useStore(): AppStore {
