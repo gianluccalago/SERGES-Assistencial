@@ -22,11 +22,35 @@ if (!supabaseConfigured) {
   );
 }
 
+/**
+ * Trava de acesso ao token SEM o Web Locks API (`navigator.locks`).
+ *
+ * O supabase-js usa `navigator.locks` para coordenar a renovação do token entre
+ * abas. Na prática, uma trava órfã (aba fechada no meio de um refresh, guia
+ * duplicada, navegador restaurando sessão) faz `getSession()` **nunca resolver**
+ * — e o app fica preso no "Carregando…" para sempre, sem erro nenhum.
+ *
+ * Aqui serializamos as chamadas numa fila em memória: mesma garantia dentro da
+ * aba, sem a trava entre abas que pode emperrar. O pior caso vira uma renovação
+ * de token repetida entre abas (inofensiva), em vez de um app travado.
+ */
+let fila: Promise<unknown> = Promise.resolve();
+function travaLocal<R>(_nome: string, _timeout: number, fn: () => Promise<R>): Promise<R> {
+  const proxima = fila.then(fn, fn);
+  fila = proxima.catch(() => {});
+  return proxima;
+}
+
 export const supabase: SupabaseClient = createClient(
   url || 'http://localhost:54321',
   anonKey || 'public-anon-key',
   {
-    auth: { persistSession: true, autoRefreshToken: true, detectSessionInUrl: false },
+    auth: {
+      persistSession: true,
+      autoRefreshToken: true,
+      detectSessionInUrl: false,
+      lock: travaLocal,
+    },
   },
 );
 

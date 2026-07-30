@@ -27,6 +27,19 @@ interface AuthApi {
 
 const Ctx = createContext<AuthApi | null>(null);
 
+/** Resolve com `fallback` se a promessa demorar demais ou falhar (nunca rejeita). */
+async function comTeto<T>(p: PromiseLike<T>, ms: number, fallback: T): Promise<T> {
+  let timer: ReturnType<typeof setTimeout> | undefined;
+  const limite = new Promise<T>((resolve) => {
+    timer = setTimeout(() => resolve(fallback), ms);
+  });
+  try {
+    return await Promise.race([Promise.resolve(p).catch(() => fallback), limite]);
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [session, setSession] = useState<Session | null>(null);
   const [perfil, setPerfil] = useState<Perfil | null>(null);
@@ -37,12 +50,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   async function carregarPerfil(userId: string, email: string) {
     if (perfilDeRef.current === userId) return;
     perfilDeRef.current = userId;
-    const { data } = await supabase.from('profiles').select('*').eq('id', userId).maybeSingle();
+    // Consulta com teto de tempo: nada aqui pode segurar a tela.
+    const consulta = (async () => {
+      const r = await supabase.from('profiles').select('*').eq('id', userId).maybeSingle();
+      return { data: r.data as Record<string, unknown> | null };
+    })();
+    const { data } = await comTeto(consulta, 6000, { data: null });
     if (data) {
       setPerfil({
-        id: data.id,
-        email: data.email ?? email,
-        nome: data.nome ?? null,
+        id: String(data.id),
+        email: (data.email as string) ?? email,
+        nome: (data.nome as string) ?? null,
         role: (data.role as Papel) ?? 'equipe',
         setor: (data.setor as Setor) ?? 'assistencial',
       });
@@ -57,28 +75,32 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setLoading(false);
       return;
     }
-    // Failsafe: se getSession()/perfil travarem (token renovando, rede ruim), o app
-    // não pode ficar preso no "Carregando…" para sempre. Libera e segue.
-    const destravar = setTimeout(() => setLoading(false), 8000);
-    supabase.auth
-      .getSession()
-      .then(async ({ data }) => {
-        setSession(data.session);
-        if (data.session?.user) await carregarPerfil(data.session.user.id, data.session.user.email ?? '');
-      })
-      .catch((e) => console.error('[auth] falha ao obter sessão', e))
-      .finally(() => {
-        clearTimeout(destravar);
-        setLoading(false);
-      });
-    const { data: sub } = supabase.auth.onAuthStateChange(async (_e, s) => {
+
+    // 1) O ouvinte vem PRIMEIRO: ele dispara INITIAL_SESSION assim que o cliente
+    //    lê o token do localStorage — costuma chegar antes do getSession().
+    const { data: sub } = supabase.auth.onAuthStateChange((_e, s) => {
       setSession(s);
-      if (s?.user) await carregarPerfil(s.user.id, s.user.email ?? '');
+      setLoading(false);
+      if (s?.user) void carregarPerfil(s.user.id, s.user.email ?? '');
       else {
         perfilDeRef.current = null;
         setPerfil(null);
       }
     });
+
+    // 2) getSession com teto próprio. Se estourar, seguimos com o que o ouvinte
+    //    trouxer — nunca ficamos esperando para sempre.
+    void (async () => {
+      const consulta = (async () => (await supabase.auth.getSession()).data.session)();
+      const sessao = await comTeto<Session | null>(consulta, 5000, null);
+      setSession((atual) => atual ?? sessao);
+      if (sessao?.user) void carregarPerfil(sessao.user.id, sessao.user.email ?? '');
+      setLoading(false);
+    })();
+
+    // 3) Rede de segurança final: aconteça o que acontecer, a tela destrava.
+    //    (Sem sessão, cai no login — melhor que um "Carregando…" eterno.)
+    const destravar = setTimeout(() => setLoading(false), 6000);
     return () => {
       clearTimeout(destravar);
       sub.subscription.unsubscribe();
