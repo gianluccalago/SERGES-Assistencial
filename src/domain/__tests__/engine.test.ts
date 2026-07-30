@@ -246,3 +246,35 @@ describe('setores — calendário isolado fora do assistencial', () => {
     expect(antes.some((o) => o.tipo === 'fechamento')).toBe(true);
   });
 });
+
+// ---------------------------------------------------------------------------
+// Responsável de série: definido uma vez, vale para todos os meses; editar a
+// obrigação de um mês continua sobrepondo apenas aquele mês.
+// ---------------------------------------------------------------------------
+describe('responsável da série', () => {
+  const serie = {
+    chave: 'financeiro-caixa', dia: 10, titulo: 'Fechar o caixa',
+    modo: 'adia' as const, responsavel: 'Juliano',
+  };
+
+  it('propaga para a obrigação gerada em qualquer mês', () => {
+    for (const m of [1, 7, 12]) {
+      const obls = deriveObligations(2026, m, [], holidays2026, [serie], { motorAssistencial: false });
+      expect(obls[0].responsavel).toBe('Juliano');
+    }
+  });
+
+  it('série sem responsável continua sem responsável (nada quebra)', () => {
+    const semResp = { chave: 'x', dia: 5, titulo: 'Algo', modo: 'adia' as const };
+    const obls = deriveObligations(2026, 7, [], holidays2026, [semResp], { motorAssistencial: false });
+    expect(obls[0].responsavel).toBeUndefined();
+  });
+
+  it('editar um mês sobrepõe só aquele mês', () => {
+    const ov: Record<string, Override> = { 'fixa:financeiro-caixa:2026-07': { responsavel: 'Estagiário' } };
+    const julho = assembleMonth(2026, 7, [], holidays2026, ov, [], [serie], { motorAssistencial: false });
+    const agosto = assembleMonth(2026, 8, [], holidays2026, ov, [], [serie], { motorAssistencial: false });
+    expect(itemById(julho, 'fixa:financeiro-caixa:2026-07').responsavel).toBe('Estagiário');
+    expect(itemById(agosto, 'fixa:financeiro-caixa:2026-08').responsavel).toBe('Juliano');
+  });
+});

@@ -132,6 +132,9 @@ export interface TarefaFixa {
   titulo: string;
   modo: AjusteDiaUtil;
   critico?: boolean;
+  /** Responsável padrão da série; vale para todos os meses. Editar a obrigação
+   * de um mês específico continua sobrepondo só aquele mês. */
+  responsavel?: string;
 }
 
 /** Obrigação derivada por regra. Função pura do motor; imutável. */

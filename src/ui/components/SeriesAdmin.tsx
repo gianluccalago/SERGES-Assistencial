@@ -66,6 +66,15 @@ function SerieCard({ t, onChange, onRemove }: { t: TarefaFixa; onChange: (p: Par
           Crítico
         </label>
       </div>
+      <label className="mt-3 block">
+        <span className="label mb-1 block">Responsável (vale para todos os meses)</span>
+        <input
+          className="input"
+          defaultValue={t.responsavel ?? ''}
+          placeholder="Nome de quem responde por esta série"
+          onBlur={(e) => e.target.value !== (t.responsavel ?? '') && onChange({ responsavel: e.target.value.trim() || undefined })}
+        />
+      </label>
       <div className="mt-2 flex items-center justify-between">
         <span className="label">Regra de origem: dia-âncora {t.dia}, regra de dia útil ({t.modo}).</span>
         <button className="btn-ghost text-[var(--color-overdue)]" onClick={onRemove}>Excluir série</button>

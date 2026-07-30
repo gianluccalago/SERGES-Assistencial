@@ -227,6 +227,7 @@ export function deriveObligations(
       competencia: comp,
       prazoCalculado: toISODate(prazo),
       estado: 'pendente',
+      responsavel: t.responsavel,
       critico: t.critico,
     });
   }

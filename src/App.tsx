@@ -83,11 +83,17 @@ export function App() {
     return { atrasadas, aguardando, vencendo, concluidas, total: monthItems.length };
   }, [monthItems]);
 
+  // Lista do filtro de responsáveis: quem de fato responde por alguma obrigação
+  // do mês (séries, manuais e editadas) + os escalistas cadastrados nos projetos.
+  // Antes vinha só dos projetos, então quem era atribuído direto na obrigação
+  // nunca aparecia aqui — e num setor sem projetos o filtro ficava vazio.
   const escalistas = useMemo(() => {
     const set = new Set<string>();
-    store.state.projects.forEach((p) => p.escalista && set.add(p.escalista));
-    return [...set].sort();
-  }, [store.state.projects]);
+    store.state.projects.forEach((p) => p.escalista && set.add(p.escalista.trim()));
+    monthItems.forEach((ro) => ro.item.responsavel && set.add(ro.item.responsavel.trim()));
+    set.delete('');
+    return [...set].sort((a, b) => a.localeCompare(b, 'pt-BR'));
+  }, [store.state.projects, monthItems]);
 
   function shift(delta: number) {
     if (screen === 'dia') setCursorISO(toISODate(addCalendarDays(cursor, delta)));
@@ -177,7 +183,7 @@ export function App() {
                     ))}
                   </select>
                   <select className="select w-auto" value={filtros.escalista} onChange={(e) => setFiltros((f) => ({ ...f, escalista: e.target.value }))}>
-                    <option value="todos">Todos os escalistas</option>
+                    <option value="todos">{doAssistencial ? 'Todos os escalistas' : 'Todos os responsáveis'}</option>
                     {escalistas.map((e) => (
                       <option key={e} value={e}>{e}</option>
                     ))}
