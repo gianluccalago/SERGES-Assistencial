@@ -7,7 +7,8 @@ import type {
   TarefaFixa,
 } from './types';
 import { deriveObligations, type DerivacaoOpcoes } from './engine';
-import { competencia as fmtCompetencia } from './dateUtils';
+import { competencia as fmtCompetencia, utcDate, toISODate, lastDayOfMonth } from './dateUtils';
+import { ocorrenciasNoIntervalo, idOcorrencia, descreverRecorrencia } from './recorrencia';
 
 /** Converte uma Obligation derivada + seu Override em CalendarItem (ou null se dismissed). */
 export function applyOverride(obligation: Obligation, override?: Override): CalendarItem | null {
@@ -111,8 +112,44 @@ export function assembleMonth(
     else if (!item.prazo && o.competencia === comp) items.push(item);
   }
 
+  // Manuais: data única, ou várias quando há recorrência. Cada ocorrência tem
+  // id próprio (`id@data`) e guarda status/edições em `overrides`, igual às
+  // geradas — por isso concluir uma data não mexe nas outras. A janela cobre os
+  // meses vizinhos porque uma ocorrência movida pode entrar/sair do mês.
+  const antesY = month === 1 ? year - 1 : year;
+  const antesM = month === 1 ? 12 : month - 1;
+  const depoisY = month === 12 ? year + 1 : year;
+  const depoisM = month === 12 ? 1 : month + 1;
+  const janelaDe = toISODate(utcDate(antesY, antesM, 1));
+  const janelaAte = toISODate(utcDate(depoisY, depoisM, lastDayOfMonth(depoisY, depoisM)));
+
   for (const m of manuals) {
-    if (m.data.startsWith(comp)) items.push(manualToItem(m));
+    if (!m.recorrencia) {
+      if (m.data.startsWith(comp)) items.push(manualToItem(m));
+      continue;
+    }
+    for (const data of ocorrenciasNoIntervalo(m, janelaDe, janelaAte, holidays)) {
+      const id = idOcorrencia(m.id, data);
+      const item = applyOverride(
+        {
+          id,
+          titulo: m.titulo,
+          projetoId: m.projetoId,
+          tipo: m.tipo,
+          regraOrigem: descreverRecorrencia(m.recorrencia),
+          competencia: data.slice(0, 7),
+          prazoCalculado: data,
+          estado: 'pendente',
+          responsavel: m.responsavel,
+          critico: m.critico,
+        },
+        overrides[id],
+      );
+      if (!item) continue; // ocorrência ocultada
+      item.notas = item.notas ?? m.notas;
+      item.ocorrenciaDe = m.id;
+      if (item.prazo?.startsWith(comp)) items.push(item);
+    }
   }
 
   return items;

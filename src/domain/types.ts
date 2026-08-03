@@ -216,6 +216,27 @@ export interface Override {
   markedBy?: string;
 }
 
+/** Com que frequência uma tarefa se repete. */
+export type FrequenciaRecorrencia = 'diaria' | 'semanal' | 'mensal' | 'anual';
+
+/**
+ * Recorrência de uma obrigação criada à mão. A obrigação guarda a data-base
+ * (primeira ocorrência) e esta regra; as repetições são calculadas na hora,
+ * nunca gravadas uma a uma. Assim mudar a regra reescreve todo o futuro.
+ */
+export interface Recorrencia {
+  frequencia: FrequenciaRecorrencia;
+  /** Repete a cada N dias/semanas/meses/anos. 1 = toda vez. */
+  intervalo: number;
+  /** Última data possível (ISO). Sem isso, repete indefinidamente. */
+  ate?: string;
+  /** Só para 'semanal': dias da semana (0=domingo … 6=sábado). Vazio = o mesmo
+   * dia da semana da data-base. */
+  diasSemana?: number[];
+  /** Regra de dia útil aplicada a cada ocorrência (antecipa/adia). */
+  modo?: AjusteDiaUtil;
+}
+
 /**
  * Obrigação criada do zero pelo usuário. Não é derivada de regra; é um
  * registro de primeira classe, editável e removível livremente.
@@ -237,6 +258,8 @@ export interface ManualObligation {
   cobrancas?: string[];
   markedAt?: string;
   markedBy?: string;
+  /** Quando presente, `data` é a 1ª ocorrência e a tarefa se repete por esta regra. */
+  recorrencia?: Recorrencia;
 }
 
 /** Configuração editável do app (§10). Persistida à parte. */
@@ -295,6 +318,9 @@ export interface CalendarItem {
   enviadaAprovacaoEm?: string;
   /** true para ManualObligation; false para gerada. */
   isManual: boolean;
+  /** Id da tarefa recorrente que gerou esta ocorrência (quando for repetição).
+   * O status de cada data é guardado à parte, como nas obrigações geradas. */
+  ocorrenciaDe?: string;
   /** Indica se o prazo veio de um override (foi movida). */
   movida?: boolean;
   // Guardrails / workflow expostos para a resolução de conclusão (§11).

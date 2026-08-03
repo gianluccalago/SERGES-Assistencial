@@ -9,7 +9,16 @@ import { EditForm } from './EditForm';
 import { whatsappLink, mailtoLink } from '../contatoLinks';
 import { useToast } from './Toast';
 
-export function ObligationDetail({ ro, onClose }: { ro: ResolvedObligation; onClose: () => void }) {
+export function ObligationDetail({
+  ro,
+  onClose,
+  onEditarRecorrencia,
+}: {
+  ro: ResolvedObligation;
+  onClose: () => void;
+  /** Abre a tarefa-mãe para mudar a repetição (todas as datas). */
+  onEditarRecorrencia?: (manualId: string) => void;
+}) {
   const store = useStore();
   const toast = useToast();
   const { item, prazo } = ro;
@@ -57,6 +66,30 @@ export function ObligationDetail({ ro, onClose }: { ro: ResolvedObligation; onCl
             <span className="chip border-[var(--color-serges-blue)] text-[var(--color-serges-blue)]">Movida</span>
           )}
         </div>
+
+        {/* Ocorrência de tarefa repetida: deixa explícito o alcance da edição. */}
+        {item.ocorrenciaDe && (
+          <div className="mt-[var(--spacing-16)] rounded-[var(--radius-md)] border border-[rgba(77,125,255,0.35)] bg-[var(--color-serges-blue-tint-soft)] p-3">
+            <div className="flex items-start gap-2.5">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="mt-0.5 shrink-0 text-[var(--color-serges-blue-strong)]">
+                <path d="M17 1l4 4-4 4" /><path d="M3 11V9a4 4 0 0 1 4-4h14M7 23l-4-4 4-4" /><path d="M21 13v2a4 4 0 0 1-4 4H3" />
+              </svg>
+              <div className="min-w-0">
+                <div className="text-[length:var(--text-label)] font-medium text-[var(--color-ink)]">Tarefa repetida</div>
+                <p className="label mt-0.5">{item.regraOrigem}</p>
+                <p className="label mt-1">O que você mudar aqui vale só para esta data.</p>
+              </div>
+            </div>
+            {onEditarRecorrencia && (
+              <button
+                className="btn-secondary mt-2 w-full"
+                onClick={() => onEditarRecorrencia(item.ocorrenciaDe as string)}
+              >
+                Editar a repetição (todas as datas)
+              </button>
+            )}
+          </div>
+        )}
 
         <dl className="mt-[var(--spacing-20)] space-y-2 text-[length:var(--text-label)]">
           {prazo && <Row k="Prazo">{formatDateLong(prazo)}</Row>}
@@ -196,12 +229,12 @@ export function ObligationDetail({ ro, onClose }: { ro: ResolvedObligation; onCl
                 toast.show('Excluída.', original ? () => store.addManual(original) : undefined);
               } else {
                 store.deleteItem(item);
-                toast.show('Ocultada.', () => store.undismiss(item.id));
+                toast.show(item.ocorrenciaDe ? 'Esta data foi removida.' : 'Ocultada.', () => store.undismiss(item.id));
               }
               onClose();
             }}
           >
-            {item.isManual ? 'Excluir' : 'Ocultar'}
+            {item.isManual ? 'Excluir' : item.ocorrenciaDe ? 'Remover esta data' : 'Ocultar'}
           </button>
         </div>
       </div>

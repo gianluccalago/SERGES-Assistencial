@@ -1,6 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import { deriveObligations, paymentDate, lotePagamentoPrazo } from '../engine';
 import { assembleMonth } from '../resolve';
+import { ocorrenciasNoIntervalo } from '../recorrencia';
 import { buildHolidaySet, easterSunday, brazilianHolidays, isBusinessDay } from '../holidays';
 import { toISODate, utcDate, fromISODate, dayOfWeek } from '../dateUtils';
 import { resolveEstado, registrarRetorno, marcadores } from '../stateMachine';
@@ -276,5 +277,99 @@ describe('responsável da série', () => {
     const agosto = assembleMonth(2026, 8, [], holidays2026, ov, [], [serie], { motorAssistencial: false });
     expect(itemById(julho, 'fixa:financeiro-caixa:2026-07').responsavel).toBe('Estagiário');
     expect(itemById(agosto, 'fixa:financeiro-caixa:2026-08').responsavel).toBe('Juliano');
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Tarefas recorrentes: diária, semanal (com dias da semana), mensal, anual,
+// intervalo customizado ("a cada N") e data-limite.
+// ---------------------------------------------------------------------------
+describe('recorrência de tarefas', () => {
+  const tarefa = (over: Partial<ManualObligation>): ManualObligation => ({
+    id: 'manual:r1', titulo: 'Repetida', data: '2026-07-01',
+    tipo: 'evento', estado: 'pendente', ...over,
+  });
+  const datas = (m: ManualObligation, de: string, ate: string) =>
+    ocorrenciasNoIntervalo(m, de, ate, holidays2026);
+
+  it('diária: todo dia', () => {
+    const r = datas(tarefa({ recorrencia: { frequencia: 'diaria', intervalo: 1 } }), '2026-07-01', '2026-07-05');
+    expect(r).toEqual(['2026-07-01', '2026-07-02', '2026-07-03', '2026-07-04', '2026-07-05']);
+  });
+
+  it('diária a cada 3 dias', () => {
+    const r = datas(tarefa({ recorrencia: { frequencia: 'diaria', intervalo: 3 } }), '2026-07-01', '2026-07-10');
+    expect(r).toEqual(['2026-07-01', '2026-07-04', '2026-07-07', '2026-07-10']);
+  });
+
+  it('semanal: mesmo dia da semana da data-base', () => {
+    // 2026-07-01 é quarta
+    const r = datas(tarefa({ recorrencia: { frequencia: 'semanal', intervalo: 1 } }), '2026-07-01', '2026-07-31');
+    expect(r).toEqual(['2026-07-01', '2026-07-08', '2026-07-15', '2026-07-22', '2026-07-29']);
+  });
+
+  it('semanal em dias escolhidos (segunda e quinta)', () => {
+    const r = datas(
+      tarefa({ recorrencia: { frequencia: 'semanal', intervalo: 1, diasSemana: [1, 4] } }),
+      '2026-07-01', '2026-07-14',
+    );
+    // não volta antes da data-base (01/07, quarta)
+    expect(r).toEqual(['2026-07-02', '2026-07-06', '2026-07-09', '2026-07-13']);
+  });
+
+  it('quinzenal (a cada 2 semanas)', () => {
+    const r = datas(tarefa({ recorrencia: { frequencia: 'semanal', intervalo: 2 } }), '2026-07-01', '2026-08-15');
+    expect(r).toEqual(['2026-07-01', '2026-07-15', '2026-07-29', '2026-08-12']);
+  });
+
+  it('mensal: mesmo dia, encolhendo em mês curto', () => {
+    const m = tarefa({ data: '2026-01-31', recorrencia: { frequencia: 'mensal', intervalo: 1 } });
+    expect(datas(m, '2026-01-01', '2026-04-30')).toEqual(['2026-01-31', '2026-02-28', '2026-03-31', '2026-04-30']);
+  });
+
+  it('anual', () => {
+    const m = tarefa({ data: '2026-03-10', recorrencia: { frequencia: 'anual', intervalo: 1 } });
+    expect(datas(m, '2026-01-01', '2028-12-31')).toEqual(['2026-03-10', '2027-03-10', '2028-03-10']);
+  });
+
+  it('respeita a data-limite e não gera nada antes da data-base', () => {
+    const m = tarefa({ recorrencia: { frequencia: 'diaria', intervalo: 1, ate: '2026-07-03' } });
+    expect(datas(m, '2026-06-01', '2026-07-31')).toEqual(['2026-07-01', '2026-07-02', '2026-07-03']);
+  });
+
+  it('aplica a regra de dia útil em cada ocorrência', () => {
+    // Todo dia 5; em julho/2026 cai domingo → antecipa para sexta 03/07.
+    const m = tarefa({ data: '2026-07-05', recorrencia: { frequencia: 'mensal', intervalo: 1, modo: 'antecipa' } });
+    expect(datas(m, '2026-07-01', '2026-07-31')).toEqual(['2026-07-03']);
+  });
+
+  it('salta janelas distantes sem varrer dia a dia', () => {
+    const m = tarefa({ data: '2020-01-01', recorrencia: { frequencia: 'diaria', intervalo: 1 } });
+    const r = datas(m, '2026-07-01', '2026-07-03');
+    expect(r).toEqual(['2026-07-01', '2026-07-02', '2026-07-03']);
+  });
+
+  it('cada data tem status próprio: concluir uma não mexe nas outras', () => {
+    const m = tarefa({ recorrencia: { frequencia: 'diaria', intervalo: 1, ate: '2026-07-03' } });
+    const ov: Record<string, Override> = { 'manual:r1@2026-07-02': { estado: 'concluida' } };
+    const itens = assembleMonth(2026, 7, [], holidays2026, ov, [m], [], { motorAssistencial: false });
+    expect(itens).toHaveLength(3);
+    expect(itemById(itens, 'manual:r1@2026-07-02').baseEstado).toBe('concluida');
+    expect(itemById(itens, 'manual:r1@2026-07-01').baseEstado).toBe('pendente');
+    expect(itemById(itens, 'manual:r1@2026-07-03').baseEstado).toBe('pendente');
+    expect(itemById(itens, 'manual:r1@2026-07-01').ocorrenciaDe).toBe('manual:r1');
+  });
+
+  it('ocultar uma ocorrência remove só aquela data', () => {
+    const m = tarefa({ recorrencia: { frequencia: 'diaria', intervalo: 1, ate: '2026-07-03' } });
+    const ov: Record<string, Override> = { 'manual:r1@2026-07-02': { dismissed: true } };
+    const itens = assembleMonth(2026, 7, [], holidays2026, ov, [m], [], { motorAssistencial: false });
+    expect(itens.map((i) => i.prazo)).toEqual(['2026-07-01', '2026-07-03']);
+  });
+
+  it('tarefa sem recorrência continua com data única', () => {
+    const itens = assembleMonth(2026, 7, [], holidays2026, {}, [tarefa({})], [], { motorAssistencial: false });
+    expect(itens).toHaveLength(1);
+    expect(itens[0].isManual).toBe(true);
   });
 });

@@ -57,6 +57,8 @@ export function App() {
   const [filtros, setFiltros] = useState<Filtros>({ projeto: 'todos', escalista: 'todos' });
   const [selected, setSelected] = useState<ResolvedObligation | null>(null);
   const [formOpen, setFormOpen] = useState(false);
+  /** Id da tarefa recorrente cuja repetição está sendo editada. */
+  const [editandoRepeticao, setEditandoRepeticao] = useState<string | null>(null);
 
   const cursor = fromISODate(cursorISO);
   const year = cursor.getUTCFullYear();
@@ -210,7 +212,17 @@ export function App() {
         </main>
       </div>
 
-      {selected && <ObligationDetail ro={selected} onClose={() => setSelected(null)} />}
+      {selected && (
+        <ObligationDetail
+          ro={selected}
+          onClose={() => setSelected(null)}
+          onEditarRecorrencia={(id) => {
+            setSelected(null);
+            setEditandoRepeticao(id);
+          }}
+        />
+      )}
+      {editandoRepeticao && <ManualForm editId={editandoRepeticao} onClose={() => setEditandoRepeticao(null)} />}
       {formOpen && <ManualForm onClose={() => setFormOpen(false)} />}
     </div>
   );
