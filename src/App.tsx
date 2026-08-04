@@ -17,7 +17,7 @@ import { UsersAdmin } from './ui/components/UsersAdmin';
 import { AdminGuard } from './ui/components/AdminGuard';
 import { useStore } from './state/store';
 import { useAuth } from './auth/AuthProvider';
-import { useMonthObligations, type ResolvedObligation } from './ui/useObligations';
+import { useMonthObligations, resolveItem, reidratarSelecionado, type ResolvedObligation } from './ui/useObligations';
 import type { Filtros } from './ui/filters';
 import { MESES, todayISO, formatDateShort } from './ui/format';
 import { addCalendarDays, fromISODate, toISODate } from './domain/dateUtils';
@@ -96,6 +96,21 @@ export function App() {
     set.delete('');
     return [...set].sort((a, b) => a.localeCompare(b, 'pt-BR'));
   }, [store.state.projects, monthItems]);
+
+  // O painel de detalhe não pode trabalhar com uma foto do item: ao marcar uma
+  // etapa, mudar status ou reordenar, ele precisa refletir na hora — senão é
+  // preciso fechar e reabrir o card para ver o resultado. Aqui reidratamos o
+  // item selecionado a partir do estado atual, a cada render.
+  const selecionado = useMemo(
+    () =>
+      reidratarSelecionado(selected, monthItems, (y, mo) => {
+        const hoje = todayISO();
+        const agora = new Date().toISOString();
+        return store.itemsFor(y, mo).map((i) => resolveItem(i, hoje, agora));
+      }),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [selected, monthItems, store.state],
+  );
 
   function shift(delta: number) {
     if (screen === 'dia') setCursorISO(toISODate(addCalendarDays(cursor, delta)));
@@ -212,9 +227,9 @@ export function App() {
         </main>
       </div>
 
-      {selected && (
+      {selecionado && (
         <ObligationDetail
-          ro={selected}
+          ro={selecionado}
           onClose={() => setSelected(null)}
           onEditarRecorrencia={(id) => {
             setSelected(null);

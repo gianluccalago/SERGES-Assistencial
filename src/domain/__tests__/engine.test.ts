@@ -6,6 +6,7 @@ import { buildHolidaySet, easterSunday, brazilianHolidays, isBusinessDay } from 
 import { toISODate, utcDate, fromISODate, dayOfWeek } from '../dateUtils';
 import { resolveEstado, registrarRetorno, marcadores, progressoTexto } from '../stateMachine';
 import { seedProjects } from '../../data/projects';
+import { reidratarSelecionado, type ResolvedObligation } from '../../ui/useObligations';
 import type { CalendarItem, ManualObligation, Obligation, Override } from '../types';
 
 const holidays2026 = buildHolidaySet([2025, 2026, 2027]);
@@ -426,5 +427,56 @@ describe('subtarefas', () => {
     // as outras datas herdam a lista da tarefa-mãe, ainda não feita
     expect(progressoTexto(itemById(itens, 'manual:r9@2026-07-01'))).toBe('0 de 1 etapas');
     expect(progressoTexto(itemById(itens, 'manual:r9@2026-07-03'))).toBe('0 de 1 etapas');
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Painel de detalhe: precisa refletir o estado atual, não a foto do clique.
+// (Era a causa de "não deixa concluir" e de ter que fechar o card para ver a
+//  etapa adicionada/reordenada.)
+// ---------------------------------------------------------------------------
+describe('reidratação do item aberto no painel', () => {
+  const ro = (id: string, over: Partial<CalendarItem> = {}): ResolvedObligation => {
+    const item: CalendarItem = {
+      id, titulo: 'T', tipo: 'evento', regraOrigem: '', competencia: '2026-07',
+      prazo: '2026-07-09', baseEstado: 'pendente', isManual: true, ...over,
+    };
+    // O prazo externo espelha o do item — é assim que resolveItem monta.
+    return {
+      item, estado: 'pendente', atrasada: false, contratanteAtrasado: false, critico: false,
+      escalado: false, cobrancasCount: 0, prazo: item.prazo,
+      aprovacaoEstourada: false, podeConcluir: true,
+    };
+  };
+
+  const vazio = () => [];
+
+  it('devolve a versão viva do mês, não a que foi clicada', () => {
+    const foto = ro('x1', { subtarefas: [{ id: 'a', titulo: 'Etapa' }] });
+    const vivo = ro('x1', { subtarefas: [{ id: 'a', titulo: 'Etapa', feita: true }] });
+    const r = reidratarSelecionado(foto, [vivo], vazio);
+    expect(r?.item.subtarefas?.[0].feita).toBe(true);
+  });
+
+  it('reflete mudança de status feita no store', () => {
+    const foto = ro('x2');
+    const vivo = { ...ro('x2'), estado: 'concluida' as const };
+    expect(reidratarSelecionado(foto, [vivo], vazio)?.estado).toBe('concluida');
+  });
+
+  it('item de outro mês (visão Semana) é resolvido no mês dele', () => {
+    const foto = ro('x3', { prazo: '2026-08-03', competencia: '2026-08' });
+    const vivo = ro('x3', { prazo: '2026-08-03', competencia: '2026-08', notas: 'atualizado' });
+    const r = reidratarSelecionado(foto, [], (y, m) => (y === 2026 && m === 8 ? [vivo] : []));
+    expect(r?.item.notas).toBe('atualizado');
+  });
+
+  it('sem encontrar em lugar nenhum, mantém o que já estava (nunca some da tela)', () => {
+    const foto = ro('x4');
+    expect(reidratarSelecionado(foto, [], vazio)).toBe(foto);
+  });
+
+  it('nada aberto continua nada aberto', () => {
+    expect(reidratarSelecionado(null, [], vazio)).toBeNull();
   });
 });
