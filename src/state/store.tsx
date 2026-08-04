@@ -17,6 +17,7 @@ import type {
   ObligationEstado,
   Contato,
   TarefaFixa,
+  Subtarefa,
 } from '../domain/types';
 import { proximaCompetencia, textoRecuperacao } from '../domain/workflows';
 import type { ResolucaoMes } from '../domain/types';
@@ -116,6 +117,8 @@ interface AppStore {
   // Estado (gerada -> override.estado; manual -> registro), com trilha de repasse
   setEstado: (item: CalendarItem, estado: ObligationEstado, marca?: { por?: string }) => void;
   batchMark: (items: CalendarItem[], estado: ObligationEstado, por?: string) => void;
+  /** Etapas (subtarefas) da obrigação. Grava na hora: é acompanhamento, não formulário. */
+  setSubtarefas: (item: CalendarItem, subtarefas: Subtarefa[]) => void;
   // Editar campos de uma obrigação (gerada -> override; manual -> registro).
   editItem: (
     item: CalendarItem,
@@ -358,6 +361,17 @@ export function StoreProvider({ children }: { children: ReactNode }) {
           }
           return { ...s, overrides, manualObligations: manuais };
         });
+      },
+      setSubtarefas(item, subtarefas) {
+        if (item.isManual) {
+          setState((s) => ({
+            ...s,
+            manualObligations: s.manualObligations.map((x) => (x.id === item.id ? { ...x, subtarefas } : x)),
+          }));
+        } else {
+          // Inclui ocorrências de tarefa repetida: cada data tem a própria lista.
+          patchOverride(item.id, { subtarefas });
+        }
       },
       editItem(item, patch) {
         if (item.isManual) {

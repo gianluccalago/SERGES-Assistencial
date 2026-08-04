@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useStore } from '../../state/store';
 import type { ResolvedObligation } from '../useObligations';
+import { Subtarefas } from './Subtarefas';
 
 // Editar campos de uma obrigação (§4.5). Em obrigações geradas grava override
 // dos campos alterados; em manuais altera o registro.
@@ -40,6 +41,11 @@ export function EditForm({ ro, onClose }: { ro: ResolvedObligation; onClose: () 
         <Field label="Prazo">
           <input className="input" type="date" value={prazo} onChange={(e) => setPrazo(e.target.value)} />
         </Field>
+        <div className="border-t border-[var(--color-line)] pt-3">
+          <Subtarefas valor={item.subtarefas} onChange={(sub) => store.setSubtarefas(item, sub)} />
+          <p className="label mt-1.5">As etapas são salvas na hora — não dependem do botão Salvar.</p>
+        </div>
+
         <Field label="Notas">
           <textarea className="input" rows={3} value={notas} onChange={(e) => setNotas(e.target.value)} />
         </Field>

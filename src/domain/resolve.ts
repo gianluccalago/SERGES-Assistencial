@@ -37,6 +37,7 @@ export function applyOverride(obligation: Obligation, override?: Override): Cale
     resolucaoMes: override?.resolucaoMes,
     recuperacao: override?.recuperacao,
     contratoSocial: override?.contratoSocial,
+    subtarefas: override?.subtarefas,
     isManual: false,
     movida: override?.dataNova != null,
   };
@@ -60,6 +61,7 @@ export function manualToItem(m: ManualObligation): CalendarItem {
     enviadaAprovacaoEm: m.enviadaAprovacaoEm,
     escalado: m.escaladoEm != null,
     cobrancasCount: m.cobrancas?.length ?? 0,
+    subtarefas: m.subtarefas,
     isManual: true,
   };
 }
@@ -147,6 +149,7 @@ export function assembleMonth(
       );
       if (!item) continue; // ocorrência ocultada
       item.notas = item.notas ?? m.notas;
+      item.subtarefas = item.subtarefas ?? m.subtarefas;
       item.ocorrenciaDe = m.id;
       if (item.prazo?.startsWith(comp)) items.push(item);
     }

@@ -8,6 +8,7 @@ import { StatusSelector } from './StatusSelector';
 import { EditForm } from './EditForm';
 import { whatsappLink, mailtoLink } from '../contatoLinks';
 import { useToast } from './Toast';
+import { Subtarefas } from './Subtarefas';
 
 export function ObligationDetail({
   ro,
@@ -207,6 +208,11 @@ export function ObligationDetail({
               Mover
             </button>
           </div>
+        </div>
+
+        {/* Etapas da obrigação (checklist de acompanhamento) */}
+        <div className="mt-[var(--spacing-20)]">
+          <Subtarefas valor={item.subtarefas} onChange={(sub) => store.setSubtarefas(item, sub)} />
         </div>
 
         {/* Notas */}

@@ -96,12 +96,14 @@ export function contratoSocialProgresso(item: CalendarItem): { ok: number; total
   return { ok: ent.filter((e) => e.procuracao && e.boleto).length, total: ent.length };
 }
 
-/** Texto curto de progresso para a linha da obrigação (contrato social). */
+/** Texto curto de progresso para a linha da obrigação (etapas / contrato social). */
 export function progressoTexto(item: CalendarItem): string | null {
   if (item.id.startsWith('fixa:contratoSocialContabilidade:')) {
     const { ok, total } = contratoSocialProgresso(item);
     return total > 0 ? `procurações e boletos ${ok} de ${total}` : null;
   }
+  const subs = item.subtarefas ?? [];
+  if (subs.length) return `${subs.filter((s) => s.feita).length} de ${subs.length} etapas`;
   return null;
 }
 

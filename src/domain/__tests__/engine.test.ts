@@ -4,7 +4,7 @@ import { assembleMonth } from '../resolve';
 import { ocorrenciasNoIntervalo } from '../recorrencia';
 import { buildHolidaySet, easterSunday, brazilianHolidays, isBusinessDay } from '../holidays';
 import { toISODate, utcDate, fromISODate, dayOfWeek } from '../dateUtils';
-import { resolveEstado, registrarRetorno, marcadores } from '../stateMachine';
+import { resolveEstado, registrarRetorno, marcadores, progressoTexto } from '../stateMachine';
 import { seedProjects } from '../../data/projects';
 import type { CalendarItem, ManualObligation, Obligation, Override } from '../types';
 
@@ -371,5 +371,60 @@ describe('recorrência de tarefas', () => {
     const itens = assembleMonth(2026, 7, [], holidays2026, {}, [tarefa({})], [], { motorAssistencial: false });
     expect(itens).toHaveLength(1);
     expect(itens[0].isManual).toBe(true);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Subtarefas (etapas da obrigação): progresso e escopo.
+// ---------------------------------------------------------------------------
+describe('subtarefas', () => {
+  const etapas = [
+    { id: 'st-1', titulo: 'Levantar notas', feita: true },
+    { id: 'st-2', titulo: 'Conferir valores' },
+    { id: 'st-3', titulo: 'Enviar ao contratante' },
+  ];
+
+  it('mostra o progresso na linha da obrigação', () => {
+    const m: ManualObligation = {
+      id: 'manual:s1', titulo: 'Fechamento', data: '2026-07-09',
+      tipo: 'evento', estado: 'pendente', subtarefas: etapas,
+    };
+    const item = itemById(assembleMonth(2026, 7, [], holidays2026, {}, [m], [], { motorAssistencial: false }), 'manual:s1');
+    expect(item.subtarefas).toHaveLength(3);
+    expect(progressoTexto(item)).toBe('1 de 3 etapas');
+  });
+
+  it('obrigação gerada guarda as etapas no override', () => {
+    const serie = { chave: 'fin-caixa', dia: 10, titulo: 'Fechar caixa', modo: 'adia' as const };
+    const ov: Record<string, Override> = { 'fixa:fin-caixa:2026-07': { subtarefas: etapas } };
+    const item = itemById(
+      assembleMonth(2026, 7, [], holidays2026, ov, [], [serie], { motorAssistencial: false }),
+      'fixa:fin-caixa:2026-07',
+    );
+    expect(progressoTexto(item)).toBe('1 de 3 etapas');
+  });
+
+  it('sem etapas, nada de progresso (não polui a linha)', () => {
+    const m: ManualObligation = {
+      id: 'manual:s2', titulo: 'Simples', data: '2026-07-09', tipo: 'evento', estado: 'pendente',
+    };
+    const item = itemById(assembleMonth(2026, 7, [], holidays2026, {}, [m], [], { motorAssistencial: false }), 'manual:s2');
+    expect(progressoTexto(item)).toBeNull();
+  });
+
+  it('tarefa repetida: cada data tem a própria lista, sem contaminar as outras', () => {
+    const m: ManualObligation = {
+      id: 'manual:r9', titulo: 'Repetida', data: '2026-07-01', tipo: 'evento', estado: 'pendente',
+      recorrencia: { frequencia: 'diaria', intervalo: 1, ate: '2026-07-03' },
+      subtarefas: [{ id: 'st-a', titulo: 'Padrão' }],
+    };
+    const ov: Record<string, Override> = {
+      'manual:r9@2026-07-02': { subtarefas: [{ id: 'st-a', titulo: 'Padrão', feita: true }] },
+    };
+    const itens = assembleMonth(2026, 7, [], holidays2026, ov, [m], [], { motorAssistencial: false });
+    expect(progressoTexto(itemById(itens, 'manual:r9@2026-07-02'))).toBe('1 de 1 etapas');
+    // as outras datas herdam a lista da tarefa-mãe, ainda não feita
+    expect(progressoTexto(itemById(itens, 'manual:r9@2026-07-01'))).toBe('0 de 1 etapas');
+    expect(progressoTexto(itemById(itens, 'manual:r9@2026-07-03'))).toBe('0 de 1 etapas');
   });
 });

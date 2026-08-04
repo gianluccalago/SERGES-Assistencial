@@ -97,6 +97,16 @@ export type ObligationTipo =
 /** Resolução explícita de mês para pagamento/faturamento (§4.5). */
 export type ResolucaoMes = 'semAtuacao' | 'faturadoParcialmente';
 
+/**
+ * Etapa de uma obrigação (subtarefa). O id é estável: renomear o texto não
+ * perde a marcação, e a ordem da lista é a ordem de execução.
+ */
+export interface Subtarefa {
+  id: string;
+  titulo: string;
+  feita?: boolean;
+}
+
 /** Médico entrante na alteração do contrato social. */
 export interface EntranteCS {
   id: string;
@@ -209,6 +219,9 @@ export interface Override {
   fopamConfirmado?: boolean;
   /** Checklists ad-hoc (esteiras do contrato social etc., §11.7). */
   checklist?: Record<string, boolean>;
+  /** Etapas da obrigação, criadas pelo usuário. Numa tarefa repetida, cada
+   * data tem a própria lista (o override é por ocorrência). */
+  subtarefas?: Subtarefa[];
   /** Alteração do contrato social: entrantes, saintes e confirmação. */
   contratoSocial?: ContratoSocialData;
   /** Trilha de repasse de cargo (§11.11). */
@@ -260,6 +273,8 @@ export interface ManualObligation {
   markedBy?: string;
   /** Quando presente, `data` é a 1ª ocorrência e a tarefa se repete por esta regra. */
   recorrencia?: Recorrencia;
+  /** Etapas da tarefa, criadas pelo usuário. */
+  subtarefas?: Subtarefa[];
 }
 
 /** Configuração editável do app (§10). Persistida à parte. */
@@ -321,6 +336,8 @@ export interface CalendarItem {
   /** Id da tarefa recorrente que gerou esta ocorrência (quando for repetição).
    * O status de cada data é guardado à parte, como nas obrigações geradas. */
   ocorrenciaDe?: string;
+  /** Etapas da obrigação (checklist de acompanhamento). */
+  subtarefas?: Subtarefa[];
   /** Indica se o prazo veio de um override (foi movida). */
   movida?: boolean;
   // Guardrails / workflow expostos para a resolução de conclusão (§11).
