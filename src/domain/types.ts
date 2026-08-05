@@ -275,6 +275,88 @@ export interface ManualObligation {
   recorrencia?: Recorrencia;
   /** Etapas da tarefa, criadas pelo usuário. */
   subtarefas?: Subtarefa[];
+  /** Quem enxerga esta tarefa (padrão: todo o setor). */
+  visibilidade?: Visibilidade;
+  permitidos?: string[];
+  /** profiles.id de quem criou. */
+  criadoPor?: string;
+}
+
+// ---------------------------------------------------------------------------
+// Demandas: trabalho repassado que está em andamento e NÃO tem data fixa de
+// execução — só um período (de … até), com prazo máximo de entrega.
+// ---------------------------------------------------------------------------
+
+/**
+ * Quem enxerga o registro.
+ * - 'setor'    → todo mundo do setor (padrão, como sempre foi).
+ * - 'restrita' → só quem criou, quem está na lista e o gestor do setor.
+ *
+ * A regra vale no BANCO (RLS), não só na tela: quem não pode ver não recebe a
+ * linha na consulta.
+ */
+export type Visibilidade = 'setor' | 'restrita';
+
+export interface Demanda {
+  id: string;
+  titulo: string;
+  descricao?: string;
+  /** Nome de quem toca a demanda (texto livre, como no resto do app). */
+  responsavel?: string;
+  /** Início do período (ISO). */
+  inicio: string;
+  /** Prazo máximo de entrega (ISO). */
+  prazo: string;
+  estado: ObligationEstado;
+  projetoId?: string;
+  /** Etapas, para acompanhar o andamento. */
+  subtarefas?: Subtarefa[];
+  /** profiles.id de quem criou (sempre enxerga a própria demanda). */
+  criadoPor?: string;
+  criadoEm: string;
+  concluidaEm?: string;
+  visibilidade?: Visibilidade;
+  /** profiles.id de quem mais pode ver, quando 'restrita'. */
+  permitidos?: string[];
+}
+
+/** Situação de uma demanda em relação ao prazo máximo. */
+export interface SituacaoDemanda {
+  concluida: boolean;
+  atrasada: boolean;
+  /** Dias até o prazo (negativo = dias de atraso). */
+  diasRestantes: number;
+  /** Ainda não começou o período. */
+  futura: boolean;
+}
+
+export function situacaoDemanda(d: Demanda, hojeISO: string): SituacaoDemanda {
+  const concluida = d.estado === 'concluida';
+  const dia = 86_400_000;
+  const diasRestantes = Math.round(
+    (Date.parse(`${d.prazo}T00:00:00Z`) - Date.parse(`${hojeISO}T00:00:00Z`)) / dia,
+  );
+  return {
+    concluida,
+    atrasada: !concluida && diasRestantes < 0,
+    diasRestantes,
+    futura: hojeISO < d.inicio,
+  };
+}
+
+/**
+ * Pode ver o registro? Espelha a regra do RLS, para a tela não oferecer o que o
+ * banco vai recusar. A segurança de verdade está no banco.
+ */
+export function podeVer(
+  r: { visibilidade?: Visibilidade; permitidos?: string[]; criadoPor?: string },
+  usuarioId: string | undefined,
+  isGestor: boolean,
+): boolean {
+  if ((r.visibilidade ?? 'setor') === 'setor') return true;
+  if (isGestor) return true;
+  if (!usuarioId) return false;
+  return r.criadoPor === usuarioId || (r.permitidos ?? []).includes(usuarioId);
 }
 
 /** Configuração editável do app (§10). Persistida à parte. */

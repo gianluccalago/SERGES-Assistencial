@@ -4,7 +4,7 @@ import { useAuth } from '../../auth/AuthProvider';
 import { SergesLogo, SergesMark } from './Logo';
 import { SETOR_LABEL, type Setor } from '../../domain/types';
 
-type Dest = 'calendario' | 'contatos' | 'projetos' | 'series' | 'comercial' | 'apresentacao' | 'usuarios';
+type Dest = 'calendario' | 'contatos' | 'projetos' | 'series' | 'comercial' | 'apresentacao' | 'usuarios' | 'demandas';
 
 function Icon({ path }: { path: ReactNode }) {
   return (
@@ -22,6 +22,7 @@ const ICONS: Record<Dest | 'oraculo', ReactNode> = {
   comercial: <><path d="M3 21h18M5 21V7l8-4v18M19 21V11l-6-3" /><path d="M9 9v.01M9 12v.01M9 15v.01" /></>,
   apresentacao: <><path d="M2 3h20M4 3v11a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V3M12 16v5M8 21h8" /><path d="M8 11l3-3 2 2 3-4" /></>,
   usuarios: <><path d="M17 21v-2a4 4 0 0 0-3-3.87M9 21v-2a4 4 0 0 1 3-3.87M12 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8z" /></>,
+  demandas: <><path d="M9 11l3 3L22 4" /><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11" /></>,
   oraculo: <><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z" /></>,
 };
 
@@ -49,6 +50,7 @@ export function Sidebar({
     ...(isGestor && doAssistencial ? [{ id: 'comercial' as Dest, label: 'Setor Comercial Público' }] : []),
     ...(isGestor && doAssistencial ? [{ id: 'apresentacao' as Dest, label: 'Apresentação de Resultados' }] : []),
     { id: 'usuarios', label: 'Usuários' },
+    { id: 'demandas', label: 'Demandas' },
   ];
 
   const nav = (

@@ -7,6 +7,7 @@ import type {
   Contato,
   ObligationEstado,
   TarefaFixa,
+  Demanda,
 } from '../domain/types';
 import { seedProjects } from '../data/projects';
 import { seedExtraHolidays } from '../data/holidays';
@@ -78,6 +79,8 @@ export interface PersistedState {
   contatos: Contato[];
   /** Séries fixas (compromissos mensais), editáveis. */
   tarefasFixas: TarefaFixa[];
+  /** Demandas: trabalho em andamento com período, sem data fixa. */
+  demandas: Demanda[];
 }
 
 export function defaultState(): PersistedState {
@@ -89,6 +92,7 @@ export function defaultState(): PersistedState {
     manualObligations: [],
     contatos: structuredClone(seedContatos),
     tarefasFixas: structuredClone(SEED_TAREFAS_FIXAS),
+    demandas: [],
   };
 }
 
@@ -198,5 +202,6 @@ function migrate(state: any): PersistedState {
     manualObligations,
     contatos: state.contatos ?? base.contatos,
     tarefasFixas: state.tarefasFixas ?? base.tarefasFixas,
+    demandas: state.demandas ?? [],
   };
 }

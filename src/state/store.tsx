@@ -18,6 +18,7 @@ import type {
   Contato,
   TarefaFixa,
   Subtarefa,
+  Demanda,
 } from '../domain/types';
 import { proximaCompetencia, textoRecuperacao } from '../domain/workflows';
 import type { ResolucaoMes } from '../domain/types';
@@ -40,7 +41,7 @@ import { supabaseConfigured } from '../lib/supabase';
 type FullState = PersistedState & { config: AppConfig };
 
 function emptyFull(): FullState {
-  return { version: 0, projects: [], extraHolidays: [], overrides: {}, manualObligations: [], contatos: [], tarefasFixas: [], config: defaultConfig() };
+  return { version: 0, projects: [], extraHolidays: [], overrides: {}, manualObligations: [], contatos: [], tarefasFixas: [], demandas: [], config: defaultConfig() };
 }
 
 // Mapeamento estado <-> tabelas Postgres (uma linha jsonb por entidade).
@@ -79,6 +80,11 @@ function slicesDoSetor(setor: Setor): Slice<FullState>[] {
     pk: 'chave',
     extract: (s) => s.tarefasFixas.map((t) => ({ key: t.chave, row: { chave: t.chave, data: t } })),
     apply: (b, rows) => ({ ...b, tarefasFixas: rows.map((r) => r.data as TarefaFixa) }),
+  },
+  {
+    table: 'demandas',
+    extract: (s) => s.demandas.map((d) => ({ key: d.id, row: { id: d.id, data: d } })),
+    apply: (b, rows) => ({ ...b, demandas: rows.map((r) => r.data as Demanda) }),
   },
   {
     table: 'app_config',
@@ -131,6 +137,9 @@ interface AppStore {
   // Séries fixas (compromissos em série)
   upsertTarefaFixa: (t: TarefaFixa) => void;
   removeTarefaFixa: (chave: string) => void;
+  // Demandas (trabalho com período, sem data fixa)
+  upsertDemanda: (d: Demanda) => void;
+  removeDemanda: (id: string) => void;
   // Resoluções de mês (§4.5)
   setResolucaoMes: (item: CalendarItem, resolucao: ResolucaoMes | undefined) => void;
   faturadoParcialmente: (item: CalendarItem, valorFaltante: number) => void;
@@ -146,7 +155,7 @@ const StoreContext = createContext<AppStore | null>(null);
 
 /** Estado vazio — base de um setor novo, que não herda nada do assistencial. */
 function estadoVazio(): PersistedState {
-  return { version: 0, projects: [], extraHolidays: [], overrides: {}, manualObligations: [], contatos: [], tarefasFixas: [] };
+  return { version: 0, projects: [], extraHolidays: [], overrides: {}, manualObligations: [], contatos: [], tarefasFixas: [], demandas: [] };
 }
 
 export function StoreProvider({ children }: { children: ReactNode }) {
@@ -424,6 +433,18 @@ export function StoreProvider({ children }: { children: ReactNode }) {
           else tarefasFixas.push(t);
           return { ...s, tarefasFixas };
         });
+      },
+      upsertDemanda(d) {
+        setState((s) => {
+          const i = s.demandas.findIndex((x) => x.id === d.id);
+          const demandas = [...s.demandas];
+          if (i >= 0) demandas[i] = d;
+          else demandas.unshift(d);
+          return { ...s, demandas };
+        });
+      },
+      removeDemanda(id) {
+        setState((s) => ({ ...s, demandas: s.demandas.filter((x) => x.id !== id) }));
       },
       removeTarefaFixa(chave) {
         setState((s) => ({ ...s, tarefasFixas: s.tarefasFixas.filter((x) => x.chave !== chave) }));

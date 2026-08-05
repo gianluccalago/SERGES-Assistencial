@@ -14,6 +14,7 @@ import { Sidebar } from './ui/components/Sidebar';
 import { ComercialPage } from './ui/comercial/ComercialPage';
 import { ApresentacaoPage } from './ui/apresentacao/ApresentacaoPage';
 import { UsersAdmin } from './ui/components/UsersAdmin';
+import { DemandasPage } from './ui/components/DemandasPage';
 import { AdminGuard } from './ui/components/AdminGuard';
 import { useStore } from './state/store';
 import { useAuth } from './auth/AuthProvider';
@@ -23,7 +24,7 @@ import { MESES, todayISO, formatDateShort } from './ui/format';
 import { addCalendarDays, fromISODate, toISODate } from './domain/dateUtils';
 
 type View = 'dia' | 'semana' | 'mes' | 'lista' | 'checklist';
-type Screen = View | 'contatos' | 'projetos' | 'series' | 'comercial' | 'apresentacao' | 'usuarios';
+type Screen = View | 'contatos' | 'projetos' | 'series' | 'comercial' | 'apresentacao' | 'usuarios' | 'demandas';
 
 const VIEW_TABS: Array<{ id: View; label: string }> = [
   { id: 'dia', label: 'Dia' },
@@ -45,6 +46,7 @@ const TITULO_PAGINA: Record<Screen, string> = {
   comercial: 'Setor Comercial Público',
   apresentacao: 'Apresentação de Resultados',
   usuarios: 'Usuários',
+  demandas: 'Demandas',
 };
 
 export function App() {
@@ -130,7 +132,7 @@ export function App() {
     return `${MESES[month - 1]} de ${year}`;
   }, [screen, cursorISO, month, year]);
 
-  function navegar(d: 'calendario' | 'contatos' | 'projetos' | 'series' | 'comercial' | 'apresentacao' | 'usuarios') {
+  function navegar(d: 'calendario' | 'contatos' | 'projetos' | 'series' | 'comercial' | 'apresentacao' | 'usuarios' | 'demandas') {
     setScreen(d === 'calendario' ? view : d);
   }
   function trocarView(v: View) {
@@ -140,7 +142,7 @@ export function App() {
 
   return (
     <div className="flex min-h-full">
-      <Sidebar active={isCalendar ? 'calendario' : (screen as 'contatos' | 'projetos' | 'series' | 'comercial' | 'apresentacao' | 'usuarios')} onNavigate={navegar} />
+      <Sidebar active={isCalendar ? 'calendario' : (screen as 'contatos' | 'projetos' | 'series' | 'comercial' | 'apresentacao' | 'usuarios' | 'demandas')} onNavigate={navegar} />
 
       <div className="min-w-0 flex-1">
         {/* Cabeçalho de página padrão */}
@@ -224,6 +226,7 @@ export function App() {
           {screen === 'comercial' && (isGestor && doAssistencial ? <ComercialPage /> : <p className="text-[var(--color-ink-soft)]">Área exclusiva do gestor do Assistencial.</p>)}
           {screen === 'apresentacao' && (isGestor && doAssistencial ? <ApresentacaoPage /> : <p className="text-[var(--color-ink-soft)]">Área exclusiva do gestor do Assistencial.</p>)}
           {screen === 'usuarios' && <AdminGuard><UsersAdmin /></AdminGuard>}
+          {screen === 'demandas' && <DemandasPage />}
         </main>
       </div>
 

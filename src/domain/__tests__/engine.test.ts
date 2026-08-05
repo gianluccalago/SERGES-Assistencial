@@ -7,6 +7,7 @@ import { toISODate, utcDate, fromISODate, dayOfWeek } from '../dateUtils';
 import { resolveEstado, registrarRetorno, marcadores, progressoTexto } from '../stateMachine';
 import { seedProjects } from '../../data/projects';
 import { reidratarSelecionado, type ResolvedObligation } from '../../ui/useObligations';
+import { situacaoDemanda, podeVer, type Demanda } from '../types';
 import type { CalendarItem, ManualObligation, Obligation, Override } from '../types';
 
 const holidays2026 = buildHolidaySet([2025, 2026, 2027]);
@@ -478,5 +479,46 @@ describe('reidratação do item aberto no painel', () => {
 
   it('nada aberto continua nada aberto', () => {
     expect(reidratarSelecionado(null, [], vazio)).toBeNull();
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Demandas: período (sem data fixa) e visibilidade. `podeVer` espelha o RLS —
+// a segurança de verdade está no banco; aqui garantimos que a tela concorda.
+// ---------------------------------------------------------------------------
+describe('demandas', () => {
+  const base = (over: Partial<Demanda> = {}): Demanda => ({
+    id: 'dem-1', titulo: 'Ajuste no cockpit', inicio: '2026-08-01', prazo: '2026-08-30',
+    estado: 'pendente', criadoEm: '2026-08-01T12:00:00Z', criadoPor: 'tayla', ...over,
+  });
+
+  it('conta os dias restantes até o prazo máximo', () => {
+    expect(situacaoDemanda(base(), '2026-08-05').diasRestantes).toBe(25);
+    expect(situacaoDemanda(base(), '2026-08-30').diasRestantes).toBe(0);
+  });
+
+  it('passa a atrasada depois do prazo, mas não se já foi entregue', () => {
+    expect(situacaoDemanda(base(), '2026-09-02').atrasada).toBe(true);
+    expect(situacaoDemanda(base({ estado: 'concluida' }), '2026-09-02').atrasada).toBe(false);
+    expect(situacaoDemanda(base({ estado: 'concluida' }), '2026-09-02').concluida).toBe(true);
+  });
+
+  it('marca o período que ainda não começou', () => {
+    expect(situacaoDemanda(base(), '2026-07-20').futura).toBe(true);
+    expect(situacaoDemanda(base(), '2026-08-10').futura).toBe(false);
+  });
+
+  it('visibilidade padrão: todo o setor vê', () => {
+    expect(podeVer(base(), 'juliano', false)).toBe(true);
+    expect(podeVer(base({ visibilidade: 'setor' }), 'juliano', false)).toBe(true);
+  });
+
+  it('restrita: só o criador, os autorizados e o gestor', () => {
+    const d = base({ visibilidade: 'restrita', permitidos: ['bruna'] });
+    expect(podeVer(d, 'tayla', false)).toBe(true);   // criou
+    expect(podeVer(d, 'bruna', false)).toBe(true);   // autorizada
+    expect(podeVer(d, 'juliano', false)).toBe(false); // de fora
+    expect(podeVer(d, 'juliano', true)).toBe(true);  // gestor do setor
+    expect(podeVer(d, undefined, false)).toBe(false); // sem sessão
   });
 });
