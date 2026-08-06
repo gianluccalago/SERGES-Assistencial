@@ -318,6 +318,8 @@ export interface Demanda {
   visibilidade?: Visibilidade;
   /** profiles.id de quem mais pode ver, quando 'restrita'. */
   permitidos?: string[];
+  /** Tirada da lista depois de entregue. Continua no banco, só sai da frente. */
+  arquivada?: boolean;
 }
 
 /** Situação de uma demanda em relação ao prazo máximo. */

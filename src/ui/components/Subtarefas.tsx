@@ -15,6 +15,9 @@ export function Subtarefas({
 }) {
   const lista = valor ?? [];
   const [novo, setNovo] = useState('');
+  // À medida que as etapas são concluídas, dá para tirá-las da frente e ver só
+  // o que falta. Só esconde na exibição — nada é apagado.
+  const [esconderFeitas, setEsconderFeitas] = useState(false);
   const feitas = lista.filter((s) => s.feita).length;
   const pct = lista.length ? Math.round((feitas / lista.length) * 100) : 0;
 
@@ -40,11 +43,21 @@ export function Subtarefas({
     <div>
       <div className="mb-1 flex items-baseline justify-between gap-2">
         <span className="label uppercase">Etapas</span>
-        {lista.length > 0 && (
-          <span className={`label tabular-nums ${feitas === lista.length ? 'text-[var(--color-done)]' : ''}`}>
-            {feitas} de {lista.length}
-          </span>
-        )}
+        <span className="flex items-center gap-3">
+          {feitas > 0 && (
+            <button
+              className="label underline decoration-dotted underline-offset-2 hover:text-[var(--color-ink)]"
+              onClick={() => setEsconderFeitas((v) => !v)}
+            >
+              {esconderFeitas ? `mostrar concluídas (${feitas})` : 'ocultar concluídas'}
+            </button>
+          )}
+          {lista.length > 0 && (
+            <span className={`label tabular-nums ${feitas === lista.length ? 'text-[var(--color-done)]' : ''}`}>
+              {feitas} de {lista.length}
+            </span>
+          )}
+        </span>
       </div>
 
       {lista.length > 0 && (
@@ -57,11 +70,12 @@ export function Subtarefas({
       )}
 
       <div className="space-y-1">
-        {lista.map((s, i) => (
+        {lista.map((s, i) =>
+          esconderFeitas && s.feita ? null : (
           <div key={s.id} className="flex items-center gap-2">
             <input
               type="checkbox"
-              className="h-4 w-4 shrink-0"
+              className="h-5 w-5 shrink-0"
               checked={!!s.feita}
               aria-label={`Concluir etapa: ${s.titulo}`}
               onChange={(e) => set(s.id, { feita: e.target.checked })}
@@ -87,8 +101,12 @@ export function Subtarefas({
               ×
             </button>
           </div>
-        ))}
+          ),
+        )}
       </div>
+      {esconderFeitas && feitas === lista.length && (
+        <p className="label mt-1 text-[var(--color-done)]">Todas as etapas concluídas.</p>
+      )}
 
       <div className="mt-2 flex gap-2">
         <input

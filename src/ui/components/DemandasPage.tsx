@@ -42,6 +42,7 @@ export function DemandasPage() {
   const { perfil, isGestor } = useAuth();
   const [editando, setEditando] = useState<Demanda | null>(null);
   const [verConcluidas, setVerConcluidas] = useState(false);
+  const [verArquivadas, setVerArquivadas] = useState(false);
   const hoje = todayISO();
 
   // Só o que este usuário pode ver. O banco já filtra (RLS); aqui é para a tela
@@ -52,9 +53,10 @@ export function DemandasPage() {
   );
 
   const abertas = visiveis
-    .filter((d) => d.estado !== 'concluida')
+    .filter((d) => !d.arquivada && d.estado !== 'concluida')
     .sort((a, b) => a.prazo.localeCompare(b.prazo));
-  const concluidas = visiveis.filter((d) => d.estado === 'concluida');
+  const concluidas = visiveis.filter((d) => !d.arquivada && d.estado === 'concluida');
+  const arquivadas = visiveis.filter((d) => d.arquivada);
   const atrasadas = abertas.filter((d) => situacaoDemanda(d, hoje).atrasada).length;
 
   return (
@@ -97,7 +99,35 @@ export function DemandasPage() {
           {verConcluidas && (
             <div className="list-stack mt-2">
               {concluidas.map((d) => (
-                <LinhaDemanda key={d.id} d={d} hoje={hoje} onAbrir={() => setEditando({ ...d })} />
+                <LinhaDemanda
+                  key={d.id}
+                  d={d}
+                  hoje={hoje}
+                  onAbrir={() => setEditando({ ...d })}
+                  acao={{ rotulo: 'Arquivar', fazer: () => store.upsertDemanda({ ...d, arquivada: true }) }}
+                />
+              ))}
+            </div>
+          )}
+        </div>
+      )}
+
+      {arquivadas.length > 0 && (
+        <div>
+          <button className="btn-ghost inline-flex items-center gap-1.5" onClick={() => setVerArquivadas((v) => !v)}>
+            Arquivadas ({arquivadas.length})
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className={`transition-transform duration-150 ${verArquivadas ? 'rotate-180' : ''}`}><path d="M6 9l6 6 6-6" /></svg>
+          </button>
+          {verArquivadas && (
+            <div className="list-stack mt-2">
+              {arquivadas.map((d) => (
+                <LinhaDemanda
+                  key={d.id}
+                  d={d}
+                  hoje={hoje}
+                  onAbrir={() => setEditando({ ...d })}
+                  acao={{ rotulo: 'Restaurar', fazer: () => store.upsertDemanda({ ...d, arquivada: undefined }) }}
+                />
               ))}
             </div>
           )}
@@ -126,7 +156,18 @@ export function DemandasPage() {
   );
 }
 
-function LinhaDemanda({ d, hoje, onAbrir }: { d: Demanda; hoje: string; onAbrir: () => void }) {
+function LinhaDemanda({
+  d,
+  hoje,
+  onAbrir,
+  acao,
+}: {
+  d: Demanda;
+  hoje: string;
+  onAbrir: () => void;
+  /** Ação secundária da linha (arquivar / restaurar). */
+  acao?: { rotulo: string; fazer: () => void };
+}) {
   const s = situacaoDemanda(d, hoje);
   const etapas = d.subtarefas ?? [];
   const feitas = etapas.filter((x) => x.feita).length;
@@ -157,6 +198,11 @@ function LinhaDemanda({ d, hoje, onAbrir }: { d: Demanda; hoje: string; onAbrir:
           </div>
         </button>
         <span className={estadoChipClass(d.estado)}>{ESTADO_LABEL[d.estado]}</span>
+        {acao && (
+          <button className="btn-ghost shrink-0" onClick={acao.fazer}>
+            {acao.rotulo}
+          </button>
+        )}
       </div>
     </div>
   );

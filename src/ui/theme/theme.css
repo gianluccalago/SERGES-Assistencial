@@ -83,6 +83,10 @@
   }
   body {
     margin: 0;
+    /* Sem isto o navegador desenha os controles nativos (checkbox, campo de
+     * data, dropdown, barra de rolagem) em modo CLARO sobre o fundo navy — o
+     * checkbox some, virando um pontinho. */
+    color-scheme: dark;
     /* Navy profundo com um único brilho de marca no topo — calmo, não decorado. */
     background-color: var(--color-canvas);
     background-image:
@@ -409,7 +413,10 @@
     font-weight: var(--font-weight-medium);
     letter-spacing: 0.02em;
   }
-  input[type='checkbox'] { accent-color: var(--color-serges-blue); }
+  input[type='checkbox'] {
+    accent-color: var(--color-serges-blue);
+    cursor: pointer;
+  }
 
   /* ---------- Toast (aviso + desfazer) ---------- */
   .toast {
@@ -511,5 +518,7 @@
   --color-done-tint: #e9f6ef;
   color: var(--color-ink);
   box-shadow: var(--shadow-pop);
+  /* Os slides são claros: controles nativos voltam ao modo claro. */
+  color-scheme: light;
 }
 .apr-slide .select option { color: #14161d; background-color: #ffffff; }
