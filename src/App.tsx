@@ -51,7 +51,7 @@ const TITULO_PAGINA: Record<Screen, string> = {
 
 export function App() {
   const store = useStore();
-  const { isGestor, setor } = useAuth();
+  const { isGestor, setor, podeCatalogo } = useAuth();
   const doAssistencial = setor === 'assistencial';
   const [screen, setScreen] = useState<Screen>('dia');
   const [view, setView] = useState<View>('dia');
@@ -221,8 +221,8 @@ export function App() {
           {screen === 'lista' && <ListView year={year} month={month} filtros={filtros} onSelect={setSelected} />}
           {screen === 'checklist' && <ChecklistView year={year} month={month} filtros={filtros} onSelect={setSelected} />}
           {screen === 'contatos' && <ContatosPage />}
-          {screen === 'projetos' && <AdminGuard><ProjectsAdmin /></AdminGuard>}
-          {screen === 'series' && <AdminGuard><SeriesAdmin /></AdminGuard>}
+          {screen === 'projetos' && <AdminGuard permitido={podeCatalogo} motivo="Você não tem permissão para editar projetos — está em modo leitura."><ProjectsAdmin /></AdminGuard>}
+          {screen === 'series' && <AdminGuard permitido={podeCatalogo} motivo="Você não tem permissão para editar séries — está em modo leitura."><SeriesAdmin /></AdminGuard>}
           {screen === 'comercial' && (isGestor && doAssistencial ? <ComercialPage /> : <p className="text-[var(--color-ink-soft)]">Área exclusiva do gestor do Assistencial.</p>)}
           {screen === 'apresentacao' && (isGestor && doAssistencial ? <ApresentacaoPage /> : <p className="text-[var(--color-ink-soft)]">Área exclusiva do gestor do Assistencial.</p>)}
           {screen === 'usuarios' && <AdminGuard><UsersAdmin /></AdminGuard>}

@@ -51,7 +51,7 @@ async function excluirUsuario(id: string) {
 
 /** Papel e nome ficam em public.profiles — o RLS já permite ao gestor gravar,
  * então não precisa de servidor nenhum. */
-async function atualizarPerfil(id: string, patch: { role?: Papel; nome?: string; setor?: Setor }) {
+async function atualizarPerfil(id: string, patch: { role?: Papel; nome?: string; setor?: Setor; pode_catalogo?: boolean }) {
   const { error } = await supabase.from('profiles').update(patch).eq('id', id);
   if (error) throw new Error(error.message);
 }
@@ -69,7 +69,13 @@ export function UsersAdmin() {
     setCarregando(true);
     const { data, error } = await supabase.from('profiles').select('*').order('email');
     if (error) setErro(error.message);
-    else setPerfis((data ?? []) as Perfil[]);
+    else
+      setPerfis(
+        ((data ?? []) as Record<string, unknown>[]).map((p) => ({
+          ...(p as unknown as Perfil),
+          podeCatalogo: p.pode_catalogo === true,
+        })),
+      );
     setCarregando(false);
   }
 
@@ -110,6 +116,18 @@ export function UsersAdmin() {
       await atualizarPerfil(id, { setor });
     } catch (e) {
       setErro(e instanceof Error ? e.message : 'Falha ao mudar o setor.');
+      void carregar();
+    }
+  }
+
+  /** Permissão avulsa: editar projetos, séries e feriados sem virar gestor. */
+  async function mudarCatalogo(id: string, podeCatalogo: boolean) {
+    setErro(null);
+    setPerfis((ps) => ps.map((p) => (p.id === id ? { ...p, podeCatalogo } : p)));
+    try {
+      await atualizarPerfil(id, { pode_catalogo: podeCatalogo });
+    } catch (e) {
+      setErro(e instanceof Error ? e.message : 'Falha ao mudar a permissão de catálogo.');
       void carregar();
     }
   }
@@ -190,6 +208,18 @@ export function UsersAdmin() {
                 <select className="select w-auto" title="Papel" value={p.role} onChange={(e) => mudarPapel(p.id, e.target.value as Papel)}>
                   {(Object.keys(PAPEL_LABEL) as Papel[]).map((r) => <option key={r} value={r}>{PAPEL_LABEL[r]}</option>)}
                 </select>
+                <label
+                  className="flex items-center gap-2 whitespace-nowrap text-[length:var(--text-label)] text-[var(--color-ink-soft)]"
+                  title="Deixa a pessoa criar e editar projetos, séries e feriados do setor dela — sem virar gestor. Gestor já pode, por definição."
+                >
+                  <input
+                    type="checkbox"
+                    checked={p.role === 'gestor' || p.podeCatalogo === true}
+                    disabled={p.role === 'gestor'}
+                    onChange={(e) => mudarCatalogo(p.id, e.target.checked)}
+                  />
+                  Projetos e séries
+                </label>
                 <button
                   className="btn-ghost text-[var(--color-overdue)]"
                   disabled={p.id === eu?.id}

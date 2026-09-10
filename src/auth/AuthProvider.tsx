@@ -12,6 +12,8 @@ export interface Perfil {
   role: Papel;
   /** Setor dono dos dados que este usuário enxerga. */
   setor: Setor;
+  /** Pode criar/editar projetos, séries e feriados do setor, sem ser gestor. */
+  podeCatalogo: boolean;
 }
 
 interface AuthApi {
@@ -21,6 +23,8 @@ interface AuthApi {
   isGestor: boolean;
   /** Setor do usuário logado (assistencial enquanto o perfil não carregou). */
   setor: Setor;
+  /** Libera as telas Projetos e Séries (gestor ou permissão explícita). */
+  podeCatalogo: boolean;
   signIn: (email: string, senha: string) => Promise<{ error: string | null }>;
   signOut: () => Promise<void>;
 }
@@ -63,10 +67,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         nome: (data.nome as string) ?? null,
         role: (data.role as Papel) ?? 'equipe',
         setor: (data.setor as Setor) ?? 'assistencial',
+        podeCatalogo: data.pode_catalogo === true,
       });
     } else {
       // Sem perfil cadastrado: trata como equipe (sem ações de gestor) até ser provisionado.
-      setPerfil({ id: userId, email, nome: null, role: 'equipe', setor: 'assistencial' });
+      setPerfil({ id: userId, email, nome: null, role: 'equipe', setor: 'assistencial', podeCatalogo: false });
     }
   }
 
@@ -114,6 +119,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       loading,
       isGestor: perfil?.role === 'gestor',
       setor: perfil?.setor ?? 'assistencial',
+      podeCatalogo: perfil?.role === 'gestor' || perfil?.podeCatalogo === true,
       async signIn(email, senha) {
         const { error } = await supabase.auth.signInWithPassword({ email: email.trim(), password: senha });
         return { error: error ? traduzErro(error.message) : null };
